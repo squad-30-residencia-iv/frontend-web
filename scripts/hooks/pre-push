@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "🔍 [SDD Hook] Iniciando validações obrigatórias antes do push..."
+
+# -------------------------------------------------------------
+# 1. Determinismo Técnico
+# -------------------------------------------------------------
+echo "⚙️ Executando validação técnica..."
+if ! npm run verify; then
+  echo ""
+  echo "❌ [ERRO] A validação técnica falhou (typecheck ou testes)."
+  echo "👉 Corrija os erros reportados antes de subir o código."
+  exit 1
+fi
+
+# -------------------------------------------------------------
+# 2. Verificação de Memória (docs/PROJECT_STATE.md)
+# -------------------------------------------------------------
+echo "🧠 Verificando integridade da memória do projeto..."
+
+# Detecta se docs/PROJECT_STATE.md sofreu alterações em relação à branch remota
+# Se a branch for nova, compara contra a origin/main
+TARGET_BRANCH="origin/main"
+git rev-parse --verify "$TARGET_BRANCH" >/dev/null 2>&1 || TARGET_BRANCH="HEAD~1"
+
+STATE_CHANGED=$(git diff --name-only "$TARGET_BRANCH"...HEAD | grep -E "^docs/PROJECT_STATE.md$" || true)
+
+if [ -z "$STATE_CHANGED" ]; then
+  echo ""
+  echo "⚠️ [ALERTA SDD] O arquivo 'docs/PROJECT_STATE.md' não foi modificado nesta ramificação!"
+  echo "👉 Isso indica que o comando de encerramento (@save-session.md) não foi executado."
+  echo "👉 Atualize o status e as tarefas no PROJECT_STATE.md antes de enviar suas alterações."
+  echo ""
+  echo "Dica: Se foi apenas um ajuste cosmético que não requer memória, use 'git push --no-verify' com cautela."
+  exit 1
+fi
+
+echo "✅ [SDD Hook] Todas as validações passaram com sucesso!"
+exit 0
