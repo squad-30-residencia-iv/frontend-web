@@ -1,0 +1,7 @@
+---
+description: Implementa passo a passo uma especificação técnica aprovada
+globs:
+alwaysApply: false
+---
+
+Execute rigorosamente as instruções descritas em docs/prompts/implement-spec.md.

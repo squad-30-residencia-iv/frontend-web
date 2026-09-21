@@ -1,0 +1,7 @@
+---
+description: Registra o progresso e atualiza a memória de sessão do projeto
+globs:
+alwaysApply: false
+---
+
+Execute rigorosamente as instruções descritas em docs/prompts/save-session.md.

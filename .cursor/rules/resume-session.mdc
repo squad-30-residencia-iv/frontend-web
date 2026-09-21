@@ -1,0 +1,7 @@
+---
+description: Retoma a sessão ativa lendo o estado atual do projeto
+globs:
+alwaysApply: false
+---
+
+Execute rigorosamente as instruções descritas em docs/prompts/resume-session.md.

@@ -1,0 +1,16 @@
+{
+  "name": "frontend-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "typecheck": "echo 'ERRO: Squad 2 precisa configurar o comando de tipagem (ex: tsc --noEmit)' && exit 1",
+    "test": "echo 'ERRO: Squad 2 precisa configurar a suite de testes (ex: vitest run)' && exit 1",
+    "verify": "npm run typecheck && npm test"
+  },
+  "author": "",
+  "license": "ISC"
+}
