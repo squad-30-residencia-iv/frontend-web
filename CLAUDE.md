@@ -1,15 +1,3 @@
-# Diretrizes Operacionais (SDD & Governança)
+# Governança de Agente e Contexto do Projeto
 
-1. FLUXO OBRIGATÓRIO:
-
-- NUNCA altere arquivos de produto sem uma especificação técnica ativa em docs/specs/in-progress/.
-- Para novas demandas, consulte docs/specs/templates/spec-template.md e preencha a spec técnica antes da implementação.
-
-2. GOVERNANÇA:
-
-- Respeite estritamente as regras de docs/arquitetura.md e PROMPT_GUIDELINES.md.
-- Todo código produzido deve vir acompanhado de testes automatizados e tipagem estrita.
-
-3. COMANDOS DE SESSÃO:
-
-- Siga os procedimentos definidos em docs/prompts/ (resume-session, implement-spec e save-session).
+Antes de propor código, refatorações ou novos arquivos, consulte e obedeça rigorosamente às diretrizes arquiteturais, ciclos operacionais (SDD) e catálogo de skills definidos no arquivo `agents.md` na raiz deste repositório.
