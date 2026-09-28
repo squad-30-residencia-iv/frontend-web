@@ -1,0 +1,55 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #fff;
+}
+
+.brand-icon {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  background-color: #ed1c2b;
+  box-shadow: 0 0 28px #ed1c2b20;
+}
+
+.brand-icon-image {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2px;
+}
+
+.brand-title {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.brand-subtitle {
+  margin-top: 0.125rem;
+  color: #939caa;
+  font-size: 11px;
+  letter-spacing: 0.025em;
+}
+
+@media (min-width: 48rem) {
+  .brand-icon {
+    width: clamp(34px, 4.5vw, 54px);
+    height: clamp(34px, 4.5vw, 54px);
+  }
+
+  .brand-title {
+    font-size: clamp(16px, 2.05vw, 26px);
+  }
+
+  .brand-subtitle {
+    font-size: clamp(11px, 1.35vw, 16px);
+  }
+}

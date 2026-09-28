@@ -1,0 +1,15 @@
+.campaign-illustration {
+  display: none;
+  pointer-events: none;
+  margin-top: 1.5rem;
+  margin-bottom: 2vh;
+  width: 100%;
+  height: auto;
+  max-height: 57vh;
+}
+
+@media (min-width: 48rem) {
+  .campaign-illustration {
+    display: block;
+  }
+}

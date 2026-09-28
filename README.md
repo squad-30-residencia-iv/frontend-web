@@ -1,3 +1,38 @@
+## Organização dos componentes
+
+As páginas ficam em `src/pages/`. Componentes exclusivos de uma tela ficam em `src/components/<funcionalidade>/`, em arquivos `.tsx`, com seu CSS ao lado.
+
+```text
+src/
+├── components/
+│   └── login/
+│       ├── Brand.tsx
+│       ├── Brand.css
+│       ├── CampaignIllustration.tsx
+│       └── CampaignIllustration.css
+├── pages/
+│   ├── LoginPage.tsx
+│   ├── LoginPage.css
+│   └── LoginPage.test.tsx
+└── styles.css
+```
+
+Novas telas seguem o mesmo padrão, por exemplo `components/campaigns/`, `components/vouchers/` e `components/reports/`. Crie essas pastas conforme as funcionalidades forem implementadas.
+
+Antes de criar um componente, verifique se existe um compartilhado adequado. Use `components/shared/` somente para componentes realmente reutilizados por várias telas, movendo-os sem duplicação quando essa necessidade surgir. Atualize todos os imports ao reorganizar arquivos.
+
+## Padrão de estilos
+
+Use classes CSS semânticas em kebab-case no JSX. Cada página ou componente importa seu arquivo CSS, localizado ao lado do arquivo TSX.
+
+- Páginas usam um prefixo próprio: `.login-page`, `.login-card`, `.login-input`, `.campaign-header`, `.voucher-card`.
+- Componentes compartilhados usam seu próprio nome: `.brand-icon`, `.campaign-illustration`.
+- Modificadores descrevem variações: `.login-label--password`.
+- Estados de interação e responsividade ficam no CSS, agrupados em pseudoclasses e media queries. Evite estilos inline e listas de classes Tailwind no JSX.
+- `src/styles.css` mantém o reset e o tema globais. Preserve os valores visuais e breakpoints ao refatorar.
+
+Use [LoginPage.tsx](src/pages/LoginPage.tsx) e [LoginPage.css](src/pages/LoginPage.css) como referência para as próximas telas. As orientações para agentes estão em [agents.md](agents.md).
+
 ## 🛠️ Guia de Desenvolvimento: Fluxo de Trabalho e SDD
 
 Este repositório adota a metodologia **Spec-Driven Development (SDD)** combinada com governança assistida por IA. O objetivo é assegurar componentização previsível, fidelidade aos contratos de interface, validação estrita com TypeScript e cobertura de testes antes de subir alterações.
