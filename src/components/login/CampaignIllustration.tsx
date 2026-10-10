@@ -1,5 +1,3 @@
-import './CampaignIllustration.css'
-
 const ILLUSTRATION_FONT_FAMILY = 'Arial, sans-serif'
 
 export function CampaignIllustration() {
@@ -7,7 +5,7 @@ export function CampaignIllustration() {
     <svg
       aria-hidden="true"
       viewBox="0 0 500 510"
-      className="campaign-illustration"
+      className="pointer-events-none mt-6 mb-[2vh] hidden h-auto w-full max-h-[57vh] md:block"
       fill="none"
     >
       <IllustrationDefs />
