@@ -1,0 +1,61 @@
+.components-demo-page {
+  min-height: 100dvh;
+  padding: 2rem max(1rem, calc((100vw - 1100px) / 2));
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.components-demo-header {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.components-demo-header h1 {
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 700;
+}
+
+.components-demo-header a {
+  width: fit-content;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.components-demo-section {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.components-demo-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.components-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.components-demo-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 40rem) {
+  .components-demo-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .components-demo-section {
+    padding: 1rem;
+  }
+}
