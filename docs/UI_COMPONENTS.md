@@ -1,8 +1,8 @@
 # Componentes base e feedbacks
 
-## Demonstração
+## Aplicação
 
-Execute `npm run dev` e abra `/ui.html` na URL informada pelo Vite. `/` continua exibindo o login. A demonstração tem entrada própria (`src/ui-demo.tsx`) e também é incluída no build e em `npm run preview`; não existe condição temporária em App nem dependência de roteamento.
+Execute `npm run dev`. A entrada da aplicação é o login em `/`.
 
 ## Organização
 
@@ -50,13 +50,13 @@ FeedbackProvider monta Toast.Provider como irmão da aplicação: esse provider 
 
 ## Validação
 
-`npm run build`, `npm test -- --run` e `npm run verify`. Não há script de lint configurado. Testes usam Vitest, Testing Library e user-event existentes, sem mocks dos componentes HeroUI. Apenas matchMedia e ResizeObserver são simulados localmente na suíte por ausência no jsdom; geometria e aparência responsiva devem ser revisadas em `/ui.html` no navegador.
+`npm run build`, `npm test -- --run` e `npm run verify`. Não há script de lint configurado. Testes usam Vitest, Testing Library e user-event existentes, sem mocks dos componentes HeroUI. Apenas matchMedia e ResizeObserver são simulados localmente na suíte por ausência no jsdom.
 
 Resultado em 2026-10-10: todos os comandos aprovados, 16 testes passando (14 novos e 2 do login).
 
 ## Arquivos desta entrega
 
 - Criados em `src/components/ui/`: Button.tsx, Input.tsx e Input.css, Select.tsx, Modal.tsx, ConfirmationModal.tsx, Loading.tsx e Loading.css, EmptyState.tsx e EmptyState.css, feedback.ts, useFeedback.tsx, FeedbackProvider.tsx, FeedbackAlert.tsx e Components.test.tsx.
-- Criados para demonstração: ui.html, src/ui-demo.tsx, src/pages/ComponentsDemoPage.tsx e ComponentsDemoPage.css.
 - Criados para documentação: este guia e docs/specs/completed/US-002-ui-feedbacks.md.
-- Modificados: src/main.tsx (provider), vite.config.ts (duas entradas de build) e docs/PROJECT_STATE.md (memória da entrega).
+- Modificados: src/main.tsx (provider) e docs/PROJECT_STATE.md (memória da entrega).
+- A vitrine isolada (`ui.html`, `src/ui-demo.tsx` e `src/pages/ComponentsDemoPage.tsx`) foi removida. O build volta a ter só `index.html`.
