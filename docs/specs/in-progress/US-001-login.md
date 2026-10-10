@@ -13,6 +13,8 @@ Reproduzir a referência: viewport inteira, painel esquerdo escuro com marca, ch
 
 Campos com labels, autocomplete e validação de e-mail e senha obrigatórios. Ilustração decorativa em SVG local. Foco de teclado visível. Sem endpoint informado: envio válido informa que a autenticação ainda não está conectada, sem simular sessão ou armazenar credenciais.
 
+O formulário usa os componentes compartilhados de `src/components/ui`: `Input` para e-mail e senha, `Button` para envio e `FeedbackAlert` para o aviso de integração. O painel, a marca e a ilustração permanecem.
+
 ## 2. Contratos
 
 `LoginCredentials`: email e password como strings. Componentes funcionais: App, LoginPage, CampaignIllustration e Brand. Estado local de feedback do formulário. Sem hooks ou serviços HTTP desnecessários.
@@ -25,7 +27,7 @@ Backend fora de escopo por ausência de contrato. Estados de carregamento e suce
 
 - [ ] Configurar Vite, React, TypeScript e Tailwind.
 - [ ] Implementar componentes, ilustração e layout responsivo.
-- [ ] Implementar formulário acessível e feedback honesto sobre integração.
+- [x] Implementar formulário acessível e feedback honesto sobre integração com `Input`, `Button` e `FeedbackAlert`.
 - [ ] Testar renderização e envio sem backend.
 - [ ] Executar npm run verify e npm run build.
 - [ ] Atualizar documentação e estado do projeto.
