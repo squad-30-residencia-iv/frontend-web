@@ -51,7 +51,7 @@ export function LoginPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="mt-[clamp(24px,3.3vw,38px)] flex flex-col gap-4 [--accent:#dc242a] [--accent-foreground:#fff] [--accent-hover:#c41c24] [--focus:#d92329]"
+            className="mt-[clamp(24px,3.3vw,38px)] flex flex-col gap-4"
           >
             <Input
               label="E-mail corporativo:"

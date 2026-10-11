@@ -14,7 +14,7 @@
 
 ## 🚧 Tarefas em Andamento
 
-- [ ] Nenhuma tarefa ativa no momento.
+- [ ] US-001 Login: o formulário já usa `Input`, `Button` e `FeedbackAlert`. A spec segue em `docs/specs/in-progress/` com checklist em aberto (stack, layout, testes da spec, verify/build e documentação).
 
 ---
 
@@ -23,6 +23,7 @@
 - Configuração inicial do ecossistema de SDD (prompts, templates e governança).
 - US-002: Button, Input, Select, Modal, ConfirmationModal, Loading, EmptyState, FeedbackAlert e feedbacks via Toast oficial HeroUI 3.2.6.
 - Documentação dos componentes em `docs/UI_COMPONENTS.md`. A vitrine `/ui.html` foi removida.
+- Paleta do portal em `src/styles.css`: cores próprias no `@theme` e tokens da HeroUI apontando para a mesma paleta.
 - Validação: `npm run build`, `npm test -- --run` e `npm run verify` aprovados; 16 testes. Sem script de lint.
 
 ---
@@ -32,5 +33,7 @@
 - Stack React + TypeScript + Vite, Tailwind, HeroUI e Lucide já instalada ao iniciar esta task.
 - Preservados App, login, estilos globais e dependências. Novos componentes em `components/ui` conforme escopo solicitado, com exports nomeados e CSS semântico adjacente.
 - Toast usa fila/provider oficiais; nenhum Context adicional. O app tem uma única entrada, `index.html`, e abre o login.
-- Spec anterior US-001 preservada no estado encontrado; esta entrega não reclassifica o trabalho anterior.
-- Alterações prontas para revisão manual, sem commit ou push. Sugestão: `feat(ui): adiciona componentes base e módulo de feedbacks`.
+- A HeroUI segue a paleta do portal pelos tokens `--accent`, `--danger`, `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--success` e `--warning`. O login não força mais um vermelho local.
+- `npm run verify` aprovado nesta sessão: typecheck e 16 testes.
+- Spec US-001 não foi concluída; permanece em `docs/specs/in-progress/`.
+- Alterações de tema prontas para commit, sem push. Sugestão: `feat(theme): padroniza a paleta do portal nos tokens da HeroUI`.
