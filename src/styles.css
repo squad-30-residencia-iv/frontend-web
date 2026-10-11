@@ -3,4 +3,50 @@
 
 @theme {
   --font-sans: Arial, Helvetica, sans-serif;
+
+  /* Superfície e texto */
+  --color-canvas: #f4f5f7;
+  --color-ink: #18181b;
+  --color-line: #e4e4e7;
+
+  /* Marca */
+  --color-brand: #d42b2b;
+  --color-brand-foreground: #ffffff;
+
+  /* Status que a HeroUI não nomeia */
+  --color-info: #3b82f6;
+  --color-neutral: #6b7280;
+
+  /* Sidebar */
+  --color-sidebar: #12121a;
+  --color-sidebar-foreground: #ffffff;
+  --color-sidebar-foreground-bg: #1e1e2d;
+  --color-sidebar-muted: #8e8e9f;
+  --color-sidebar-indicator: var(--color-brand);
+}
+
+@layer base {
+  :root {
+    --background: var(--color-canvas);
+    --foreground: var(--color-ink);
+    --surface: #ffffff;
+    --surface-foreground: var(--color-ink);
+    --overlay: #ffffff;
+    --overlay-foreground: var(--color-ink);
+    --muted: #71717a;
+    --border: var(--color-line);
+    --separator: var(--color-line);
+    --accent: var(--color-brand);
+    --accent-foreground: var(--color-brand-foreground);
+    --focus: var(--color-brand);
+    --link: var(--color-brand);
+    --danger: var(--color-brand);
+    --danger-foreground: var(--color-brand-foreground);
+    --success: #10b981;
+    --success-foreground: #ffffff;
+    --warning: #f59e0b;
+    --warning-foreground: var(--color-ink);
+    --field-foreground: var(--color-ink);
+    --field-placeholder: #71717a;
+  }
 }

@@ -55,7 +55,13 @@ Qualquer assistente que iniciar uma sessão deve seguir este fluxo:
 
 - Usar classes CSS semânticas em kebab-case no JSX, com estilos em arquivos CSS ao lado da página ou componente e importados por ele. Este é o padrão para novas telas e refatorações.
 - Prefixar estilos de página com seu domínio: `.login-page`, `.login-card`, `.campaign-header`, `.voucher-card`. Componentes compartilhados usam seu próprio nome: `.brand-icon`, `.campaign-illustration`.
-- Usar modificadores explícitos quando necessário, como `.login-label--password`. Evitar nomes genéricos, estilos inline e listas de utilitários Tailwind no JSX.
+- Usar classes do tema Tailwind no JSX, como `bg-canvas`, `text-ink`, `bg-brand` e os utilitários da HeroUI (`bg-accent`, `bg-surface`). Evitar estilos inline.
 - Organizar o CSS por estrutura, elementos, estados (`:hover`, `:focus`, `:focus-visible`, `:active`, `:empty`) e media queries. Preservar acessibilidade, valores visuais e breakpoints nas refatorações.
 - Manter em `src/styles.css` apenas estilos globais, reset e tema existentes. Estilos de componentes compartilhados não devem depender de seletores de uma página.
 - Manter fidelidade aos contratos e protótipos de interface.
+
+### [Skill] Tema de cores
+
+- Registrar a paleta do portal em `src/styles.css`, no bloco `@theme`, com prefixo `--color-`. Isso gera as classes Tailwind. Não criar `tailwind.config.ts`.
+- Não redeclarar no `@theme` nomes que a HeroUI já usa: `--color-surface`, `--color-muted`, `--color-success`, `--color-warning` e `--color-warning-soft`.
+- Para a biblioteca seguir a mesma paleta, apontar no `:root` os tokens de origem: `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--accent`, `--danger`, `--success`, `--warning` e `--focus`.
