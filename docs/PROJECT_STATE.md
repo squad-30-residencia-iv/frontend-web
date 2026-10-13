@@ -37,3 +37,13 @@
 - `npm run verify` aprovado nesta sessão: typecheck e 16 testes.
 - Spec US-001 não foi concluída; permanece em `docs/specs/in-progress/`.
 - Alterações de tema prontas para commit, sem push. Sugestão: `feat(theme): padroniza a paleta do portal nos tokens da HeroUI`.
+
+## Entrega 2026-10-13 — US-003
+- Gerenciamento de Campanhas em /campanhas, login preservado em /; sem roteador, backend ou dependências adicionais.
+- PortalLayout reutilizável; busca, status/período, paginação, menu acessível e aprovação local com confirmação/Toast.
+- Mocks tipados com sete registros da imagem e 73 demonstrativos. Totais coerentes com os indicadores.
+- ConfirmationModal aceita approve além das ações existentes.
+- Build aprovado; teste e verify aprovados com 25 testes. Sem lint. Aviso Vite de bundle >500 kB.
+- Spec concluída em docs/specs/completed/US-003-gerenciamento-campanhas.md; relatório em docs/CAMPAIGN_MANAGEMENT.md.
+- Revisão visual no Chrome indisponível por falta de autorização do Computer Use.
+- Branch feat/02-criacao_campanhas sem commits; frontend-web já não rastreado ao iniciar. Sem commit/push.
