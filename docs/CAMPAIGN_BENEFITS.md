@@ -49,3 +49,6 @@ Build aprovado; aviso Vite de chunk JS acima de 500 kB.
 Suíte completa e verify aprovados: 46 testes em 4 arquivos (10 novos e teste de continuidade anterior adaptado). Sem script de lint.
 git status, git diff --stat e git diff --check executados. Sem dependências, backend, alterações no login/gerenciamento, commit ou push.
 Sugestão de commit: feat(campaigns): integra etapa de alvos e benefícios ao rascunho.
+
+## Atualização US-006
+Continuar da segunda etapa agora abre Regras e público após validação, preservando toda a edição dos benefícios. A etapa 3 foi integrada ao mesmo estado. Relatório em [CAMPAIGN_RULES.md](CAMPAIGN_RULES.md).

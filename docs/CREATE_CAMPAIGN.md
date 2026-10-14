@@ -52,3 +52,6 @@ Sugestão de commit para revisão: feat(campaigns): adiciona primeira etapa de c
 
 ## Atualização US-005 — segunda etapa
 Alvos e benefícios agora está implementada no mesmo formulário. Continuar valida a primeira etapa e avança; Voltar preserva os dados de ambas. Rascunhos salvos incluem benefits com migração do formato anterior. A próxima etapa pendente passa a ser Regras e público. Detalhes e validação em [CAMPAIGN_BENEFITS.md](CAMPAIGN_BENEFITS.md).
+
+## Atualização US-006 — terceira etapa
+Regras e público agora integra o mesmo formulário/rascunho. Continuar da segunda etapa valida e avança; Voltar preserva as três seções. Escopo e canais passa a ser a etapa pendente. Detalhes em [CAMPAIGN_RULES.md](CAMPAIGN_RULES.md).

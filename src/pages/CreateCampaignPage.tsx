@@ -12,6 +12,8 @@ import { navigate } from '../navigation/navigate'
 import type { CampaignDraft } from '../types/campaign'
 import { CampaignBenefitsForm } from '../components/campaigns/create/CampaignBenefitsForm'
 import { validateCampaignBenefits, validateDiscount, type CampaignBenefitsErrors } from '../data/campaignBenefits'
+import { CampaignRulesForm } from '../components/campaigns/create/CampaignRulesForm'
+import { validateCampaignRules, type CampaignRulesErrors } from '../data/campaignRules'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -24,9 +26,11 @@ export function CreateCampaignPage() {
   const [draft, setDraft] = useState(loadCampaignDraft)
   const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(draft))
   const [errors, setErrors] = useState<CampaignInformationErrors>({})
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, setStep] = useState<1 | 2 | 3>(1)
   const [visitedBenefits, setVisitedBenefits] = useState(false)
   const [benefitsErrors, setBenefitsErrors] = useState<CampaignBenefitsErrors>({})
+  const [visitedRules, setVisitedRules] = useState(false)
+  const [rulesErrors, setRulesErrors] = useState<CampaignRulesErrors>({})
   const [discardOpen, setDiscardOpen] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const information = draft.information
@@ -107,12 +111,21 @@ export function CreateCampaignPage() {
       setStep(2)
       return
     }
-    const validationErrors = validateCampaignBenefits(draft.benefits)
-    setBenefitsErrors(validationErrors)
+    if (step === 2) {
+      const validationErrors = validateCampaignBenefits(draft.benefits)
+      setBenefitsErrors(validationErrors)
+      const firstInvalidField = Object.keys(validationErrors)[0]
+      if (firstInvalidField) { focusInvalidField(firstInvalidField); return }
+      setVisitedRules(true)
+      setStep(3)
+      return
+    }
+    const validationErrors = validateCampaignRules(draft.rules)
+    setRulesErrors(validationErrors)
     const firstInvalidField = Object.keys(validationErrors)[0]
     if (firstInvalidField) { focusInvalidField(firstInvalidField); return }
-    // Conectar a etapa Regras e público aqui, reutilizando o mesmo draft.
-    feedback.info({ title: 'Alvos e benefícios validados.', description: 'A etapa Regras e público será implementada depois. Seus dados permanecem neste formulário.' })
+    // Conectar Escopo e canais aqui, reutilizando as três seções do draft.
+    feedback.info({ title: 'Regras e público validados.', description: 'A etapa Escopo e canais será implementada depois. Seus dados permanecem neste formulário.' })
   }
 
   const benefitValidation = validateCampaignBenefits(draft.benefits)
@@ -139,7 +152,7 @@ export function CreateCampaignPage() {
           ))}</ol>
         </nav>
 
-        <form ref={formRef} noValidate onSubmit={handleContinue} className={`create-campaign-form ${step === 2 ? 'create-campaign-form-benefits' : ''}`} aria-label="Informações da campanha">
+        <form ref={formRef} noValidate onSubmit={handleContinue} className={`create-campaign-form ${step > 1 ? 'create-campaign-form-benefits' : ''}`} aria-label="Informações da campanha">
           {step === 1 ? <section className="create-campaign-information" aria-labelledby="campaign-information-title">
             <h2 id="campaign-information-title" tabIndex={-1}>Informações básicas</h2>
             <p className="create-campaign-description">Identifique a campanha e defina quando ela poderá emitir vouchers.</p>
@@ -160,9 +173,10 @@ export function CreateCampaignPage() {
                 <Select label="Teto máximo" name="voucherCap" options={capOptions} value={information.voucherCap || null} onChange={value => updateField('voucherCap', value === 'unlimited' ? 'unlimited' : '')} isRequired validationBehavior="aria" errorMessage={errors.voucherCap} />
               </div>
             </section>
-          </section> : <CampaignBenefitsForm value={draft.benefits} errors={benefitsErrors}
+          </section> : step === 2 ? <CampaignBenefitsForm value={draft.benefits} errors={benefitsErrors}
             onChange={benefits => { setDraft(current => ({ ...current, benefits })); setBenefitsErrors({}) }}
-            onAddBenefit={handleAddBenefit} />}
+            onAddBenefit={handleAddBenefit} /> : <CampaignRulesForm value={draft.rules} errors={rulesErrors}
+              onChange={rules => { setDraft(current => ({ ...current, rules })); setRulesErrors({}) }} />}
 
           <aside className="create-campaign-summary" aria-labelledby="campaign-summary-title">
             <h2 id="campaign-summary-title">Resumo da configuração</h2>
@@ -170,7 +184,7 @@ export function CreateCampaignPage() {
             <p className="create-campaign-draft-status">Rascunho</p>
             <p className="create-campaign-summary-label">Itens obrigatórios</p>
             <ul>{requirements.map((requirement, index) => {
-              const complete = index === 0 ? basicInformationComplete : index === 1 ? benefitsComplete : index === 2 ? quantityComplete : false
+              const complete = index === 0 ? basicInformationComplete : index === 1 ? benefitsComplete : index === 2 ? quantityComplete : index === 3 ? visitedRules && draft.rules.audience === 'all' : false
               const Icon = complete ? Check : Circle
               return <li key={requirement} className={complete ? 'create-campaign-requirement-complete' : undefined}>
                 <Icon size={10} aria-hidden="true" />
@@ -183,7 +197,7 @@ export function CreateCampaignPage() {
           </aside>
 
           <footer className="create-campaign-actions">
-            {step === 2 && <Button className="create-campaign-back" type="button" variant="secondary" startIcon={ArrowLeft} onPress={() => setStep(1)}>Voltar</Button>}
+            {step > 1 && <Button className="create-campaign-back" type="button" variant="secondary" startIcon={ArrowLeft} onPress={() => setStep(step === 3 ? 2 : 1)}>Voltar</Button>}
             <Button type="button" variant="secondary" onPress={handleSaveDraft}>Salvar rascunho</Button>
             <Button type="submit" endIcon={ArrowRight}>Continuar</Button>
           </footer>

@@ -73,3 +73,19 @@
 - Removidos bloqueios condicionais dos inputs e seletores de Alvos e benefícios conforme pedido do usuário.
 - Radios preservam a seleção para validação; total previsto continua calculado.
 - Testes existentes atualizados para verificar edição e cálculo também no modo não selecionado.
+
+## Entrega 2026-10-14 — US-006
+- Regras e público integra o único CreateCampaignPage/CampaignDraft, com step1|2|3 e navegação validada entre etapas.
+- Público, combinações E/OU, coleções de condições/restrições editáveis com IDs estáveis e adição local.
+- Tipos/operadores revelados na referência; valores monetários válidos, mínimo obrigatório e máximo opcional >= mínimo.
+- Rascunhos anteriores recebem rules sem perder information/benefits. Campos da etapa 2 seguem editáveis.
+- Layout de altura natural reutilizado; sem canvas excedente ou scroll interno.
+- Etapa 4 pendente; feedback e handler preparados para Escopo e canais.
+- Build/test/verify aprovados: 55 testes. Sem lint; aviso Vite de bundle >500 kB. Revisão visual indisponível.
+- Spec US-006-regras-publico.md e relatório docs/CAMPAIGN_RULES.md. Branch inicialmente limpa; sem commit/push.
+
+## Ajuste 2026-10-14 — excluir condição
+- Cada condição recebe Excluir condição com ícone Lucide e botão compartilhado.
+- Itens preenchidos usam ConfirmationModal; vazios são removidos diretamente. Exclusão por ID preserva demais itens; foco retorna a Adicionar condição.
+- Permite remover a última condição e adicionar outra. Sem alterações nas restrições.
+- Build/verify aprovados com 58 testes (3 novos de exclusão). Sem commit/push.

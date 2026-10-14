@@ -18,6 +18,20 @@ export interface CampaignBenefit {
   value: string
 }
 
+export interface CampaignCondition {
+  id: string
+  type: 'purchase-total' | ''
+  operator: 'gte' | ''
+  value: string
+}
+
+export interface CampaignRestriction {
+  id: string
+  type: 'purchase-value' | ''
+  minimum: string
+  maximum: string
+}
+
 export interface CampaignDraft {
   information: {
     name: string
@@ -41,5 +55,12 @@ export interface CampaignDraft {
     limitPerCustomer: string
     customerBase: string
     quantityPerCustomer: string
+  }
+  rules: {
+    audience: 'all' | ''
+    conditionMatch: 'all' | 'any'
+    conditions: CampaignCondition[]
+    restrictionMatch: 'all' | 'any'
+    restrictions: CampaignRestriction[]
   }
 }
