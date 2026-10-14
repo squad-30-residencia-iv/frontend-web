@@ -22,6 +22,8 @@ import {
 import { CampaignRulesForm } from '../components/campaigns/create/CampaignRulesForm'
 import { validateCampaignRules, type CampaignRulesErrors } from '../data/campaignRules'
 import { CampaignInformationForm } from '../components/campaigns/create/CampaignInformationForm'
+import { CampaignScopeForm } from '../components/campaigns/create/CampaignScopeForm'
+import { validateCampaignScope, type CampaignScopeErrors } from '../data/campaignScope'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -31,11 +33,14 @@ export function CreateCampaignPage() {
   const [draft, setDraft] = useState(loadCampaignDraft)
   const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(draft))
   const [errors, setErrors] = useState<CampaignInformationErrors>({})
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [visitedBenefits, setVisitedBenefits] = useState(false)
   const [benefitsErrors, setBenefitsErrors] = useState<CampaignBenefitsErrors>({})
   const [visitedRules, setVisitedRules] = useState(false)
   const [rulesErrors, setRulesErrors] = useState<CampaignRulesErrors>({})
+  const [visitedScope, setVisitedScope] = useState(false)
+  const [scopeErrors, setScopeErrors] = useState<CampaignScopeErrors>({})
+  const pendingFocusRef = useRef<string | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const information = draft.information
@@ -44,7 +49,12 @@ export function CreateCampaignPage() {
 
   useEffect(() => {
     const heading = formRef.current?.querySelector<HTMLElement>('h2')
-    heading?.focus()
+    if (pendingFocusRef.current) {
+      focusInvalidField(pendingFocusRef.current)
+      pendingFocusRef.current = null
+    } else {
+      heading?.focus()
+    }
     heading?.scrollIntoView?.({ block: 'nearest' })
   }, [step])
 
@@ -74,7 +84,16 @@ export function CreateCampaignPage() {
     setRulesErrors({})
   }
 
+  function handleScopeChange(scope: CampaignDraft['scope']) {
+    setDraft(current => ({ ...current, scope }))
+    setScopeErrors({})
+  }
+
   function handleBack() {
+    if (step === 4) {
+      setStep(3)
+      return
+    }
     setStep(step === 3 ? 2 : 1)
   }
 
@@ -148,15 +167,55 @@ export function CreateCampaignPage() {
       setStep(3)
       return
     }
-    const validationErrors = validateCampaignRules(draft.rules)
-    setRulesErrors(validationErrors)
-    const firstInvalidField = Object.keys(validationErrors)[0]
-    if (firstInvalidField) {
-      focusInvalidField(firstInvalidField)
+    if (step === 3) {
+      const validationErrors = validateCampaignRules(draft.rules)
+      setRulesErrors(validationErrors)
+      const firstInvalidField = Object.keys(validationErrors)[0]
+      if (firstInvalidField) {
+        focusInvalidField(firstInvalidField)
+        return
+      }
+      setVisitedScope(true)
+      setStep(4)
       return
     }
-    // Conectar Escopo e canais aqui, reutilizando as três seções do draft.
-    feedback.info({ title: 'Regras e público validados.', description: 'A etapa Escopo e canais será implementada depois. Seus dados permanecem neste formulário.' })
+
+    // Antes de conectar a revisão, conferir todas as seções do rascunho.
+    const informationErrors = validateCampaignInformation(draft)
+    const benefitsValidation = validateCampaignBenefits(draft.benefits)
+    const rulesValidation = validateCampaignRules(draft.rules)
+    const scopeValidation = validateCampaignScope(draft.scope)
+
+    setErrors(informationErrors)
+    setBenefitsErrors(benefitsValidation)
+    setRulesErrors(rulesValidation)
+    setScopeErrors(scopeValidation)
+
+    const previousSteps = [
+      { step: 1 as const, errors: informationErrors },
+      { step: 2 as const, errors: benefitsValidation },
+      { step: 3 as const, errors: rulesValidation },
+    ]
+
+    for (const previous of previousSteps) {
+      const firstInvalidField = Object.keys(previous.errors)[0]
+      if (firstInvalidField) {
+        pendingFocusRef.current = firstInvalidField
+        setStep(previous.step)
+        return
+      }
+    }
+
+    const firstInvalidScopeField = Object.keys(scopeValidation)[0]
+    if (firstInvalidScopeField) {
+      focusInvalidField(firstInvalidScopeField)
+      return
+    }
+
+    feedback.info({
+      title: 'Escopo e canais validados.',
+      description: 'A etapa Revisão será implementada depois. Seu rascunho permanece preenchido.',
+    })
   }
   const benefitValidation = validateCampaignBenefits(draft.benefits)
   const benefitsComplete =
@@ -178,7 +237,7 @@ export function CreateCampaignPage() {
     { label: 'Alvos e benefícios', complete: benefitsComplete },
     { label: 'Quantidade de vouchers', complete: quantityComplete },
     { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all' },
-    { label: 'Escopo organizacional', complete: false },
+    { label: 'Escopo organizacional', complete: visitedScope },
     { label: 'Condições de geração', complete: false },
   ]
   return (
@@ -233,6 +292,11 @@ export function CreateCampaignPage() {
             value={draft.rules}
             errors={rulesErrors}
             onChange={handleRulesChange}
+          />}
+          {step === 4 && <CampaignScopeForm
+            value={draft.scope}
+            errors={scopeErrors}
+            onChange={handleScopeChange}
           />}
           <aside className="create-campaign-summary" aria-labelledby="campaign-summary-title">
             <h2 id="campaign-summary-title">Resumo da configuração</h2>

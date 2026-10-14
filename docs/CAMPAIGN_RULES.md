@@ -49,3 +49,6 @@ Sugestão de commit para revisão: feat(campaigns): integra regras e público ao
 
 ## Exclusão de condições — atualização 2026-10-14
 Cada condição agora tem Excluir condição, conforme novo pedido. Valores preenchidos exigem confirmação pelo componente compartilhado; condição vazia é removida diretamente. A exclusão usa ID estável, preserva os demais itens e devolve foco a Adicionar condição. Pode excluir a última e adicionar novamente; restrições não foram alteradas.
+
+## Atualização US-008
+Continuar da terceira etapa agora abre Escopo e canais após validação. Voltar preserva todas as seções. Conforme escolha explícita do usuário, Revisão permanece pendente após validar a quarta etapa; não há conclusão simulada ainda. Detalhes em [CAMPAIGN_SCOPE.md](CAMPAIGN_SCOPE.md).

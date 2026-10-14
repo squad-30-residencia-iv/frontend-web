@@ -1,6 +1,7 @@
 import type { CampaignDraft } from '../types/campaign'
 import { isCampaignBenefits, newCampaignBenefits } from './campaignBenefits'
 import { isCampaignRules, newCampaignRules } from './campaignRules'
+import { isCampaignScope, newCampaignScope } from './campaignScope'
 
 export const campaignDraftStorageKey = 'portal-campaigns:creation-draft:v1'
 export const initialCampaignDraft: CampaignDraft = {
@@ -14,6 +15,7 @@ export const initialCampaignDraft: CampaignDraft = {
   },
   benefits: newCampaignBenefits(),
   rules: newCampaignRules(),
+  scope: newCampaignScope(),
 }
 
 function isCampaignDraft(value: unknown): value is Pick<CampaignDraft, 'information'> {
@@ -35,12 +37,13 @@ export function loadCampaignDraft(): CampaignDraft {
     if (isCampaignDraft(value)) {
       const benefits = 'benefits' in value && isCampaignBenefits(value.benefits) ? value.benefits : newCampaignBenefits()
       const rules = 'rules' in value && isCampaignRules(value.rules) ? value.rules : newCampaignRules()
-      return { information: value.information, benefits, rules }
+      const scope = 'scope' in value && isCampaignScope(value.scope) ? value.scope : newCampaignScope()
+      return { information: value.information, benefits, rules, scope }
     }
   } catch {
     // Armazenamento indisponível ou rascunho inválido: iniciar um formulário novo.
   }
-  return { information: { ...initialCampaignDraft.information }, benefits: newCampaignBenefits(), rules: newCampaignRules() }
+  return { information: { ...initialCampaignDraft.information }, benefits: newCampaignBenefits(), rules: newCampaignRules(), scope: newCampaignScope() }
 }
 
 export type CampaignInformationErrors = Partial<Record<keyof CampaignDraft['information'], string>>

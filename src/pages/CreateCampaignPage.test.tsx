@@ -265,8 +265,8 @@ describe('Alvos e benefícios', () => {
     await user.type(grant, '2')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
-    expect(screen.queryByRole('heading', { name: 'Escopo e canais' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Escopo Organizacional' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
   })
 
   it('calcula lote por base e quantidade, ignorando campos automáticos inativos', async () => {
@@ -364,7 +364,7 @@ describe('Regras e público', () => {
     await user.type(within(second).getByRole('textbox', { name: 'Valor' }), '350,50')
     await user.type(within(restriction).getByRole('textbox', { name: 'Mínimo' }), '50')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(await screen.findByText('Regras e público validados.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
   })
 
   it('valida mínimo e máximo e permite máximo sem limite', async () => {
@@ -375,7 +375,8 @@ describe('Regras e público', () => {
     expect(screen.getByText('O máximo não pode ser menor que o mínimo.')).toBeVisible()
     await user.clear(maximum)
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(await screen.findByText('Regras e público validados.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
     const minimum = screen.getByRole('textbox', { name: 'Mínimo' })
     await user.clear(minimum)
     await user.type(minimum, '-1')
@@ -397,7 +398,7 @@ describe('Regras e público', () => {
     await user.click(screen.getByRole('button', { name: /Operador/ }))
     await user.click(await screen.findByRole('option', { name: 'Maior ou igual a' }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(await screen.findByText('Regras e público validados.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
   })
 
   it('preserva as três etapas, as coleções e as combinações ao voltar e avançar', async () => {
@@ -417,7 +418,7 @@ describe('Regras e público', () => {
     expect(screen.getByRole('radio', { name: 'Pelo menos uma restrição — OU' })).toBeChecked()
   })
 
-  it('salva e restaura regras e mantém a quarta etapa pendente', async () => {
+  it('salva e restaura regras e avança para a quarta etapa', async () => {
     const user = await openRules()
     const amount = screen.getByRole('textbox', { name: 'Valor' })
     await user.clear(amount)
@@ -429,9 +430,9 @@ describe('Regras e público', () => {
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('450,00')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(await screen.findByText('Regras e público validados.')).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
-    expect(screen.queryByRole('heading', { name: 'Escopo e canais' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
   })
 
   it('migra rascunhos sem regras preservando as duas primeiras etapas', async () => {
@@ -482,5 +483,147 @@ describe('Exclusão de condições', () => {
     expect(screen.getByRole('button', { name: 'Adicionar condição +' })).toHaveFocus()
     await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
     expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('')
+  })
+})
+
+async function openScope(scope = initialCampaignDraft.scope) {
+  localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+    ...initialCampaignDraft,
+    information: { ...initialCampaignDraft.information, name: 'Campanha de escopo' },
+    scope,
+  }))
+  const user = setup()
+
+  for (let step = 1; step <= 3; step += 1) {
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  }
+
+  return user
+}
+
+describe('Escopo e canais', () => {
+  it('avança da terceira etapa, marca progresso e mostra os campos editáveis', async () => {
+    await openScope()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toHaveFocus()
+    const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
+    expect(within(summary).getByText('Escopo organizacional').closest('li')).toHaveTextContent('Escopo organizacional: completo')
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    expect(within(progress).getByText('Escopo e canais').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(progress).getByText('Regras e público').closest('li')).toHaveTextContent('concluída')
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).not.toBeChecked()
+    expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toBeEnabled()
+    for (const checkbox of screen.getAllByRole('checkbox')) expect(checkbox).toBeEnabled()
+  })
+
+  it('não avança da terceira etapa com regras inválidas', async () => {
+    const user = await openRules()
+    await user.clear(screen.getByRole('textbox', { name: 'Valor' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Escopo Organizacional' })).not.toBeInTheDocument()
+  })
+
+  it('valida lojas e canais e foca a busca sem apagar os dados anteriores', async () => {
+    const user = await openScope()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Adicione ao menos uma loja específica.')).toBeVisible()
+    expect(screen.getByText('Selecione ao menos um canal para as lojas específicas.')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+  })
+
+  it('valida toda a rede, permite ambos os canais e deixa a revisão pendente', async () => {
+    const user = await openScope()
+    await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione ao menos um canal para toda a rede.')).toBeVisible()
+    const channels = screen.getByRole('group', { name: 'Canais de toda a rede' })
+    expect(within(channels).getByRole('checkbox', { name: 'Físico' })).toHaveFocus()
+    await user.click(within(channels).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(await screen.findByText('Escopo e canais validados.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+    expect(within(channels).getByRole('checkbox', { name: 'Físico' })).toBeChecked()
+    expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
+  })
+
+  it('busca por código e nome, adiciona lojas e valida os canais específicos', async () => {
+    const user = await openScope()
+    const search = screen.getByRole('textbox', { name: 'Buscar lojas' })
+    await user.type(search, '002')
+    await user.click(screen.getByRole('button', { name: 'Adicionar loja 002 — Loja Shopping' }))
+    expect(search).toHaveValue('')
+    expect(screen.getByRole('list', { name: 'Lojas selecionadas' })).toHaveTextContent('002 — Loja Shopping')
+    await user.type(search, 'centro')
+    await user.click(screen.getByRole('button', { name: 'Adicionar loja 001 — Loja Centro' }))
+    const channels = screen.getByRole('group', { name: 'Canais das lojas específicas' })
+    await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(await screen.findByText('Escopo e canais validados.')).toBeVisible()
+    expect(screen.getByRole('list', { name: 'Lojas selecionadas' }).children).toHaveLength(2)
+  })
+
+  it('mostra busca vazia, remove loja selecionada e permite desmarcar os canais', async () => {
+    const user = await openScope({ ...initialCampaignDraft.scope, storeIds: ['store-center'], storeChannels: ['physical'] })
+    const search = screen.getByRole('textbox', { name: 'Buscar lojas' })
+    await user.type(search, 'inexistente')
+    expect(screen.getByRole('heading', { name: 'Nenhuma loja encontrada' })).toBeVisible()
+    await user.clear(search)
+    await user.click(screen.getByRole('button', { name: 'Remover loja 001 — Loja Centro' }))
+    const channels = screen.getByRole('group', { name: 'Canais das lojas específicas' })
+    await user.click(within(channels).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Adicione ao menos uma loja específica.')).toBeVisible()
+    expect(screen.getByText('Selecione ao menos um canal para as lojas específicas.')).toBeVisible()
+  })
+
+  it('preserva as quatro etapas ao voltar e mantém escolhas alternativas do escopo', async () => {
+    const user = await openScope({
+      ...initialCampaignDraft.scope,
+      storeIds: ['store-shopping'],
+      storeChannels: ['virtual'],
+      networkChannels: ['physical'],
+    })
+    await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toHaveValue('20')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
+    for (let step = 1; step <= 3; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    expect(screen.getByRole('list', { name: 'Lojas selecionadas' })).toHaveTextContent('Loja Shopping')
+    expect(within(screen.getByRole('group', { name: 'Canais das lojas específicas' })).getByRole('checkbox', { name: 'Virtual' })).toBeChecked()
+    expect(within(screen.getByRole('group', { name: 'Canais de toda a rede' })).getByRole('checkbox', { name: 'Físico' })).toBeChecked()
+  })
+
+  it('salva e restaura o escopo junto com o rascunho', async () => {
+    const user = await openScope()
+    await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
+    await user.click(within(screen.getByRole('group', { name: 'Canais de toda a rede' })).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    for (let step = 1; step <= 3; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    expect(within(screen.getByRole('group', { name: 'Canais de toda a rede' })).getByRole('checkbox', { name: 'Físico' })).toBeChecked()
+  })
+
+  it('migra rascunho de três etapas sem perder as informações salvas', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+      information: { ...initialCampaignDraft.information, name: 'Rascunho de três etapas' },
+      benefits: initialCampaignDraft.benefits,
+      rules: initialCampaignDraft.rules,
+    }))
+    const user = setup()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Rascunho de três etapas')
+    for (let step = 1; step <= 3; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).not.toBeChecked()
+    expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toHaveValue('')
   })
 })

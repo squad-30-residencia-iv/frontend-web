@@ -98,3 +98,13 @@
 - Visual, textos, validações, persistência e fluxo preservados. Sem dependências ou mudanças no login.
 - Build e verify aprovados com 58 testes; aviso habitual de bundle. Sem testes novos por ser refatoração; suíte existente mantida.
 - Sem commit/push. Sugestão: refactor(campaigns): melhora legibilidade das telas e formulários.
+
+## Entrega 2026-10-14 — US-008
+- Quarta etapa Escopo e canais integrada ao mesmo CreateCampaignPage/CampaignDraft, preservando legibilidade e dados das quatro seções.
+- Toda a rede ou lojas específicas, busca local por código/nome, adição/remoção e canais físico/virtual editáveis.
+- Rascunhos antigos recebem scope default; catálogo de três lojas demonstrativas separado da renderização.
+- Validação de lojas/canais e revalidação das etapas anteriores com retorno/foco ao primeiro erro.
+- Usuário esclareceu: validar a quarta etapa e deixar Revisão pendente. Sem conclusão simulada, limpeza do rascunho ou atualização da listagem nesta etapa.
+- Altura natural, sem canvas excedente ou scroll interno; layout/componentes base reaproveitados.
+- Build aprovado; verify aprovado com 67 testes (9 novos). Sem lint; aviso Vite de bundle >500 kB. Revisão visual não realizada.
+- Relatório docs/CAMPAIGN_SCOPE.md; spec US-008-escopo-canais.md concluída. Sem commit/push.

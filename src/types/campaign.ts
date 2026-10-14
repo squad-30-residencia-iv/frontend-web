@@ -32,6 +32,8 @@ export interface CampaignRestriction {
   maximum: string
 }
 
+export type CampaignChannel = 'physical' | 'virtual'
+
 export interface CampaignDraft {
   information: {
     name: string
@@ -62,5 +64,11 @@ export interface CampaignDraft {
     conditions: CampaignCondition[]
     restrictionMatch: 'all' | 'any'
     restrictions: CampaignRestriction[]
+  }
+  scope: {
+    mode: 'network' | 'stores'
+    networkChannels: CampaignChannel[]
+    storeIds: string[]
+    storeChannels: CampaignChannel[]
   }
 }
