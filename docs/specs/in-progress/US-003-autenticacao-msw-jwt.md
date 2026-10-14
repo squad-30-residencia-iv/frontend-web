@@ -119,7 +119,7 @@ export interface JwtPayload { sub: string; exp: number; iat?: number } // exp em
 
 Ordem do `agents.md`: tipos, integrações, telas e testes. Marque cada item com `[x]` ao concluir.
 
-- [ ] 0. Dependências (`react-router`, `axios`, `msw`), `.gitignore`, `.env.example`, `src/vite-env.d.ts` e `public/mockServiceWorker.js`
+- [x] 0. Dependências (`react-router`, `axios`, `msw`), `.gitignore`, `.env.example`, `src/vite-env.d.ts` e `public/mockServiceWorker.js`
 - [ ] 1. Tipos e type guards (`src/services/auth.types.ts`)
 - [ ] 2. `src/services/tokenStorage.ts` (guardar, ler, limpar, decodificar JWT, checar expiração)
 - [ ] 3. `src/services/api.ts` (instância Axios + interceptores de Bearer e de 401)
