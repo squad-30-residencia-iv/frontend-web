@@ -1,7 +1,7 @@
 import type { CampaignDraft } from '../types/campaign'
-import { isCampaignBenefits, newCampaignBenefits } from './campaignBenefits'
-import { isCampaignRules, newCampaignRules } from './campaignRules'
-import { isCampaignScope, newCampaignScope } from './campaignScope'
+import { isCampaignBenefits, newCampaignBenefits, validateCampaignBenefits } from './campaignBenefits'
+import { isCampaignRules, newCampaignRules, validateCampaignRules } from './campaignRules'
+import { isCampaignScope, newCampaignScope, validateCampaignScope } from './campaignScope'
 
 export const campaignDraftStorageKey = 'portal-campaigns:creation-draft:v1'
 export const initialCampaignDraft: CampaignDraft = {
@@ -67,4 +67,28 @@ export function validateCampaignInformation({ information }: CampaignDraft): Cam
   if (!information.voucherDurationDays.trim() || !Number.isSafeInteger(days) || days <= 0) errors.voucherDurationDays = 'Informe uma quantidade inteira de dias maior que zero.'
   if (!information.voucherCap) errors.voucherCap = 'Selecione o teto máximo.'
   return errors
+}
+
+export function validateCampaignDraft(draft: CampaignDraft) {
+  const information = validateCampaignInformation(draft)
+  const benefits = validateCampaignBenefits(draft.benefits)
+  const rules = validateCampaignRules(draft.rules)
+  const scope = validateCampaignScope(draft.scope)
+  const stages = [
+    { step: 1 as const, errors: information },
+    { step: 2 as const, errors: benefits },
+    { step: 3 as const, errors: rules },
+    { step: 4 as const, errors: scope },
+  ]
+  const invalidStage = stages.find(stage => Object.keys(stage.errors).length > 0)
+
+  return {
+    information,
+    benefits,
+    rules,
+    scope,
+    firstInvalid: invalidStage
+      ? { step: invalidStage.step, field: Object.keys(invalidStage.errors)[0] }
+      : null,
+  }
 }

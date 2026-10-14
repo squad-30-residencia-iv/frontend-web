@@ -108,3 +108,13 @@
 - Altura natural, sem canvas excedente ou scroll interno; layout/componentes base reaproveitados.
 - Build aprovado; verify aprovado com 67 testes (9 novos). Sem lint; aviso Vite de bundle >500 kB. Revisão visual não realizada.
 - Relatório docs/CAMPAIGN_SCOPE.md; spec US-008-escopo-canais.md concluída. Sem commit/push.
+
+## Entrega 2026-10-14 — US-009
+- Quinta etapa Revisão integrada ao mesmo CampaignDraft; quarta preservada como Escopo e canais.
+- Três seções da referência apresentam dados reais das quatro etapas, com datas, reais, percentuais, nomes de IDs, listas e limites formatados por helper puro.
+- Voltar5->4 preserva dados; correções pelas etapas anteriores atualizam a revisão. Sem inventar Editar ausente na imagem.
+- Validador geral reutiliza validadores existentes, retorna à primeira etapa inválida e foca o campo; usado antes da revisão e ao salvar.
+- Salvar conclui de forma simulada, remove só o rascunho local existente, mostra sucesso e retorna ao gerenciamento. Novo formulário inicia limpo; falha de limpeza mantém dados e informa erro.
+- Listagem segue mockada, sem nova persistência/API/timeout. Layout com altura natural e sem sobra do canvas.
+- Build aprovado; test aprovado e verify final com80 testes (13 novos). Sem lint; aviso Vite de bundle >500kB. Revisão visual não realizada.
+- Relatório docs/CAMPAIGN_REVIEW.md; spec US-009-revisao-campanha.md concluída. Sem commit/push.

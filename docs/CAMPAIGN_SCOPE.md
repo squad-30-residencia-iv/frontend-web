@@ -47,3 +47,6 @@ Sugestão de commit para revisão: feat(campaigns): integra escopo e canais ao f
 
 ## Ajuste do resumo — 2026-10-14
 Escopo organizacional fica marcado ao acessar a quarta etapa, conforme pedido explícito do usuário. A marcação representa progresso; campos obrigatórios de lojas/canais continuam sendo validados ao continuar.
+
+## Atualização US-009
+Revisão agora está implementada como quinta etapa. Continuar da quarta valida o fluxo e abre a revisão; Voltar mantém o escopo editável. Salvar na quinta revalida e conclui de forma simulada, com limpeza do rascunho e retorno ao gerenciamento. Detalhes em [CAMPAIGN_REVIEW.md](CAMPAIGN_REVIEW.md).

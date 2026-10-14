@@ -533,7 +533,7 @@ describe('Escopo e canais', () => {
     expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
   })
 
-  it('valida toda a rede, permite ambos os canais e deixa a revisão pendente', async () => {
+  it('valida toda a rede e avança para a revisão', async () => {
     const user = await openScope()
     await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
@@ -543,11 +543,9 @@ describe('Escopo e canais', () => {
     await user.click(within(channels).getByRole('checkbox', { name: 'Físico' }))
     await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(await screen.findByText('Escopo e canais validados.')).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
-    expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
     expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
-    expect(within(channels).getByRole('checkbox', { name: 'Físico' })).toBeChecked()
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Físico, Virtual')
     expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
   })
 
@@ -563,8 +561,9 @@ describe('Escopo e canais', () => {
     const channels = screen.getByRole('group', { name: 'Canais das lojas específicas' })
     await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(await screen.findByText('Escopo e canais validados.')).toBeVisible()
-    expect(screen.getByRole('list', { name: 'Lojas selecionadas' }).children).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Loja Shopping')
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Loja Centro')
   })
 
   it('mostra busca vazia, remove loja selecionada e permite desmarcar os canais', async () => {
@@ -626,4 +625,97 @@ describe('Escopo e canais', () => {
     expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).not.toBeChecked()
     expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toHaveValue('')
   })
+})
+
+async function openReview() {
+  const user = await openScope({
+    ...initialCampaignDraft.scope,
+    mode: 'network',
+    networkChannels: ['physical', 'virtual'],
+  })
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  return user
+}
+
+describe('Revisão geral', () => {
+  it('mostra a quinta etapa com dados reais formatados e resumo completo', async () => {
+    await openReview()
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toHaveFocus()
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    expect(within(progress).getByText('Revisão').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(progress).getByText('Escopo e canais').closest('li')).toHaveTextContent('concluída')
+    const information = screen.getByRole('region', { name: 'Informações' })
+    expect(information).toHaveTextContent('Campanha de escopo')
+    expect(information).toHaveTextContent('01/10/2026 08:00 a 31/10/2026 23:59')
+    expect(information).toHaveTextContent('30 dias após a emissão')
+    expect(information).toHaveTextContent('Toda a rede')
+    expect(information).toHaveTextContent('Físico, Virtual')
+    expect(screen.getByRole('region', { name: 'Alvo e benefícios' })).toHaveTextContent('20%')
+    expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent(/R\$\s*200,00/)
+    expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent('Sem limite')
+    const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
+    expect(within(summary).getByText('Condições de geração').closest('li')).toHaveTextContent('completo')
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled()
+  })
+
+  it('volta ao escopo, permite corrigir dados e atualiza a revisão', async () => {
+    const user = await openReview()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    const channels = screen.getByRole('group', { name: 'Canais de toda a rede' })
+    await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    const name = screen.getByRole('textbox', { name: 'Nome da campanha' })
+    await user.clear(name)
+    await user.type(name, 'Campanha revisada')
+    for (let step = 1; step <= 4; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha revisada')
+    expect(screen.getByRole('region', { name: 'Informações' })).not.toHaveTextContent('Virtual')
+  })
+
+  it('salva de forma simulada, retorna ao gerenciamento e inicia outro formulário limpo', async () => {
+    const user = await openReview()
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(await screen.findByText('Campanha criada com sucesso.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    expect(window.location.pathname).toBe('/campanhas')
+    expect(localStorage.getItem(campaignDraftStorageKey)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('')
+    expect(screen.getByText('Informações').closest('li')).toHaveAttribute('aria-current', 'step')
+  })
+
+  it('preserva revisão e dados quando não consegue limpar o rascunho local', async () => {
+    const user = await openReview()
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('Storage indisponível') })
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(await screen.findByText('Não foi possível concluir o salvamento.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha de escopo')
+    expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+  })
+})
+
+it('revalida ao salvar e retorna à etapa apontada sem descartar o rascunho', async () => {
+  const user = await openReview()
+  const validationModule = await import('../data/campaignDraft')
+  const invalidValidation = validationModule.validateCampaignDraft({
+    ...initialCampaignDraft,
+    information: { ...initialCampaignDraft.information, name: '' },
+    scope: { ...initialCampaignDraft.scope, mode: 'network', networkChannels: ['physical'] },
+  })
+  // Exercita a defesa do salvamento caso a validação geral passe a rejeitar a campanha.
+  vi.spyOn(validationModule, 'validateCampaignDraft').mockReturnValue(invalidValidation)
+
+  await user.click(screen.getByRole('button', { name: 'Salvar' }))
+  expect(screen.getByRole('heading', { name: 'Informações básicas' })).toBeVisible()
+  expect(screen.getByText('Informe o nome da campanha.')).toBeVisible()
+  expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveFocus()
+  expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
+  expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
+  expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
 })

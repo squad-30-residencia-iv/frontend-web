@@ -9,6 +9,7 @@ import {
   campaignDraftStorageKey,
   loadCampaignDraft,
   validateCampaignInformation,
+  validateCampaignDraft,
   type CampaignInformationErrors,
 } from '../data/campaignDraft'
 import { navigate } from '../navigation/navigate'
@@ -23,7 +24,8 @@ import { CampaignRulesForm } from '../components/campaigns/create/CampaignRulesF
 import { validateCampaignRules, type CampaignRulesErrors } from '../data/campaignRules'
 import { CampaignInformationForm } from '../components/campaigns/create/CampaignInformationForm'
 import { CampaignScopeForm } from '../components/campaigns/create/CampaignScopeForm'
-import { validateCampaignScope, type CampaignScopeErrors } from '../data/campaignScope'
+import type { CampaignScopeErrors } from '../data/campaignScope'
+import { CampaignReview } from '../components/campaigns/create/CampaignReview'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -33,7 +35,7 @@ export function CreateCampaignPage() {
   const [draft, setDraft] = useState(loadCampaignDraft)
   const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(draft))
   const [errors, setErrors] = useState<CampaignInformationErrors>({})
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
   const [visitedBenefits, setVisitedBenefits] = useState(false)
   const [benefitsErrors, setBenefitsErrors] = useState<CampaignBenefitsErrors>({})
   const [visitedRules, setVisitedRules] = useState(false)
@@ -90,6 +92,10 @@ export function CreateCampaignPage() {
   }
 
   function handleBack() {
+    if (step === 5) {
+      setStep(4)
+      return
+    }
     if (step === 4) {
       setStep(3)
       return
@@ -180,42 +186,41 @@ export function CreateCampaignPage() {
       return
     }
 
-    // Antes de conectar a revisão, conferir todas as seções do rascunho.
-    const informationErrors = validateCampaignInformation(draft)
-    const benefitsValidation = validateCampaignBenefits(draft.benefits)
-    const rulesValidation = validateCampaignRules(draft.rules)
-    const scopeValidation = validateCampaignScope(draft.scope)
+    const validation = validateCampaignDraft(draft)
+    setErrors(validation.information)
+    setBenefitsErrors(validation.benefits)
+    setRulesErrors(validation.rules)
+    setScopeErrors(validation.scope)
 
-    setErrors(informationErrors)
-    setBenefitsErrors(benefitsValidation)
-    setRulesErrors(rulesValidation)
-    setScopeErrors(scopeValidation)
-
-    const previousSteps = [
-      { step: 1 as const, errors: informationErrors },
-      { step: 2 as const, errors: benefitsValidation },
-      { step: 3 as const, errors: rulesValidation },
-    ]
-
-    for (const previous of previousSteps) {
-      const firstInvalidField = Object.keys(previous.errors)[0]
-      if (firstInvalidField) {
-        pendingFocusRef.current = firstInvalidField
-        setStep(previous.step)
-        return
+    if (validation.firstInvalid) {
+      const { step: invalidStep, field } = validation.firstInvalid
+      if (invalidStep === step) {
+        focusInvalidField(field)
+      } else {
+        pendingFocusRef.current = field
+        setStep(invalidStep)
       }
-    }
-
-    const firstInvalidScopeField = Object.keys(scopeValidation)[0]
-    if (firstInvalidScopeField) {
-      focusInvalidField(firstInvalidScopeField)
       return
     }
 
-    feedback.info({
-      title: 'Escopo e canais validados.',
-      description: 'A etapa Revisão será implementada depois. Seu rascunho permanece preenchido.',
-    })
+    if (step === 4) {
+      setStep(5)
+      return
+    }
+
+    // A conclusão é local; não há API nem persistência de campanhas criadas.
+    try {
+      localStorage.removeItem(campaignDraftStorageKey)
+    } catch {
+      feedback.error({
+        title: 'Não foi possível concluir o salvamento.',
+        description: 'Não foi possível limpar o rascunho local. Seus dados foram preservados; tente novamente.',
+      })
+      return
+    }
+
+    feedback.success({ title: 'Campanha criada com sucesso.' })
+    navigate('/campanhas')
   }
   const benefitValidation = validateCampaignBenefits(draft.benefits)
   const benefitsComplete =
@@ -238,7 +243,7 @@ export function CreateCampaignPage() {
     { label: 'Quantidade de vouchers', complete: quantityComplete },
     { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all' },
     { label: 'Escopo organizacional', complete: visitedScope },
-    { label: 'Condições de geração', complete: false },
+    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft).firstInvalid === null },
   ]
   return (
     <PortalLayout onCampaignNavigate={handleReturn}>
@@ -298,6 +303,7 @@ export function CreateCampaignPage() {
             errors={scopeErrors}
             onChange={handleScopeChange}
           />}
+          {step === 5 && <CampaignReview draft={draft} />}
           <aside className="create-campaign-summary" aria-labelledby="campaign-summary-title">
             <h2 id="campaign-summary-title">Resumo da configuração</h2>
             <p className="create-campaign-summary-label">Status</p>
@@ -338,7 +344,7 @@ export function CreateCampaignPage() {
               variant="secondary"
               onPress={handleSaveDraft}
             >Salvar rascunho</Button>
-            <Button type="submit" endIcon={ArrowRight}>Continuar</Button>
+            <Button type="submit" endIcon={ArrowRight}>{step === 5 ? 'Salvar' : 'Continuar'}</Button>
           </footer>
         </form>
         <Modal
