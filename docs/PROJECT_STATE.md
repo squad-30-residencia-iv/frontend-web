@@ -89,3 +89,12 @@
 - Itens preenchidos usam ConfirmationModal; vazios são removidos diretamente. Exclusão por ID preserva demais itens; foco retorna a Adicionar condição.
 - Permite remover a última condição e adicionar outra. Sem alterações nas restrições.
 - Build/verify aprovados com 58 testes (3 novos de exclusão). Sem commit/push.
+
+## Entrega 2026-10-14 — US-007: legibilidade
+- JSX das telas/componentes exclusivos expandido, com props em linhas separadas; CSS formatado em blocos de propriedades.
+- Primeira etapa isolada em CampaignInformationForm, consistente com BenefitsForm e RulesForm, mantendo o único estado na página.
+- Renderização explícita por etapa; resumo usa itens nomeados/completos em vez de ternário encadeado por índice.
+- Filtros do gerenciamento têm condições nomeadas; callbacks de busca/status/período/limpeza/aprovação e mudanças de etapa extraídos em handlers.
+- Visual, textos, validações, persistência e fluxo preservados. Sem dependências ou mudanças no login.
+- Build e verify aprovados com 58 testes; aviso habitual de bundle. Sem testes novos por ser refatoração; suíte existente mantida.
+- Sem commit/push. Sugestão: refactor(campaigns): melhora legibilidade das telas e formulários.

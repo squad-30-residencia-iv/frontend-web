@@ -445,7 +445,7 @@ describe('Regras e público', () => {
   })
 })
 
- describe('Exclusão de condições', () => {
+describe('Exclusão de condições', () => {
   it('remove condição vazia diretamente e preserva as outras', async () => {
     const user = await openRules()
     await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
