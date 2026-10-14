@@ -58,3 +58,18 @@
 - Navegador integrado indisponível; revisão visual não realizada.
 - Spec concluída US-004-criacao-campanha-informacoes.md; relatório docs/CREATE_CAMPAIGN.md.
 - Branch feat/02-criacao_campanhas inicialmente limpa no repositório frontend-web. Sem commit/push.
+
+## Entrega 2026-10-13 — US-005
+- Segunda etapa Alvos e benefícios integrada ao mesmo CreateCampaignPage/CampaignDraft; avanço validado e retorno sem perda de dados.
+- Descontos, alvos múltiplos, máximo de vouchers, geração automática/lote e total calculado; opções locais demonstrativas.
+- Select compartilhado suporta multiple mantendo single padrão; APIs conferidas nas tipagens instaladas.
+- Rascunhos anteriores migram preservando information. Salvamento existente inclui benefits.
+- Etapa 2 com altura natural/rolagem normal do documento, sem sobra de captura ou min-height artificial.
+- Etapa 3 pendente; handleContinue preparado e feedback compartilhado. Login/gerenciamento preservados.
+- Build/test/verify aprovados: 46 testes. Sem lint. Aviso Vite de bundle >500 kB; revisão visual indisponível.
+- Relatório docs/CAMPAIGN_BENEFITS.md; spec US-005-alvos-beneficios.md concluída. Sem commit/push.
+
+## Ajuste 2026-10-14 — edição da segunda etapa
+- Removidos bloqueios condicionais dos inputs e seletores de Alvos e benefícios conforme pedido do usuário.
+- Radios preservam a seleção para validação; total previsto continua calculado.
+- Testes existentes atualizados para verificar edição e cálculo também no modo não selecionado.

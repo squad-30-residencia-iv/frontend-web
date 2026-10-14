@@ -49,3 +49,6 @@ npm run build aprovado; aviso Vite de bundle JS maior que 500 kB.
 npm test -- --run e npm run verify aprovados: 36 testes em 4 arquivos (11 novos e teste do botão existente atualizado).
 Sem script de lint. git diff --check, git status e git diff --stat executados no repositório frontend-web.
 Sugestão de commit para revisão: feat(campaigns): adiciona primeira etapa de criação e navegação.
+
+## Atualização US-005 — segunda etapa
+Alvos e benefícios agora está implementada no mesmo formulário. Continuar valida a primeira etapa e avança; Voltar preserva os dados de ambas. Rascunhos salvos incluem benefits com migração do formato anterior. A próxima etapa pendente passa a ser Regras e público. Detalhes e validação em [CAMPAIGN_BENEFITS.md](CAMPAIGN_BENEFITS.md).

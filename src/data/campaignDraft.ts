@@ -1,4 +1,5 @@
 import type { CampaignDraft } from '../types/campaign'
+import { isCampaignBenefits, newCampaignBenefits } from './campaignBenefits'
 
 export const campaignDraftStorageKey = 'portal-campaigns:creation-draft:v1'
 export const initialCampaignDraft: CampaignDraft = {
@@ -10,9 +11,10 @@ export const initialCampaignDraft: CampaignDraft = {
     voucherDurationDays: '30',
     voucherCap: 'unlimited',
   },
+  benefits: newCampaignBenefits(),
 }
 
-function isCampaignDraft(value: unknown): value is CampaignDraft {
+function isCampaignDraft(value: unknown): value is Pick<CampaignDraft, 'information'> {
   if (!value || typeof value !== 'object' || !('information' in value)) return false
   const information = value.information
   return Boolean(information && typeof information === 'object'
@@ -28,11 +30,14 @@ export function loadCampaignDraft(): CampaignDraft {
   try {
     const stored = localStorage.getItem(campaignDraftStorageKey)
     const value: unknown = stored ? JSON.parse(stored) : null
-    if (isCampaignDraft(value)) return value
+    if (isCampaignDraft(value)) {
+      const benefits = 'benefits' in value && isCampaignBenefits(value.benefits) ? value.benefits : newCampaignBenefits()
+      return { information: value.information, benefits }
+    }
   } catch {
     // Armazenamento indisponível ou rascunho inválido: iniciar um formulário novo.
   }
-  return { information: { ...initialCampaignDraft.information } }
+  return { information: { ...initialCampaignDraft.information }, benefits: newCampaignBenefits() }
 }
 
 export type CampaignInformationErrors = Partial<Record<keyof CampaignDraft['information'], string>>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
-import { ArrowRight, Check, Circle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
 import { PortalLayout } from '../components/layout/PortalLayout'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -10,6 +10,8 @@ import { useFeedback } from '../components/ui/useFeedback'
 import { campaignDraftStorageKey, loadCampaignDraft, validateCampaignInformation, type CampaignInformationErrors } from '../data/campaignDraft'
 import { navigate } from '../navigation/navigate'
 import type { CampaignDraft } from '../types/campaign'
+import { CampaignBenefitsForm } from '../components/campaigns/create/CampaignBenefitsForm'
+import { validateCampaignBenefits, validateDiscount, type CampaignBenefitsErrors } from '../data/campaignBenefits'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -22,11 +24,20 @@ export function CreateCampaignPage() {
   const [draft, setDraft] = useState(loadCampaignDraft)
   const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(draft))
   const [errors, setErrors] = useState<CampaignInformationErrors>({})
+  const [step, setStep] = useState<1 | 2>(1)
+  const [visitedBenefits, setVisitedBenefits] = useState(false)
+  const [benefitsErrors, setBenefitsErrors] = useState<CampaignBenefitsErrors>({})
   const [discardOpen, setDiscardOpen] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const information = draft.information
   const dirty = JSON.stringify(draft) !== savedDraft
   const basicInformationComplete = Object.keys(validateCampaignInformation(draft)).length === 0
+
+  useEffect(() => {
+    const heading = formRef.current?.querySelector<HTMLElement>('h2')
+    heading?.focus()
+    heading?.scrollIntoView?.({ block: 'nearest' })
+  }, [step])
 
   useEffect(() => {
     if (!dirty) return
@@ -64,20 +75,49 @@ export function CreateCampaignPage() {
     }
   }
 
-  function handleContinue(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const validationErrors = validateCampaignInformation(draft)
-    setErrors(validationErrors)
-    const firstInvalidField = Object.keys(validationErrors)[0]
-    if (firstInvalidField) {
-      const field = formRef.current?.querySelector<HTMLElement>(`[name="${firstInvalidField}"]`)
-      const focusTarget = field?.closest('.select')?.querySelector<HTMLElement>('button') ?? field
-      focusTarget?.focus()
+  function focusInvalidField(name: string) {
+    const field = formRef.current?.querySelector<HTMLElement>(`[name="${name}"]`)
+    const focusTarget = field?.closest('.select')?.querySelector<HTMLElement>('button') ?? field
+    focusTarget?.focus()
+  }
+
+  function handleAddBenefit() {
+    const benefits = draft.benefits
+    const key = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
+    if (!validateDiscount(benefits.discountType, benefits[key])) {
+      setBenefitsErrors({ [key]: validateCampaignBenefits(benefits)[key] })
+      focusInvalidField(key)
       return
     }
-    // Ponto de conexão para a próxima etapa, mantendo o rascunho estruturado.
-    feedback.info({ title: 'Informações básicas validadas.', description: 'A etapa Alvos e benefícios será implementada na próxima etapa. Seus dados permanecem nesta tela.' })
+    setDraft(current => ({ ...current, benefits: {
+      ...current.benefits,
+      addedBenefits: [...current.benefits.addedBenefits, { type: benefits.discountType, value: benefits[key] }],
+    } }))
+    feedback.success({ title: 'Benefício adicionado ao rascunho.' })
   }
+
+  function handleContinue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (step === 1) {
+      const validationErrors = validateCampaignInformation(draft)
+      setErrors(validationErrors)
+      const firstInvalidField = Object.keys(validationErrors)[0]
+      if (firstInvalidField) { focusInvalidField(firstInvalidField); return }
+      setVisitedBenefits(true)
+      setStep(2)
+      return
+    }
+    const validationErrors = validateCampaignBenefits(draft.benefits)
+    setBenefitsErrors(validationErrors)
+    const firstInvalidField = Object.keys(validationErrors)[0]
+    if (firstInvalidField) { focusInvalidField(firstInvalidField); return }
+    // Conectar a etapa Regras e público aqui, reutilizando o mesmo draft.
+    feedback.info({ title: 'Alvos e benefícios validados.', description: 'A etapa Regras e público será implementada depois. Seus dados permanecem neste formulário.' })
+  }
+
+  const benefitValidation = validateCampaignBenefits(draft.benefits)
+  const benefitsComplete = visitedBenefits && !benefitValidation.percentage && !benefitValidation.fixedAmount && !benefitValidation.addedBenefits && !benefitValidation.targetIds
+  const quantityComplete = visitedBenefits && !benefitValidation.maxVouchers && !benefitValidation.quantityPerGrant && !benefitValidation.limitPerCustomer && !benefitValidation.customerBase && !benefitValidation.quantityPerCustomer
 
   return (
     <PortalLayout onCampaignNavigate={handleReturn}>
@@ -92,16 +132,16 @@ export function CreateCampaignPage() {
         </header>
 
         <nav aria-label="Etapas da criação" className="create-campaign-steps">
-          <ol>{steps.map((step, index) => (
-            <li key={step} aria-current={index === 0 ? 'step' : undefined}>
-              <span>{index + 1}</span> {step}
+          <ol>{steps.map((stepLabel, index) => (
+            <li key={stepLabel} aria-current={index === step - 1 ? 'step' : undefined} className={index < step - 1 ? 'create-campaign-step-complete' : undefined}>
+              <span aria-hidden="true">{index < step - 1 ? <Check size={12} /> : index + 1}</span> {stepLabel}{index < step - 1 && <span className="create-campaign-sr-only">concluída</span>}
             </li>
           ))}</ol>
         </nav>
 
-        <form ref={formRef} noValidate onSubmit={handleContinue} className="create-campaign-form" aria-label="Informações da campanha">
-          <section className="create-campaign-information" aria-labelledby="campaign-information-title">
-            <h2 id="campaign-information-title">Informações básicas</h2>
+        <form ref={formRef} noValidate onSubmit={handleContinue} className={`create-campaign-form ${step === 2 ? 'create-campaign-form-benefits' : ''}`} aria-label="Informações da campanha">
+          {step === 1 ? <section className="create-campaign-information" aria-labelledby="campaign-information-title">
+            <h2 id="campaign-information-title" tabIndex={-1}>Informações básicas</h2>
             <p className="create-campaign-description">Identifique a campanha e defina quando ela poderá emitir vouchers.</p>
             <Input label="Nome da campanha" name="name" placeholder="Ex.: Volta às Aulas 2026" value={information.name} onChange={value => updateField('name', value)} isRequired validationBehavior="aria" errorMessage={errors.name} />
             <div className="create-campaign-dates">
@@ -120,7 +160,9 @@ export function CreateCampaignPage() {
                 <Select label="Teto máximo" name="voucherCap" options={capOptions} value={information.voucherCap || null} onChange={value => updateField('voucherCap', value === 'unlimited' ? 'unlimited' : '')} isRequired validationBehavior="aria" errorMessage={errors.voucherCap} />
               </div>
             </section>
-          </section>
+          </section> : <CampaignBenefitsForm value={draft.benefits} errors={benefitsErrors}
+            onChange={benefits => { setDraft(current => ({ ...current, benefits })); setBenefitsErrors({}) }}
+            onAddBenefit={handleAddBenefit} />}
 
           <aside className="create-campaign-summary" aria-labelledby="campaign-summary-title">
             <h2 id="campaign-summary-title">Resumo da configuração</h2>
@@ -128,7 +170,7 @@ export function CreateCampaignPage() {
             <p className="create-campaign-draft-status">Rascunho</p>
             <p className="create-campaign-summary-label">Itens obrigatórios</p>
             <ul>{requirements.map((requirement, index) => {
-              const complete = index === 0 && basicInformationComplete
+              const complete = index === 0 ? basicInformationComplete : index === 1 ? benefitsComplete : index === 2 ? quantityComplete : false
               const Icon = complete ? Check : Circle
               return <li key={requirement} className={complete ? 'create-campaign-requirement-complete' : undefined}>
                 <Icon size={10} aria-hidden="true" />
@@ -141,6 +183,7 @@ export function CreateCampaignPage() {
           </aside>
 
           <footer className="create-campaign-actions">
+            {step === 2 && <Button className="create-campaign-back" type="button" variant="secondary" startIcon={ArrowLeft} onPress={() => setStep(1)}>Voltar</Button>}
             <Button type="button" variant="secondary" onPress={handleSaveDraft}>Salvar rascunho</Button>
             <Button type="submit" endIcon={ArrowRight}>Continuar</Button>
           </footer>

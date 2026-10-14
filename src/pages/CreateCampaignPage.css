@@ -66,3 +66,16 @@
 @media (max-width: 1000px) { .create-campaign-validity-fields { grid-template-columns: minmax(0, 1fr); } .create-campaign-duration-unit { top: 29px; } }
 @media (max-width: 800px) { .create-campaign-form { grid-template-columns: minmax(0, 1fr); } .create-campaign-information, .create-campaign-summary { min-height: auto; } .create-campaign-information { padding-bottom: 28px; } .create-campaign-summary ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .create-campaign-header h1 { font-size: 22px; } .create-campaign-steps ol { grid-template-columns: repeat(5, minmax(110px, 1fr)); } .create-campaign-steps { overflow-x: auto; } .create-campaign-steps li { padding: 12px; min-height: 54px; font-size: 11px; } .create-campaign-dates { grid-template-columns: minmax(0, 1fr); } .create-campaign-duration-unit { top: 34px; } .create-campaign-summary ul { grid-template-columns: minmax(0, 1fr); } .create-campaign-actions .button { flex: 1; } }
+
+.create-campaign-form-benefits { align-items: start; }
+.create-campaign-form-benefits .create-campaign-information,
+.create-campaign-form-benefits .create-campaign-summary { min-height: 0; }
+.create-campaign-steps li.create-campaign-step-complete { color: var(--color-brand); background: color-mix(in srgb, var(--color-brand) 5%, var(--surface)); }
+.create-campaign-back { margin-right: auto; }
+.create-campaign-information h2:focus { outline: none; }
+@media (max-width: 700px) {
+  .create-campaign-steps ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .create-campaign-steps li { overflow-wrap: anywhere; }
+  .create-campaign-actions { flex-wrap: wrap; }
+  .create-campaign-back { flex-basis: 100%; }
+}
