@@ -79,10 +79,10 @@ describe('Gerenciamento de Campanhas', () => {
     expect(await screen.findByText('Campanha aprovada')).toBeVisible()
     expect(screen.queryByText('Nova campanha criada')).not.toBeInTheDocument()
   })
-  it('informa próxima etapa da criação', async () => {
+  it('navega para a criação', async () => {
     const user = setup()
     await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
-    expect(await screen.findByText('A criação de campanhas será implementada na próxima etapa.')).toBeVisible()
+    expect(window.location.pathname).toBe('/campanhas/nova')
   })
   it('mostra loading sem simular requisição', () => {
     render(<CampaignManagementPage isLoading />)
@@ -94,5 +94,3 @@ describe('Gerenciamento de Campanhas', () => {
     expect(screen.getByRole('heading', { name: 'Nenhuma campanha encontrada' })).toBeVisible()
   })
 })
-
-

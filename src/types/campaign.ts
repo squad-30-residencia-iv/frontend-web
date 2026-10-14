@@ -12,3 +12,14 @@ export interface Campaign {
 export const statusLabels: Record<CampaignStatus, string> = {
   active: 'Ativa', scheduled: 'Agendada', paused: 'Pausada', ended: 'Encerrada',
 }
+
+export interface CampaignDraft {
+  information: {
+    name: string
+    start: string
+    end: string
+    voucherModel: 'relative' | ''
+    voucherDurationDays: string
+    voucherCap: 'unlimited' | ''
+  }
+}

@@ -11,6 +11,7 @@ import { useFeedback } from '../components/ui/useFeedback'
 import { CampaignActionsMenu } from '../components/campaigns/CampaignActionsMenu'
 import { campaigns as mockCampaigns } from '../data/campaigns'
 import { statusLabels, type Campaign } from '../types/campaign'
+import { navigate } from '../navigation/navigate'
 import './CampaignManagementPage.css'
 
 const numberFormat = new Intl.NumberFormat('pt-BR')
@@ -39,7 +40,7 @@ export function CampaignManagementPage({ campaigns = mockCampaigns, isLoading = 
   const currentPage = Math.min(page, Math.max(1, pageCount))
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const pageNumbers = [...new Set([1, 2, 3, currentPage - 1, currentPage, currentPage + 1, pageCount])].filter(value => value > 0 && value <= pageCount).sort((a, b) => a - b)
-  function handleCreateCampaign() { feedback.info({ title: 'A criação de campanhas será implementada na próxima etapa.' }) }
+  function handleCreateCampaign() { navigate('/campanhas/nova') }
   return <PortalLayout>
     <header className="campaign-header"><div><nav aria-label="Caminho" className="campaign-breadcrumb"><span>Portal</span><ChevronRight size={12} /><span>Campanhas</span></nav><h1>Gerenciamento de Campanhas</h1></div><Button className="campaign-create" startIcon={Plus} onPress={handleCreateCampaign}>Nova campanha</Button></header>
     {!approved && <section className="campaign-notice" aria-label="Campanha aguardando aprovação"><span className="campaign-notice-icon"><ShieldAlert size={17} /></span><div><strong>Nova campanha criada</strong><p>Uma nova campanha foi criada e aguarda sua aprovação.</p></div><Button className="campaign-approve" onPress={() => setApprovalOpen(true)}>Aprovar</Button></section>}
@@ -52,4 +53,3 @@ export function CampaignManagementPage({ campaigns = mockCampaigns, isLoading = 
     <ConfirmationModal action="approve" itemName="nova campanha" isOpen={approvalOpen} onOpenChange={setApprovalOpen} onConfirm={() => { setApproved(true); setApprovalOpen(false); feedback.success({ title: 'Campanha aprovada', description: 'A aprovação foi registrada localmente nesta demonstração.' }) }} />
   </PortalLayout>
 }
-

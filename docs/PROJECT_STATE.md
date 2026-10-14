@@ -47,3 +47,14 @@
 - Spec concluída em docs/specs/completed/US-003-gerenciamento-campanhas.md; relatório em docs/CAMPAIGN_MANAGEMENT.md.
 - Revisão visual no Chrome indisponível por falta de autorização do Computer Use.
 - Branch feat/02-criacao_campanhas sem commits; frontend-web já não rastreado ao iniciar. Sem commit/push.
+
+## Entrega 2026-10-13 — US-004
+- Nova campanha navega para /campanhas/nova por history/pathname; App acompanha popstate sem roteador. Login preservado.
+- CreateCampaignPage reproduz a primeira etapa: informações, vigência e validade do voucher; resumo, salvar rascunho e continuar.
+- Rascunho tipado em information, persistência local validada, erros junto aos campos e feedbacks compartilhados.
+- Retorno por breadcrumb/sidebar com confirmação de alterações não salvas; aviso de recarga via beforeunload. Voltar nativo do navegador não interceptado pelo modal.
+- Próximas etapas não implementadas; handleContinue valida e informa etapa pendente, mantendo dados.
+- Build aprovado; testes e verify aprovados: 36 testes (11 novos). Sem lint; aviso Vite de bundle >500 kB.
+- Navegador integrado indisponível; revisão visual não realizada.
+- Spec concluída US-004-criacao-campanha-informacoes.md; relatório docs/CREATE_CAMPAIGN.md.
+- Branch feat/02-criacao_campanhas inicialmente limpa no repositório frontend-web. Sem commit/push.
