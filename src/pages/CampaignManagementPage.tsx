@@ -20,6 +20,7 @@ import { ConfirmationModal } from '../components/ui/ConfirmationModal'
 import { useFeedback } from '../components/ui/useFeedback'
 import { CampaignActionsMenu } from '../components/campaigns/CampaignActionsMenu'
 import { campaigns as mockCampaigns } from '../data/campaigns'
+import { loadCreatedCampaigns } from '../data/campaignRepository'
 import { statusLabels, type Campaign } from '../types/campaign'
 import { navigate } from '../navigation/navigate'
 import './CampaignManagementPage.css'
@@ -38,7 +39,9 @@ const pageSize = 7
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 export interface CampaignManagementPageProps { campaigns?: readonly Campaign[]; isLoading?: boolean }
 
-export function CampaignManagementPage({ campaigns = mockCampaigns, isLoading = false }: CampaignManagementPageProps) {
+export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading = false }: CampaignManagementPageProps) {
+  const [createdCampaigns] = useState(loadCreatedCampaigns)
+  const campaigns = providedCampaigns ?? [...createdCampaigns, ...mockCampaigns]
   const feedback = useFeedback()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
@@ -120,7 +123,7 @@ export function CampaignManagementPage({ campaigns = mockCampaigns, isLoading = 
       <Button className="campaign-approve" onPress={() => setApprovalOpen(true)}>Aprovar</Button>
     </section>}
     <section className="campaign-metrics" aria-label="Resumo de campanhas">
-      {metrics.map(({ label, value, change, icon: Icon, tone }) => <article className="campaign-metric" key={label}>
+      {metrics.map(({ label, change, icon: Icon, tone }) => <article className="campaign-metric" key={label}>
         <div>
           <h2>
             {label}
@@ -131,7 +134,7 @@ export function CampaignManagementPage({ campaigns = mockCampaigns, isLoading = 
         </div>
         <div>
           <strong>
-            {value}
+              {campaigns.filter(campaign => campaign.status === tone).length}
           </strong>
           <span className={`campaign-change ${tone === 'paused' ? 'campaign-change-negative' : ''}`}>
             {change}
