@@ -1,0 +1,142 @@
+.campaign-scope-description {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 290px;
+  margin-bottom: 20px;
+}
+
+.campaign-scope-panel {
+  padding: 14px;
+  margin-bottom: 14px;
+  max-width: 490px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-canvas) 40%, var(--surface));
+}
+
+.campaign-scope-panel:last-child {
+  margin-bottom: 0;
+}
+
+.campaign-scope-panel h3,
+.campaign-scope-channels legend {
+  color: var(--color-ink);
+  font-size: 12px;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+
+.campaign-scope-panel > p {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+
+.campaign-scope-channels {
+  padding: 0;
+  margin: 12px 0 0;
+  border: 0;
+  min-width: 0;
+}
+
+.campaign-scope-channel-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.campaign-scope-option,
+.campaign-scope-network {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.campaign-scope-option {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.campaign-scope input[type="checkbox"] {
+  appearance: auto;
+  accent-color: var(--color-brand);
+  width: 12px;
+  height: 12px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.campaign-scope-search {
+  max-width: 325px;
+}
+
+.campaign-scope-search > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.campaign-scope-search svg {
+  width: 14px;
+}
+
+.campaign-scope .campaign-scope-search input {
+  padding-left: 32px;
+}
+
+.campaign-scope-results,
+.campaign-scope-selected {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  margin: 10px 0;
+  list-style: none;
+}
+
+.campaign-scope-results .button {
+  justify-content: flex-start;
+  height: auto;
+  white-space: normal;
+  text-align: left;
+  font-size: 12px;
+}
+
+.campaign-scope-selected li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.campaign-scope-selected .button {
+  min-width: 26px;
+  width: 26px;
+  min-height: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.campaign-scope-error {
+  color: var(--danger);
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+@media (max-width: 700px) {
+  .campaign-scope-panel,
+  .campaign-scope-search {
+    max-width: none;
+  }
+
+  .campaign-scope-channel-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

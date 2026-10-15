@@ -1,0 +1,17 @@
+.portal-layout { min-height: 100dvh; display: grid; grid-template-columns: 204px minmax(0, 1fr); background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); }
+.portal-sidebar { background: var(--color-sidebar); color: var(--color-sidebar-muted); padding: 22px 16px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; }
+.portal-brand { display: flex; align-items: center; gap: 10px; color: var(--color-sidebar-foreground); text-decoration: none; margin-bottom: 30px; }
+.portal-brand strong { font-size: 14px; display: block; white-space: nowrap; }
+.portal-brand small, .portal-profile small { display: block; font-size: 10px; color: var(--color-sidebar-muted); }
+.portal-brand-icon { background: var(--color-brand); border-radius: 7px; padding: 6px; }
+.portal-sidebar nav { display: grid; gap: 4px; }
+.portal-sidebar nav a { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 11px 12px; border-left: 3px solid transparent; border-radius: 7px; text-decoration: none; }
+.portal-sidebar nav a[aria-current] { background: var(--color-sidebar-foreground-bg); border-left-color: var(--color-brand); color: var(--color-sidebar-foreground); }
+.portal-profile { margin-top: auto; border-top: 1px solid var(--color-sidebar-foreground-bg); padding-top: 16px; display: flex; align-items: center; gap: 10px; }
+.portal-profile strong { color: var(--color-sidebar-foreground); font-size: 12px; }
+.portal-avatar { background: var(--color-sidebar-foreground-bg); padding: 7px; border-radius: 50%; }
+.portal-main { padding: 28px; min-width: 0; }
+.portal-layout a:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+@media (min-width: 1400px) { .portal-main { padding: 36px; } }
+@media (max-width: 1000px) and (min-width: 701px) { .portal-layout { grid-template-columns: 156px minmax(0, 1fr); } .portal-sidebar { padding: 16px 12px; } .portal-brand { gap: 8px; } .portal-brand strong { font-size: 11px; } .portal-main { padding: 24px 20px 20px; } .portal-sidebar nav a { font-size: 10px; padding: 9px; } }
+@media (max-width: 700px) { .portal-layout { display: block; } .portal-sidebar { position: static; height: auto; padding: 16px; } .portal-brand { margin-bottom: 16px; } .portal-sidebar nav { display: flex; overflow-x: auto; } .portal-sidebar nav a { white-space: nowrap; padding: 8px; } .portal-profile { display: none; } .portal-main { padding: 20px 14px; } }
