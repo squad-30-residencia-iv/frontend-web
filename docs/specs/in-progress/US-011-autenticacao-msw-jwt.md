@@ -1,4 +1,4 @@
-# Especificação Técnica: US-003 - Autenticação com JWT, MSW e rotas protegidas
+# Especificação Técnica: US-011 - Autenticação com JWT, MSW e rotas protegidas
 
 > Status: In Progress
 > História de Usuário Relacionada: Autenticação com JWT (Esquadrão 1)
