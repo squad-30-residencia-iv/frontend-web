@@ -1,0 +1,721 @@
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { toast } from '@heroui/react'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { App } from '../App'
+import { CreateCampaignPage } from './CreateCampaignPage'
+import { FeedbackProvider } from '../components/ui/FeedbackProvider'
+import { campaignDraftStorageKey, initialCampaignDraft } from '../data/campaignDraft'
+
+beforeAll(() => {
+  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() })
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, onchange: null, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }))
+})
+beforeEach(() => { localStorage.clear(); window.history.replaceState(null, '', '/campanhas/nova') })
+afterEach(() => { act(() => toast.clear()); vi.restoreAllMocks(); window.history.replaceState(null, '', '/') })
+afterAll(() => vi.unstubAllGlobals())
+function setup() {
+  render(<><App /><FeedbackProvider /></>)
+  return userEvent.setup()
+}
+
+describe('Criação de campanha', () => {
+  it('navega da listagem e mantém o login acessível', async () => {
+    window.history.replaceState(null, '', '/campanhas')
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    expect(window.location.pathname).toBe('/campanhas/nova')
+    expect(screen.getByRole('heading', { name: 'Criar nova campanha' })).toBeVisible()
+    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
+    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    act(() => { window.history.pushState(null, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')) })
+    expect(screen.getByRole('heading', { name: 'Bem-vindo de volta!' })).toBeVisible()
+  })
+
+  it('abre a URL diretamente e mostra campos, datas e etapa atual', () => {
+    setup()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toBeRequired()
+    expect(screen.getByLabelText('Início da vigência')).toHaveValue('2026-10-01T08:00')
+    expect(screen.getByLabelText('Fim da vigência')).toHaveValue('2026-10-31T23:59')
+    expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveValue(30)
+    expect(screen.getByRole('button', { name: /Modelo/ })).toHaveTextContent('Prazo relativo')
+    expect(screen.getByRole('button', { name: /Teto máximo/ })).toHaveTextContent('Sem teto')
+    expect(screen.getByText('Informações').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(screen.getByRole('complementary', { name: 'Resumo da configuração' })).getByText('Informações básicas').closest('li')).toHaveTextContent('Informações básicas: pendente')
+  })
+
+  it('valida obrigatórios e foca o primeiro campo inválido', async () => {
+    const user = setup()
+    fireEvent.change(screen.getByLabelText('Início da vigência'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '' } })
+    await user.clear(screen.getByRole('spinbutton', { name: 'Duração' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe o nome da campanha.')).toBeVisible()
+    expect(screen.getByText('Informe uma data e hora de início válidas.')).toBeVisible()
+    expect(screen.getByText('Informe uma data e hora de fim válidas.')).toBeVisible()
+    expect(screen.getByText('Informe uma quantidade inteira de dias maior que zero.')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveFocus()
+  })
+
+  it('valida ordem de datas e duração e permite corrigir os campos', async () => {
+    const user = setup()
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Volta às Aulas 2026')
+    fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-09-30T23:59' } })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Duração' }), { target: { value: '0' } })
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('O fim da vigência não pode ser anterior ao início.')).toBeVisible()
+    expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-10-31T23:59' } })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Duração' }), { target: { value: '45' } })
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Alvos e benefícios' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Volta às Aulas 2026')
+    expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveValue(45)
+    expect(window.location.pathname).toBe('/campanhas/nova')
+    expect(within(screen.getByRole('complementary', { name: 'Resumo da configuração' })).getByText('Informações básicas').closest('li')).toHaveTextContent('Informações básicas: completo')
+  })
+
+  it('retorna pela sidebar sem alterações', async () => {
+    const user = setup()
+    await user.click(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Campanhas' }))
+    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('confirma descarte, permite cancelar e devolve foco', async () => {
+    const user = setup()
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Campanha em edição')
+    const link = within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' })
+    await user.click(link)
+    const dialog = await screen.findByRole('alertdialog', { name: 'Descartar alterações?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Continuar editando' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha em edição')
+    await waitFor(() => expect(link).toHaveFocus())
+    await user.click(link)
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Descartar alterações' }))
+    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('')
+  })
+
+  it('salva rascunho local e restaura ao voltar', async () => {
+    const user = setup()
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Rascunho local')
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    expect(await screen.findByText('Rascunho salvo neste navegador.')).toBeVisible()
+    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
+    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Rascunho local')
+  })
+
+  it('permite salvar incompleto e valida as seleções obrigatórias ao continuar', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, voucherModel: '', voucherCap: '' } }))
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    expect(await screen.findByText('Rascunho salvo neste navegador.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione o modelo de validade.')).toBeVisible()
+    expect(screen.getByText('Selecione o teto máximo.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: /Modelo/ }))
+    await user.click(await screen.findByRole('option', { name: 'Prazo relativo' }))
+    expect(screen.queryByText('Selecione o modelo de validade.')).not.toBeInTheDocument()
+  })
+
+  it('ignora rascunhos inválidos e informa falha ao salvar sem perder dados', async () => {
+    localStorage.setItem(campaignDraftStorageKey, '{inválido')
+    const user = setup()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('')
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Manter dados')
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage indisponível') })
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    expect(await screen.findByText('Não foi possível salvar o rascunho.')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Manter dados')
+  })
+
+  it('protege a recarga apenas enquanto existem alterações não salvas', async () => {
+    const user = setup()
+    const cleanEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(cleanEvent)
+    expect(cleanEvent.defaultPrevented).toBe(false)
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Alterações')
+    const dirtyEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(dirtyEvent)
+    expect(dirtyEvent.defaultPrevented).toBe(true)
+  })
+
+  it('restaura um rascunho com datas impossíveis e rejeita a continuidade', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, name: 'Teste', start: '2026-02-31T08:00' } }))
+    render(<><CreateCampaignPage /><FeedbackProvider /></>)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe uma data e hora de início válidas.')).toBeVisible()
+  })
+})
+
+
+async function openBenefits() {
+  localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ ...initialCampaignDraft, information: { ...initialCampaignDraft.information, name: 'Campanha completa' } }))
+  const user = setup()
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  return user
+}
+
+describe('Alvos e benefícios', () => {
+  it('avança com a primeira etapa válida, indica conclusão e foca o título', async () => {
+    await openBenefits()
+    const heading = screen.getByRole('heading', { name: 'Alvos e benefícios' })
+    expect(heading).toBeVisible()
+    expect(heading).toHaveFocus()
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    expect(within(progress).getByText('Alvos e benefícios').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(progress).getByText('Informações').closest('li')).toHaveTextContent('concluída')
+    expect(screen.getByRole('radio', { name: 'Desconto percentual (%)' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Valor total da compra' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Automática' })).toBeChecked()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('2.500 vouchers')
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Base de clientes/ })).toBeEnabled()
+    const batchQuantity = screen.getByRole('spinbutton', { name: 'Quantidade por cliente' })
+    await userEvent.setup().clear(batchQuantity)
+    await userEvent.setup().type(batchQuantity, '3')
+    expect(batchQuantity).toHaveValue(3)
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('7.500 vouchers')
+  })
+
+  it('bloqueia avanço da primeira etapa sem nome', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.queryByRole('heading', { name: 'Alvos e benefícios' })).not.toBeInTheDocument()
+    expect(screen.getByText('Informe o nome da campanha.')).toBeVisible()
+  })
+
+  it('valida desconto e quantidade máxima sem perder os valores', async () => {
+    const user = await openBenefits()
+    const percentage = screen.getByRole('textbox', { name: 'Valor do desconto (%)' })
+    await user.clear(percentage)
+    await user.type(percentage, '101')
+    await user.clear(screen.getByRole('spinbutton', { name: /Quantidade máxima/ }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe um percentual maior que zero e até 100%.')).toBeVisible()
+    expect(screen.getByText('Informe uma quantidade máxima inteira maior que zero.')).toBeVisible()
+    expect(percentage).toHaveValue('101')
+    expect(percentage).toHaveFocus()
+  })
+
+  it('alterna desconto para reais, adiciona e remove benefícios localmente', async () => {
+    const user = await openBenefits()
+    await user.click(screen.getByRole('radio', { name: 'Desconto com valor fixo (R$)' }))
+    const fixed = screen.getByRole('textbox', { name: 'Valor do desconto (R$)' })
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toBeEnabled()
+    await user.clear(fixed)
+    await user.type(fixed, '35,50')
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }))
+    const list = screen.getByRole('list', { name: 'Benefícios adicionados' })
+    expect(list).toHaveTextContent(/35,50/)
+    expect(await screen.findByText('Benefício adicionado ao rascunho.')).toBeVisible()
+    await user.click(within(list).getByRole('button', { name: 'Remover benefício 1' }))
+    expect(screen.queryByRole('list', { name: 'Benefícios adicionados' })).not.toBeInTheDocument()
+    await user.clear(fixed)
+    await user.type(fixed, '-2')
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }))
+    expect(screen.getByText('Informe um valor em reais maior que zero, com até duas casas decimais.')).toBeVisible()
+  })
+
+  it('seleciona múltiplas categorias e preserva ao voltar e avançar', async () => {
+    const user = await openBenefits()
+    await user.click(screen.getByRole('radio', { name: 'Produtos ou categorias específicas' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione ao menos um produto ou categoria.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: /Produtos ou categoria/ }))
+    await user.click(await screen.findByRole('option', { name: 'Moda' }))
+    await user.click(screen.getByRole('option', { name: 'Calçados' }))
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('Moda')
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('Calçados')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha completa')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('Moda')
+    expect(screen.getByRole('radio', { name: 'Produtos ou categorias específicas' })).toBeChecked()
+  })
+
+  it('muda para produtos e valida a nova seleção', async () => {
+    const user = await openBenefits()
+    await user.click(screen.getByRole('radio', { name: 'Produtos ou categorias específicas' }))
+    await user.click(screen.getByRole('button', { name: /^Categoria Tipo$/ }))
+    await user.click(await screen.findByRole('option', { name: 'Produto' }))
+    await user.click(screen.getByRole('button', { name: /Produtos ou categoria/ }))
+    await user.click(await screen.findByRole('option', { name: 'Camiseta demonstrativa' }))
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+  })
+
+  it('valida a geração automática e avança para a terceira etapa', async () => {
+    const user = await openBenefits()
+    const grant = screen.getByRole('spinbutton', { name: 'Quantidade por concessão' })
+    await user.clear(grant)
+    await user.type(grant, '0')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe uma quantidade por concessão inteira maior que zero.')).toBeVisible()
+    await user.clear(grant)
+    await user.type(grant, '2')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Escopo Organizacional' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
+  })
+
+  it('calcula lote por base e quantidade, ignorando campos automáticos inativos', async () => {
+    const user = await openBenefits()
+    await user.clear(screen.getByRole('spinbutton', { name: 'Quantidade por concessão' }))
+    await user.click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.getByRole('spinbutton', { name: 'Quantidade por concessão' })).toBeEnabled()
+    const quantity = screen.getByRole('spinbutton', { name: 'Quantidade por cliente' })
+    await user.clear(quantity)
+    await user.type(quantity, '2')
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('5.000 vouchers')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    await user.clear(screen.getByRole('spinbutton', { name: 'Quantidade por cliente' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe uma quantidade por cliente inteira válida maior que zero.')).toBeVisible()
+  })
+
+  it('salva as duas etapas e restaura o benefício preenchido', async () => {
+    const user = await openBenefits()
+    const percentage = screen.getByRole('textbox', { name: 'Valor do desconto (%)' })
+    await user.clear(percentage)
+    await user.type(percentage, '15')
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha completa')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toHaveValue('15')
+  })
+
+  it('migra o rascunho anterior sem perder a primeira etapa', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, name: 'Rascunho antigo' } }))
+    const user = setup()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Rascunho antigo')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toHaveValue('20')
+  })
+})
+
+
+async function openRules(rules = initialCampaignDraft.rules) {
+  localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ ...initialCampaignDraft, information: { ...initialCampaignDraft.information, name: 'Campanha de regras' }, rules }))
+  const user = setup()
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  return user
+}
+
+describe('Regras e público', () => {
+  it('abre a terceira etapa e indica as duas anteriores concluídas', async () => {
+    await openRules()
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toHaveFocus()
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    expect(within(progress).getByText('Regras e público').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(progress).getByText('Informações').closest('li')).toHaveTextContent('concluída')
+    expect(within(progress).getByText('Alvos e benefícios').closest('li')).toHaveTextContent('concluída')
+    expect(screen.getByRole('button', { name: /Público elegível/ })).toHaveTextContent('Todos os clientes')
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+    expect(screen.getByRole('textbox', { name: 'Mínimo' })).toHaveValue('100,00')
+    expect(screen.getByRole('textbox', { name: 'Máximo' })).toHaveAttribute('placeholder', 'Sem limite')
+  })
+
+  it('não avança da segunda etapa se o desconto for inválido', async () => {
+    const user = await openBenefits()
+    await user.clear(screen.getByRole('textbox', { name: 'Valor do desconto (%)' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Alvos e benefícios' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Regras e público' })).not.toBeInTheDocument()
+  })
+
+  it('valida valor obrigatório e mantém o foco e o conteúdo na terceira etapa', async () => {
+    const user = await openRules()
+    const amount = screen.getByRole('textbox', { name: 'Valor' })
+    await user.clear(amount)
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe um valor válido, não negativo e com até duas casas decimais.')).toBeVisible()
+    expect(amount).toHaveFocus()
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+    await user.type(amount, '1,234')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe um valor válido, não negativo e com até duas casas decimais.')).toBeVisible()
+    expect(amount).toHaveValue('1,234')
+  })
+
+  it('adiciona condições e restrições editáveis sem apagar as anteriores', async () => {
+    const user = await openRules()
+    await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
+    await user.click(screen.getByRole('button', { name: 'Adicionar restrição +' }))
+    const first = screen.getByRole('group', { name: 'Condição 1:' })
+    const second = screen.getByRole('group', { name: 'Condição 2:' })
+    const restriction = screen.getByRole('group', { name: 'Restrição 2:' })
+    expect(within(first).getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+    await user.type(within(second).getByRole('textbox', { name: 'Valor' }), '350,50')
+    await user.type(within(restriction).getByRole('textbox', { name: 'Mínimo' }), '50')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+  })
+
+  it('valida mínimo e máximo e permite máximo sem limite', async () => {
+    const user = await openRules()
+    const maximum = screen.getByRole('textbox', { name: 'Máximo' })
+    await user.type(maximum, '99')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('O máximo não pode ser menor que o mínimo.')).toBeVisible()
+    await user.clear(maximum)
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    const minimum = screen.getByRole('textbox', { name: 'Mínimo' })
+    await user.clear(minimum)
+    await user.type(minimum, '-1')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe um mínimo válido, não negativo e com até duas casas decimais.')).toBeVisible()
+  })
+
+  it('valida seleções obrigatórias e permite preencher pelos seletores', async () => {
+    const user = await openRules({ ...initialCampaignDraft.rules, audience: '', conditions: [{ id: 'empty-condition', type: '', operator: '', value: '0' }] })
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione o público elegível.')).toBeVisible()
+    expect(screen.getByText('Selecione o tipo de condição.')).toBeVisible()
+    expect(screen.getByText('Selecione o operador.')).toBeVisible()
+    expect(screen.getByRole('button', { name: /Público elegível/ })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: /Público elegível/ }))
+    await user.click(await screen.findByRole('option', { name: 'Todos os clientes' }))
+    await user.click(screen.getByRole('button', { name: /Tipo de condição/ }))
+    await user.click(await screen.findByRole('option', { name: 'Valor total da compra' }))
+    await user.click(screen.getByRole('button', { name: /Operador/ }))
+    await user.click(await screen.findByRole('option', { name: 'Maior ou igual a' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+  })
+
+  it('preserva as três etapas, as coleções e as combinações ao voltar e avançar', async () => {
+    const user = await openRules()
+    await user.click(screen.getByRole('radio', { name: 'Pelo menos uma condição - OU' }))
+    await user.click(screen.getByRole('radio', { name: 'Pelo menos uma restrição — OU' }))
+    await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
+    await user.type(within(screen.getByRole('group', { name: 'Condição 2:' })).getByRole('textbox', { name: 'Valor' }), '500')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toHaveValue('20')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de regras')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(within(screen.getByRole('group', { name: 'Condição 2:' })).getByRole('textbox', { name: 'Valor' })).toHaveValue('500')
+    expect(screen.getByRole('radio', { name: 'Pelo menos uma condição - OU' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Pelo menos uma restrição — OU' })).toBeChecked()
+  })
+
+  it('salva e restaura regras e avança para a quarta etapa', async () => {
+    const user = await openRules()
+    const amount = screen.getByRole('textbox', { name: 'Valor' })
+    await user.clear(amount)
+    await user.type(amount, '450,00')
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('450,00')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
+  })
+
+  it('migra rascunhos sem regras preservando as duas primeiras etapas', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, name: 'Migrar duas etapas' }, benefits: { ...initialCampaignDraft.benefits, percentage: '17' } }))
+    const user = setup()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Migrar duas etapas')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toHaveValue('17')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+  })
+})
+
+describe('Exclusão de condições', () => {
+  it('remove condição vazia diretamente e preserva as outras', async () => {
+    const user = await openRules()
+    await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
+    await user.click(screen.getByRole('button', { name: 'Excluir condição 2' }))
+    expect(screen.queryByRole('group', { name: 'Condição 2:' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Condição 1:' })).getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+    expect(screen.queryByRole('alertdialog', { name: /^Excluir condição/ })).not.toBeInTheDocument()
+    expect(await screen.findByText('Condição excluída do rascunho.')).toBeVisible()
+  })
+
+  it('permite cancelar e confirma somente a exclusão selecionada', async () => {
+    const user = await openRules()
+    await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
+    await user.type(within(screen.getByRole('group', { name: 'Condição 2:' })).getByRole('textbox', { name: 'Valor' }), '350')
+    const trigger = screen.getByRole('button', { name: 'Excluir condição 1' })
+    await user.click(trigger)
+    let dialog = await screen.findByRole('alertdialog', { name: /^Excluir condição/ })
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog', { name: /^Excluir condição/ })).not.toBeInTheDocument())
+    expect(screen.getAllByRole('textbox', { name: 'Valor' })).toHaveLength(2)
+    await user.click(trigger)
+    dialog = await screen.findByRole('alertdialog', { name: /^Excluir condição/ })
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog', { name: /^Excluir condição/ })).not.toBeInTheDocument())
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('350')
+    expect(screen.getByRole('textbox', { name: 'Mínimo' })).toHaveValue('100,00')
+  })
+
+  it('permite excluir a última condição e adicionar outra', async () => {
+    const user = await openRules()
+    await user.clear(screen.getByRole('textbox', { name: 'Valor' }))
+    await user.click(screen.getByRole('button', { name: 'Excluir condição 1' }))
+    expect(screen.queryByRole('group', { name: 'Condição 1:' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Adicionar condição +' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Adicionar condição +' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('')
+  })
+})
+
+async function openScope(scope = initialCampaignDraft.scope) {
+  localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+    ...initialCampaignDraft,
+    information: { ...initialCampaignDraft.information, name: 'Campanha de escopo' },
+    scope,
+  }))
+  const user = setup()
+
+  for (let step = 1; step <= 3; step += 1) {
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  }
+
+  return user
+}
+
+describe('Escopo e canais', () => {
+  it('avança da terceira etapa, marca progresso e mostra os campos editáveis', async () => {
+    await openScope()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toHaveFocus()
+    const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
+    expect(within(summary).getByText('Escopo organizacional').closest('li')).toHaveTextContent('Escopo organizacional: completo')
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    expect(within(progress).getByText('Escopo e canais').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(progress).getByText('Regras e público').closest('li')).toHaveTextContent('concluída')
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).not.toBeChecked()
+    expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toBeEnabled()
+    for (const checkbox of screen.getAllByRole('checkbox')) expect(checkbox).toBeEnabled()
+  })
+
+  it('não avança da terceira etapa com regras inválidas', async () => {
+    const user = await openRules()
+    await user.clear(screen.getByRole('textbox', { name: 'Valor' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Escopo Organizacional' })).not.toBeInTheDocument()
+  })
+
+  it('valida lojas e canais e foca a busca sem apagar os dados anteriores', async () => {
+    const user = await openScope()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Adicione ao menos uma loja específica.')).toBeVisible()
+    expect(screen.getByText('Selecione ao menos um canal para as lojas específicas.')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+  })
+
+  it('valida toda a rede e avança para a revisão', async () => {
+    const user = await openScope()
+    await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione ao menos um canal para toda a rede.')).toBeVisible()
+    const channels = screen.getByRole('group', { name: 'Canais de toda a rede' })
+    expect(within(channels).getByRole('checkbox', { name: 'Físico' })).toHaveFocus()
+    await user.click(within(channels).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
+    expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Físico, Virtual')
+    expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
+  })
+
+  it('busca por código e nome, adiciona lojas e valida os canais específicos', async () => {
+    const user = await openScope()
+    const search = screen.getByRole('textbox', { name: 'Buscar lojas' })
+    await user.type(search, '002')
+    await user.click(screen.getByRole('button', { name: 'Adicionar loja 002 — Loja Shopping' }))
+    expect(search).toHaveValue('')
+    expect(screen.getByRole('list', { name: 'Lojas selecionadas' })).toHaveTextContent('002 — Loja Shopping')
+    await user.type(search, 'centro')
+    await user.click(screen.getByRole('button', { name: 'Adicionar loja 001 — Loja Centro' }))
+    const channels = screen.getByRole('group', { name: 'Canais das lojas específicas' })
+    await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Loja Shopping')
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Loja Centro')
+  })
+
+  it('mostra busca vazia, remove loja selecionada e permite desmarcar os canais', async () => {
+    const user = await openScope({ ...initialCampaignDraft.scope, storeIds: ['store-center'], storeChannels: ['physical'] })
+    const search = screen.getByRole('textbox', { name: 'Buscar lojas' })
+    await user.type(search, 'inexistente')
+    expect(screen.getByRole('heading', { name: 'Nenhuma loja encontrada' })).toBeVisible()
+    await user.clear(search)
+    await user.click(screen.getByRole('button', { name: 'Remover loja 001 — Loja Centro' }))
+    const channels = screen.getByRole('group', { name: 'Canais das lojas específicas' })
+    await user.click(within(channels).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Adicione ao menos uma loja específica.')).toBeVisible()
+    expect(screen.getByText('Selecione ao menos um canal para as lojas específicas.')).toBeVisible()
+  })
+
+  it('preserva as quatro etapas ao voltar e mantém escolhas alternativas do escopo', async () => {
+    const user = await openScope({
+      ...initialCampaignDraft.scope,
+      storeIds: ['store-shopping'],
+      storeChannels: ['virtual'],
+      networkChannels: ['physical'],
+    })
+    await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor' })).toHaveValue('200,00')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Valor do desconto (%)' })).toHaveValue('20')
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
+    for (let step = 1; step <= 3; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    expect(screen.getByRole('list', { name: 'Lojas selecionadas' })).toHaveTextContent('Loja Shopping')
+    expect(within(screen.getByRole('group', { name: 'Canais das lojas específicas' })).getByRole('checkbox', { name: 'Virtual' })).toBeChecked()
+    expect(within(screen.getByRole('group', { name: 'Canais de toda a rede' })).getByRole('checkbox', { name: 'Físico' })).toBeChecked()
+  })
+
+  it('salva e restaura o escopo junto com o rascunho', async () => {
+    const user = await openScope()
+    await user.click(screen.getByRole('checkbox', { name: 'Toda a rede' }))
+    await user.click(within(screen.getByRole('group', { name: 'Canais de toda a rede' })).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    for (let step = 1; step <= 3; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    expect(within(screen.getByRole('group', { name: 'Canais de toda a rede' })).getByRole('checkbox', { name: 'Físico' })).toBeChecked()
+  })
+
+  it('migra rascunho de três etapas sem perder as informações salvas', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+      information: { ...initialCampaignDraft.information, name: 'Rascunho de três etapas' },
+      benefits: initialCampaignDraft.benefits,
+      rules: initialCampaignDraft.rules,
+    }))
+    const user = setup()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Rascunho de três etapas')
+    for (let step = 1; step <= 3; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).not.toBeChecked()
+    expect(screen.getByRole('textbox', { name: 'Buscar lojas' })).toHaveValue('')
+  })
+})
+
+async function openReview() {
+  const user = await openScope({
+    ...initialCampaignDraft.scope,
+    mode: 'network',
+    networkChannels: ['physical', 'virtual'],
+  })
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  return user
+}
+
+describe('Revisão geral', () => {
+  it('mostra a quinta etapa com dados reais formatados e resumo completo', async () => {
+    await openReview()
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toHaveFocus()
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    expect(within(progress).getByText('Revisão').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(progress).getByText('Escopo e canais').closest('li')).toHaveTextContent('concluída')
+    const information = screen.getByRole('region', { name: 'Informações' })
+    expect(information).toHaveTextContent('Campanha de escopo')
+    expect(information).toHaveTextContent('01/10/2026 08:00 a 31/10/2026 23:59')
+    expect(information).toHaveTextContent('30 dias após a emissão')
+    expect(information).toHaveTextContent('Toda a rede')
+    expect(information).toHaveTextContent('Físico, Virtual')
+    expect(screen.getByRole('region', { name: 'Alvo e benefícios' })).toHaveTextContent('20%')
+    expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent(/R\$\s*200,00/)
+    expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent('Sem limite')
+    const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
+    expect(within(summary).getByText('Condições de geração').closest('li')).toHaveTextContent('completo')
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled()
+  })
+
+  it('volta ao escopo, permite corrigir dados e atualiza a revisão', async () => {
+    const user = await openReview()
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    const channels = screen.getByRole('group', { name: 'Canais de toda a rede' })
+    await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+    const name = screen.getByRole('textbox', { name: 'Nome da campanha' })
+    await user.clear(name)
+    await user.type(name, 'Campanha revisada')
+    for (let step = 1; step <= 4; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha revisada')
+    expect(screen.getByRole('region', { name: 'Informações' })).not.toHaveTextContent('Virtual')
+  })
+
+  it('salva de forma simulada, retorna ao gerenciamento e inicia outro formulário limpo', async () => {
+    const user = await openReview()
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(await screen.findByText('Campanha criada com sucesso.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    expect(window.location.pathname).toBe('/campanhas')
+    expect(localStorage.getItem(campaignDraftStorageKey)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('')
+    expect(screen.getByText('Informações').closest('li')).toHaveAttribute('aria-current', 'step')
+  })
+
+  it('preserva revisão e dados quando não consegue limpar o rascunho local', async () => {
+    const user = await openReview()
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('Storage indisponível') })
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(await screen.findByText('Não foi possível concluir o salvamento.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha de escopo')
+    expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+  })
+})
+
+it('revalida ao salvar e retorna à etapa apontada sem descartar o rascunho', async () => {
+  const user = await openReview()
+  const validationModule = await import('../data/campaignDraft')
+  const invalidValidation = validationModule.validateCampaignDraft({
+    ...initialCampaignDraft,
+    information: { ...initialCampaignDraft.information, name: '' },
+    scope: { ...initialCampaignDraft.scope, mode: 'network', networkChannels: ['physical'] },
+  })
+  // Exercita a defesa do salvamento caso a validação geral passe a rejeitar a campanha.
+  vi.spyOn(validationModule, 'validateCampaignDraft').mockReturnValue(invalidValidation)
+
+  await user.click(screen.getByRole('button', { name: 'Salvar' }))
+  expect(screen.getByRole('heading', { name: 'Informações básicas' })).toBeVisible()
+  expect(screen.getByText('Informe o nome da campanha.')).toBeVisible()
+  expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveFocus()
+  expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
+  expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
+  expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+})

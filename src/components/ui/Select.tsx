@@ -5,16 +5,16 @@ export interface SelectOption {
   label: string
 }
 
-export interface SelectProps extends Omit<HeroSelectProps<SelectOption>, 'children' | 'items'> {
+export interface SelectProps<Mode extends 'single' | 'multiple' = 'single'> extends Omit<HeroSelectProps<SelectOption, Mode>, 'children' | 'items'> {
   label: string
   options: readonly SelectOption[]
   description?: string
   errorMessage?: string
 }
 
-export function Select({ label, options, description, errorMessage, isInvalid, ...props }: SelectProps) {
+export function Select<Mode extends 'single' | 'multiple' = 'single'>({ label, options, description, errorMessage, isInvalid, ...props }: SelectProps<Mode>) {
   return (
-    <HeroSelect {...props} isInvalid={isInvalid ?? Boolean(errorMessage)}>
+    <HeroSelect<SelectOption, Mode> {...props} isInvalid={isInvalid ?? Boolean(errorMessage)}>
       <Label>{label}</Label>
       <HeroSelect.Trigger>
         <HeroSelect.Value />

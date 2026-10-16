@@ -1,6 +1,6 @@
 import { Modal } from './Modal'
 
-export type ConfirmationAction = 'delete' | 'activate' | 'deactivate'
+export type ConfirmationAction = 'delete' | 'activate' | 'deactivate' | 'approve'
 
 export interface ConfirmationModalProps {
   action: ConfirmationAction
@@ -11,7 +11,7 @@ export interface ConfirmationModalProps {
   isPending?: boolean
 }
 
-const actionLabels = { delete: 'Excluir', activate: 'Ativar', deactivate: 'Inativar' }
+const actionLabels = { delete: 'Excluir', activate: 'Ativar', deactivate: 'Inativar', approve: 'Aprovar' }
 
 export function ConfirmationModal({ action, itemName, isOpen, onOpenChange, onConfirm, isPending = false }: ConfirmationModalProps) {
   const label = actionLabels[action]
@@ -31,3 +31,4 @@ export function ConfirmationModal({ action, itemName, isOpen, onOpenChange, onCo
     </Modal>
   )
 }
+

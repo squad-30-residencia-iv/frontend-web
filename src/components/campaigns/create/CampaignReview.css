@@ -1,0 +1,52 @@
+.campaign-review-description {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 22px;
+}
+
+.campaign-review-section + .campaign-review-section {
+  margin-top: 18px;
+}
+
+.campaign-review-section h3 {
+  font-size: 15px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+
+.campaign-review-card {
+  display: grid;
+  gap: 5px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: min(180px, 100%);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-canvas) 40%, var(--surface));
+}
+
+.campaign-review-field {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.campaign-review-field dt,
+.campaign-review-field dd {
+  display: inline;
+}
+
+.campaign-review-field dt {
+  margin-right: 4px;
+}
+
+.campaign-review-field dd {
+  color: var(--color-ink);
+}
+
+@media (max-width: 700px) {
+  .campaign-review-card {
+    width: 100%;
+  }
+}
