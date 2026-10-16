@@ -1,3 +1,4 @@
+import { createFormSchema, formErrors } from '../schemas/validation'
 import type { CampaignDraft } from '../types/campaign'
 import { isCampaignBenefits, newCampaignBenefits, validateCampaignBenefits } from './campaignBenefits'
 import { isCampaignRules, newCampaignRules, validateCampaignRules } from './campaignRules'
@@ -56,12 +57,12 @@ function isValidDateTime(value: string) {
     && date.getDate() === day && date.getHours() === hours && date.getMinutes() === minutes
 }
 
-export function validateCampaignInformation({ information }: CampaignDraft): CampaignInformationErrors {
+function collectCampaignInformationErrors({ information }: Pick<CampaignDraft, 'information'>): CampaignInformationErrors {
   const errors: CampaignInformationErrors = {}
   if (!information.name.trim()) errors.name = 'Informe o nome da campanha.'
   if (!isValidDateTime(information.start)) errors.start = 'Informe uma data e hora de início válidas.'
   if (!isValidDateTime(information.end)) errors.end = 'Informe uma data e hora de fim válidas.'
-  if (!errors.start && !errors.end && information.end < information.start) errors.end = 'O fim da vigência não pode ser anterior ao início.'
+  if (!errors.start && !errors.end && information.end <= information.start) errors.end = 'O fim da vigência deve ser posterior ao início.'
   if (!information.voucherModel) errors.voucherModel = 'Selecione o modelo de validade.'
   const days = Number(information.voucherDurationDays)
   if (!information.voucherDurationDays.trim() || !Number.isSafeInteger(days) || days <= 0) errors.voucherDurationDays = 'Informe uma quantidade inteira de dias maior que zero.'
@@ -91,4 +92,13 @@ export function validateCampaignDraft(draft: CampaignDraft) {
       ? { step: invalidStage.step, field: Object.keys(invalidStage.errors)[0] }
       : null,
   }
+}
+
+export const campaignInformationSchema = createFormSchema(
+  (value: unknown): value is CampaignDraft['information'] => isCampaignDraft({ information: value }),
+  information => collectCampaignInformationErrors({ information }),
+)
+
+export function validateCampaignInformation(value: CampaignDraft): CampaignInformationErrors {
+  return formErrors(campaignInformationSchema, value.information)
 }

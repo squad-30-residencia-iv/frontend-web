@@ -1,3 +1,4 @@
+import { createFormSchema, formErrors } from '../schemas/validation'
 import type { CampaignCondition, CampaignDraft, CampaignRestriction } from '../types/campaign'
 import { parseDiscount } from './campaignBenefits'
 
@@ -14,7 +15,7 @@ export function conditionFieldName(id: string, field: 'type' | 'operator' | 'val
 export function restrictionFieldName(id: string, field: 'type' | 'minimum' | 'maximum') { return `restriction-${id}-${field}` }
 function isValidMoney(value: string) { const amount = parseDiscount(value); return Number.isFinite(amount) && amount >= 0 }
 
-export function validateCampaignRules(rules: CampaignDraft['rules']): CampaignRulesErrors {
+function collectCampaignRulesErrors(rules: CampaignDraft['rules']): CampaignRulesErrors {
   const errors: CampaignRulesErrors = {}
   if (!rules.audience) errors.audience = 'Selecione o público elegível.'
   for (const item of rules.conditions) {
@@ -57,4 +58,10 @@ export function isCampaignRules(value: unknown): value is CampaignDraft['rules']
     && new Set(item.conditions.map(condition => condition.id)).size === item.conditions.length
     && Array.isArray(item.restrictions) && item.restrictions.every(isRestriction)
     && new Set(item.restrictions.map(restriction => restriction.id)).size === item.restrictions.length
+}
+
+export const campaignRulesSchema = createFormSchema(isCampaignRules, collectCampaignRulesErrors)
+
+export function validateCampaignRules(value: CampaignDraft['rules']): CampaignRulesErrors {
+  return formErrors(campaignRulesSchema, value)
 }

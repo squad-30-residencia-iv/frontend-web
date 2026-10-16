@@ -63,7 +63,7 @@ describe('Criação de campanha', () => {
     fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-09-30T23:59' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Duração' }), { target: { value: '0' } })
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(screen.getByText('O fim da vigência não pode ser anterior ao início.')).toBeVisible()
+    expect(screen.getByText('O fim da vigência deve ser posterior ao início.')).toBeVisible()
     expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveAttribute('aria-invalid', 'true')
     fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-10-31T23:59' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Duração' }), { target: { value: '45' } })
@@ -199,7 +199,7 @@ describe('Alvos e benefícios', () => {
     await user.type(percentage, '101')
     await user.clear(screen.getByRole('spinbutton', { name: /Quantidade máxima/ }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(screen.getByText('Informe um percentual maior que zero e até 100%.')).toBeVisible()
+    expect(screen.getByText('Informe um percentual entre 1% e 100%.')).toBeVisible()
     expect(screen.getByText('Informe uma quantidade máxima inteira maior que zero.')).toBeVisible()
     expect(percentage).toHaveValue('101')
     expect(percentage).toHaveFocus()
@@ -655,7 +655,7 @@ describe('Revisão geral', () => {
     expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent('Sem limite')
     const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
     expect(within(summary).getByText('Condições de geração').closest('li')).toHaveTextContent('completo')
-    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Ativar campanha' })).toBeEnabled()
   })
 
   it('volta ao escopo, permite corrigir dados e atualiza a revisão', async () => {
@@ -679,7 +679,7 @@ describe('Revisão geral', () => {
     const user = await openReview()
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
     expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    await user.click(screen.getByRole('button', { name: 'Ativar campanha' }))
     expect(await screen.findByText('Campanha criada com sucesso.')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
     expect(window.location.pathname).toBe('/campanhas')
@@ -692,7 +692,7 @@ describe('Revisão geral', () => {
   it('preserva revisão e dados quando não consegue limpar o rascunho local', async () => {
     const user = await openReview()
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('Storage indisponível') })
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    await user.click(screen.getByRole('button', { name: 'Ativar campanha' }))
     expect(await screen.findByText('Não foi possível concluir o salvamento.')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha de escopo')
@@ -711,7 +711,7 @@ it('revalida ao salvar e retorna à etapa apontada sem descartar o rascunho', as
   // Exercita a defesa do salvamento caso a validação geral passe a rejeitar a campanha.
   vi.spyOn(validationModule, 'validateCampaignDraft').mockReturnValue(invalidValidation)
 
-  await user.click(screen.getByRole('button', { name: 'Salvar' }))
+  await user.click(screen.getByRole('button', { name: 'Ativar campanha' }))
   expect(screen.getByRole('heading', { name: 'Informações básicas' })).toBeVisible()
   expect(screen.getByText('Informe o nome da campanha.')).toBeVisible()
   expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveFocus()
