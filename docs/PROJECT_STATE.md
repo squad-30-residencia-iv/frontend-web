@@ -118,3 +118,11 @@
 - Listagem segue mockada, sem nova persistência/API/timeout. Layout com altura natural e sem sobra do canvas.
 - Build aprovado; test aprovado e verify final com80 testes (13 novos). Sem lint; aviso Vite de bundle >500kB. Revisão visual não realizada.
 - Relatório docs/CAMPAIGN_REVIEW.md; spec US-009-revisao-campanha.md concluída. Sem commit/push.
+
+## Entrega 2026-10-15 — US-010: conformidade EP-01
+- Zod instalado; schemas por etapa e composição completa, mantendo mensagens/foco existentes.
+- Fim estritamente posterior ao início, desconto percentual de 1 a 100 e quantidades positivas.
+- Revisão conclui com Ativar campanha; configuração completa persistida no mock local e nova campanha ativa incluída na listagem com indicadores coerentes.
+- Repositório separado das páginas; falhas preservam formulário/rascunho, registros corrompidos não são sobrescritos.
+- Cinco etapas preservadas conforme protótipos solicitados; diferença dos quatro passos da issue documentada em docs/CAMPAIGN_EP01.md. Público Todos os clientes preservado.
+- Verify aprovado com 90 testes em seis arquivos; build aprovado com avisos de tamanho de bundle e comentários da dependência Zod. Sem commit/push.

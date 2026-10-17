@@ -1,3 +1,4 @@
+import { createFormSchema, formErrors } from '../schemas/validation'
 import type { CampaignChannel, CampaignDraft } from '../types/campaign'
 
 export interface CampaignStore {
@@ -24,7 +25,7 @@ export function newCampaignScope(): CampaignDraft['scope'] {
 
 export type CampaignScopeErrors = Partial<Record<'stores' | 'networkChannels' | 'storeChannels', string>>
 
-export function validateCampaignScope(scope: CampaignDraft['scope']): CampaignScopeErrors {
+function collectCampaignScopeErrors(scope: CampaignDraft['scope']): CampaignScopeErrors {
   const errors: CampaignScopeErrors = {}
 
   if (scope.mode === 'network') {
@@ -63,4 +64,10 @@ export function isCampaignScope(value: unknown): value is CampaignDraft['scope']
     && scope.storeChannels.every(isChannel)
     && Array.isArray(scope.storeIds)
     && scope.storeIds.every(id => typeof id === 'string')
+}
+
+export const campaignScopeSchema = createFormSchema(isCampaignScope, collectCampaignScopeErrors)
+
+export function validateCampaignScope(value: CampaignDraft['scope']): CampaignScopeErrors {
+  return formErrors(campaignScopeSchema, value)
 }

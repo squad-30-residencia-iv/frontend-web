@@ -1,3 +1,4 @@
+import { createFormSchema, formErrors } from '../schemas/validation'
 import type { CampaignBenefit, CampaignDraft } from '../types/campaign'
 
 export const categoryOptions = [{ value: 'category-fashion', label: 'Moda' }, { value: 'category-shoes', label: 'Calçados' }, { value: 'category-home', label: 'Casa' }]
@@ -17,17 +18,17 @@ export function parseDiscount(value: string) {
 export function isPositiveInteger(value: string) { return /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0 }
 export function validateDiscount(type: CampaignBenefit['type'], value: string) {
   const amount = parseDiscount(value)
-  return Number.isFinite(amount) && amount > 0 && (type !== 'percentage' || amount <= 100)
+  return Number.isFinite(amount) && amount > 0 && (type !== 'percentage' || (amount >= 1 && amount <= 100))
 }
 export function getBatchTotal(benefits: CampaignDraft['benefits']) {
   const base = customerBases.find(item => item.value === benefits.customerBase)
   const total = (base?.customers ?? 0) * Number(benefits.quantityPerCustomer)
   return isPositiveInteger(benefits.quantityPerCustomer) && Number.isSafeInteger(total) ? total : 0
 }
-export function validateCampaignBenefits(benefits: CampaignDraft['benefits']): CampaignBenefitsErrors {
+function collectCampaignBenefitsErrors(benefits: CampaignDraft['benefits']): CampaignBenefitsErrors {
   const errors: CampaignBenefitsErrors = {}
   const discountField = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
-  if (!validateDiscount(benefits.discountType, benefits[discountField])) errors[discountField] = benefits.discountType === 'percentage' ? 'Informe um percentual maior que zero e até 100%.' : 'Informe um valor em reais maior que zero, com até duas casas decimais.'
+  if (!validateDiscount(benefits.discountType, benefits[discountField])) errors[discountField] = benefits.discountType === 'percentage' ? 'Informe um percentual entre 1% e 100%.' : 'Informe um valor em reais maior que zero, com até duas casas decimais.'
   if (benefits.addedBenefits.some(item => !validateDiscount(item.type, item.value))) errors.addedBenefits = 'Revise os benefícios adicionados.'
   if (benefits.application === 'specific') {
     const options = benefits.targetType === 'category' ? categoryOptions : productOptions
@@ -56,4 +57,10 @@ export function isCampaignBenefits(value: unknown): value is CampaignDraft['bene
 }
 export function newCampaignBenefits(): CampaignDraft['benefits'] {
   return { ...initialCampaignBenefits, targetIds: [], addedBenefits: [] }
+}
+
+export const campaignBenefitsSchema = createFormSchema(isCampaignBenefits, collectCampaignBenefitsErrors)
+
+export function validateCampaignBenefits(value: CampaignDraft['benefits']): CampaignBenefitsErrors {
+  return formErrors(campaignBenefitsSchema, value)
 }

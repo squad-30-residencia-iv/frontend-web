@@ -26,6 +26,7 @@ import { CampaignInformationForm } from '../components/campaigns/create/Campaign
 import { CampaignScopeForm } from '../components/campaigns/create/CampaignScopeForm'
 import type { CampaignScopeErrors } from '../data/campaignScope'
 import { CampaignReview } from '../components/campaigns/create/CampaignReview'
+import { activateCampaign } from '../data/campaignRepository'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -208,13 +209,13 @@ export function CreateCampaignPage() {
       return
     }
 
-    // A conclusão é local; não há API nem persistência de campanhas criadas.
+    // O repositório mockado valida novamente antes de registrar a ativação.
     try {
-      localStorage.removeItem(campaignDraftStorageKey)
+      activateCampaign(draft)
     } catch {
       feedback.error({
         title: 'Não foi possível concluir o salvamento.',
-        description: 'Não foi possível limpar o rascunho local. Seus dados foram preservados; tente novamente.',
+        description: 'Não foi possível registrar a campanha neste navegador. Seus dados continuam nesta tela; tente novamente.',
       })
       return
     }
@@ -344,7 +345,7 @@ export function CreateCampaignPage() {
               variant="secondary"
               onPress={handleSaveDraft}
             >Salvar rascunho</Button>
-            <Button type="submit" endIcon={ArrowRight}>{step === 5 ? 'Salvar' : 'Continuar'}</Button>
+            <Button type="submit" endIcon={ArrowRight}>{step === 5 ? 'Ativar campanha' : 'Continuar'}</Button>
           </footer>
         </form>
         <Modal
