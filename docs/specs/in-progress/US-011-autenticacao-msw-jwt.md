@@ -3,9 +3,9 @@
 > Status: In Progress
 > História de Usuário Relacionada: Autenticação com JWT (Esquadrão 1)
 > Responsável: bergue-vitor
-> Data: 2026-10-13
+> Data: 2026-10-16
 > Branch: `feat/01_autenticacao-login`
-> Rastreabilidade: substitui `docs/specs/backlog/spec-auth-msw-jwt.md` (mover/remover o rascunho do backlog, se existir)
+> Rastreabilidade: substitui o rascunho `docs/specs/backlog/spec-auth-msw-jwt.md` (se existir) e a primeira versão desta spec, que previa `react-router`.
 
 ---
 
@@ -15,13 +15,16 @@
 
 Esta spec define o comportamento de envio do login e **substitui** o trecho da `US-001` que dizia "autenticação ainda não conectada, sem simular sessão".
 
+**Navegação do projeto.** O app usa navegação própria (`src/navigation/navigate.ts` e a leitura do `pathname` em `src/App.tsx`), sem roteador. Essa decisão do time (US-003) é **mantida**: a proteção das páginas é feita por um componente `ProtectedRoute` e nenhuma biblioteca de rotas é adicionada.
+
 ### O que o sistema deve fazer
 
 - O login chama `POST /api/v1/auth/login`. Em desenvolvimento com `VITE_USE_MOCK=true`, a chamada é interceptada pelo MSW, que simula o contrato.
 - O token JWT recebido (MSW ou backend real) é salvo no `localStorage` e anexado como `Authorization: Bearer <token>` em toda requisição privada, por um único interceptor em `src/services/api.ts`.
-- Rota privada sem token, ou com token expirado ou malformado, redireciona imediatamente para `/login`.
+- Página privada sem token válido (ausente, expirado ou malformado) redireciona imediatamente para `/login?from=<página>`.
 - Trocar o mock pelo backend real exige só `.env` (`VITE_USE_MOCK=false` e, para outro endereço, `VITE_API_BASE_URL`), sem alterar componentes React.
 - O escopo do usuário (`role` + `organizationId`) vem na resposta do login e fica disponível em `useAuth()`. O mecanismo `allowedRoles` do `ProtectedRoute` está implementado e testado.
+- O `PortalLayout` mostra o usuário logado (nome e perfil) e um botão **Sair**. Renderizado sem login (telas isoladas), mantém o perfil padrão e não mostra o botão.
 
 ### O que o sistema não deve fazer
 
@@ -29,17 +32,17 @@ Esta spec define o comportamento de envio do login e **substitui** o trecho da `
 - Não revelar se o e-mail existe: credencial inválida tem sempre a mesma mensagem.
 - Não incluir o MSW nem as credenciais do mock no bundle de produção. O mock só carrega com `import.meta.env.DEV` **e** `VITE_USE_MOCK === 'true'`.
 - Não versionar `.env` (só o `.env.example`).
+- Não alterar o comportamento das telas de campanhas além de protegê-las. As mudanças em arquivos do time são aditivas (ver "Arquivos do time alterados").
 
 ### Rotas
 
 | Rota | Acesso | Conteúdo |
 |---|---|---|
-| `/login` | Pública (autenticado é enviado ao destino) | Tela de login |
-| `/campanhas` | Privada | Placeholder dentro do `PrivateLayout` |
-| `/cadastros` | Privada | Placeholder dentro do `PrivateLayout` |
-| `*` | - | Redireciona para `/campanhas` (e daí para `/login` se não houver sessão) |
+| `/login`, `/` e qualquer rota desconhecida | Pública (autenticado é enviado ao destino) | Tela de login, como hoje |
+| `/campanhas` | Privada | `CampaignManagementPage` |
+| `/campanhas/nova` | Privada | `CreateCampaignPage` |
 
-Após o login, o usuário vai para a página que tentou abrir (`state.from`) ou, se não houver, para `/campanhas`.
+Após o login, o usuário vai para a página que tentou abrir (`?from=`, aceitando só caminhos internos) ou, se não houver, para `/campanhas`. A história cita `/cadastros` como exemplo de rota privada; essa tela não existe no projeto e fica fora do escopo.
 
 ### Validação do formulário (antes de chamar a API)
 
@@ -54,20 +57,34 @@ O formulário usa `noValidate` e `validationBehavior="aria"` para exibir as mens
 ### Estados da tela de login
 
 - **Carregando:** botão com `isPending`, campos somente leitura, envio duplicado bloqueado.
-- **Erro:** `FeedbackAlert type="error"` — 401: `E-mail ou senha inválidos.`; 400/422: mensagem devolvida pela API; falha de rede, 5xx ou resposta fora do contrato: `Não foi possível entrar agora.`
+- **Erro:** `FeedbackAlert type="error"`: 401 mostra `E-mail ou senha inválidos.`; 400/422 mostram a mensagem devolvida pela API; falha de rede, 5xx ou resposta fora do contrato mostram `Não foi possível entrar agora.`
 - **Sucesso:** redirecionamento (não há mensagem de sucesso).
+
+### Arquivos do time alterados (de forma aditiva)
+
+| Arquivo | Mudança |
+|---|---|
+| `src/App.tsx` | envolve as duas páginas privadas com `ProtectedRoute` |
+| `src/components/layout/PortalLayout.tsx` e `.css` | mostra o usuário logado e o botão Sair; sem login, mantém o perfil padrão |
+| `src/main.tsx` | liga o mock e envolve o app com `AuthProvider` |
+| `src/test/setup.ts` | servidor MSW nos testes e limpeza entre testes |
+| `src/pages/LoginPage.tsx` e `LoginPage.test.tsx` | login real |
+| `src/pages/CreateCampaignPage.test.tsx` | abre o app com sessão e usa "Sair" para chegar ao login (5 pontos) |
+
+`src/navigation/navigate.ts` **não é alterado**: o novo `src/navigation/replaceRoute.ts` troca a rota sem empilhar histórico.
 
 ### Decisões adotadas
 
 | # | Decisão | Escolha |
 |---|---|---|
 | D1 | Cliente HTTP | Axios (interceptors nativos) |
-| D2 | Versões | `react-router` 7.18.x (Node ≥20), `axios` 1.20.x, `msw` 2.15.x como devDependency (Node ≥18). Mantêm o mínimo de Node do projeto. `react-router` 8 e `msw` 3 exigem Node ≥22.22 e ≥22.12; avaliar em spec própria. |
+| D2 | Dependências | `axios` 1.20.x e `msw` 2.15.x (somente desenvolvimento). **Sem `react-router`**, por decisão do time. `msw` 3 exige Node ≥22.12; avaliar em spec própria. |
 | D3 | Contrato da API | Proposto na seção 3. **Confirmar com o backend.** |
-| D4 | Matriz de permissões por perfil | Não definida pelo produto: nenhuma restrição aplicada nas rotas reais. |
+| D4 | Matriz de permissões por perfil | Não definida pelo produto: nenhuma restrição aplicada nas páginas reais. |
 | D5 | Logout | `POST /api/v1/auth/logout`, 204. A sessão local é limpa antes, e falha do servidor não impede a saída. |
 | D6 | Endereço do backend | `VITE_API_BASE_URL` (vazio = mesma origem) |
 | D7 | Armazenamento do token | `localStorage`, como pede a história. Risco conhecido: exposição a XSS. |
+| D8 | Página de origem | Vai na URL (`?from=`), porque a navegação do projeto não guarda estado. `replaceRoute` evita entradas extras no histórico. |
 
 ---
 
@@ -119,18 +136,19 @@ export interface JwtPayload { sub: string; exp: number; iat?: number } // exp em
 
 Ordem do `agents.md`: tipos, integrações, telas e testes. Marque cada item com `[x]` ao concluir.
 
-- [x] 0. Dependências (`react-router`, `axios`, `msw`), `.gitignore`, `.env.example`, `src/vite-env.d.ts` e `public/mockServiceWorker.js`
+- [x] 0. Dependências (`axios` e `msw` em desenvolvimento), `.gitignore`, `.env.example`, `src/vite-env.d.ts` e `public/mockServiceWorker.js`; `react-router` removido (o projeto usa navegação própria)
 - [ ] 1. Tipos e type guards (`src/services/auth.types.ts`)
 - [ ] 2. `src/services/tokenStorage.ts` (guardar, ler, limpar, decodificar JWT, checar expiração)
 - [ ] 3. `src/services/api.ts` (instância Axios + interceptores de Bearer e de 401)
 - [ ] 4. `src/services/auth.ts` (login, logout, me) e `src/services/loginValidation.ts`
 - [ ] 5. Mock em `src/mocks/` (handlers, JWT simulado, `browser`, `server`, `enableMocking`)
 - [ ] 6. `src/contexts/AuthContext.tsx` e `useAuth.ts` (restauração da sessão, login, logout)
-- [ ] 7. `ProtectedRoute.tsx`, `AppRoutes.tsx`, `PrivateLayout.tsx` (botão "Sair") e páginas placeholder
-- [ ] 8. `LoginPage` integrada ao `useAuth`; `main.tsx` aguarda o mock antes de renderizar
-- [ ] 9. Testes de serviços, mock, contexto, rotas e login
-- [ ] 10. `npm run verify` e `npm run build` aprovados
-- [ ] 11. Documentação e memória atualizadas (`save-session`)
+- [ ] 7. `ProtectedRoute.tsx`, `src/navigation/replaceRoute.ts` e proteção das duas páginas em `src/App.tsx`
+- [ ] 8. `PortalLayout` com o usuário logado e o botão "Sair"
+- [ ] 9. `LoginPage` integrada ao `useAuth`; `main.tsx` aguarda o mock antes de renderizar
+- [ ] 10. Testes de serviços, mock, contexto, layout, rotas e login (incluindo o ajuste do `CreateCampaignPage.test.tsx`)
+- [ ] 11. `npm run verify` e `npm run build` aprovados
+- [ ] 12. Documentação e memória atualizadas (`save-session`)
 
 ---
 
@@ -139,18 +157,18 @@ Ordem do `agents.md`: tipos, integrações, telas e testes. Marque cada item com
 **Critérios de aceite da história**
 
 - [ ] **CA1:** com MSW ativo, o login válido grava o token, guarda o perfil e redireciona (`LoginPage.test.tsx`).
-- [ ] **CA2:** sem token, `/campanhas` e `/cadastros` redirecionam para `/login` (`AppRoutes.test.tsx`).
-- [ ] **CA3:** "Sair" remove o token, encerra a sessão no mock e leva a `/login` (`AppRoutes.test.tsx`, `AuthContext.test.tsx`).
+- [ ] **CA2:** sem token, `/campanhas` e `/campanhas/nova` redirecionam para `/login` (`App.test.tsx`).
+- [ ] **CA3:** "Sair" remove o token, encerra a sessão no mock e leva a `/login` (`App.test.tsx`, `AuthContext.test.tsx`, `PortalLayout.test.tsx`).
 - [ ] **CA4:** o mock recusa requisição privada sem `Bearer` válido (`mocks/handlers/auth.test.ts`).
 
-**Cenários adicionais cobertos:** credencial inválida e usuário inexistente com a mesma mensagem; 422, 500, falha de rede e resposta fora do contrato; carregamento sem envio duplicado; volta para a página de origem; token expirado, malformado e adulterado; token válido sem usuário guardado; 401 do servidor encerra a sessão; `allowedRoles`; interceptor não anexa token no login nem token expirado; `enableMocking` não liga fora de DEV nem com `VITE_USE_MOCK` diferente de `true`; `localStorage` indisponível.
-
+**Cenários adicionais cobertos:** credencial inválida e usuário inexistente com a mesma mensagem; 422, 500, falha de rede e resposta fora do contrato; carregamento sem envio duplicado; volta para a página de origem e rejeição de `?from=` externo; token expirado, malformado e adulterado; token válido sem usuário guardado; 401 do servidor encerra a sessão; `allowedRoles`; interceptor não anexa token no login nem token expirado; `enableMocking` não liga fora de DEV nem com `VITE_USE_MOCK` diferente de `true`; `localStorage` indisponível; `PortalLayout` sem `AuthProvider` mantém o perfil padrão; as telas de campanhas do time seguem passando com sessão.
 
 ---
 
 ## 6. Fora de Escopo e Pendências
 
-- Refresh token, "esqueci a senha", cadastro de usuários, matriz final de permissões, cookies `httpOnly`, conteúdo real de `/campanhas` e `/cadastros`.
+- Refresh token, "esqueci a senha", cadastro de usuários, matriz final de permissões, cookies `httpOnly` e a tela `/cadastros` (não existe no projeto).
 - **Contraste:** o texto de erro dos campos (12 px, `#d42b2b` sobre o cartão `#d9d9d9`) mede 3,56:1, abaixo dos 4,5:1 do WCAG AA. A correção é de tema (cor `danger` para texto) e afeta todos os campos.
 - **Hospedagem:** em produção, o servidor precisa devolver `index.html` para rotas como `/login` e `/campanhas` (SPA fallback).
 - `public/mockServiceWorker.js` é copiado para `dist/` (arquivo inerte sem o registro do worker); pode ser excluído do deploy.
+- Os contratos de `login`, `logout` e `me` são uma proposta; confirmar com o backend.
