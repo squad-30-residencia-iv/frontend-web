@@ -16,6 +16,7 @@
 
 - [ ] US-001 Login: o formulário já usa `Input`, `Button` e `FeedbackAlert`. A spec segue em `docs/specs/in-progress/` com checklist em aberto (stack, layout, testes da spec, verify/build e documentação).
 - [ ] US-011 Autenticação com JWT, MSW e rotas protegidas (branch `feat/01_autenticacao-login`): em andamento. Spec em `docs/specs/in-progress/US-011-autenticacao-msw-jwt.md`.
+
 ---
 
 ## ✅ Últimas Entregas Concluídas
