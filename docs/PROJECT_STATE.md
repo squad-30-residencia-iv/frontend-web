@@ -16,6 +16,7 @@
 
 - [ ] US-001 Login: o formulário já usa `Input`, `Button` e `FeedbackAlert`. A spec segue em `docs/specs/in-progress/` com checklist em aberto (stack, layout, testes da spec, verify/build e documentação).
 - [ ] US-011 Autenticação com JWT, MSW e rotas protegidas (branch `feat/01_autenticacao-login`): em andamento. Spec em `docs/specs/in-progress/US-011-autenticacao-msw-jwt.md`.
+- [ ] US-012 Home (Visão Geral) com Sidebar Global (branch `feat/03-pagina_home`): código e testes escritos; falta rodar `npm run verify`/`npm run build` e a revisão visual no navegador (não há frame da Home no Figma; visual segue as telas existentes). Spec em `docs/specs/in-progress/US-012-home-sidebar.md`; relatório em `docs/HOME.md`.
 ---
 
 ## ✅ Últimas Entregas Concluídas
@@ -126,3 +127,10 @@
 - Repositório separado das páginas; falhas preservam formulário/rascunho, registros corrompidos não são sobrescritos.
 - Cinco etapas preservadas conforme protótipos solicitados; diferença dos quatro passos da issue documentada em docs/CAMPAIGN_EP01.md. Público Todos os clientes preservado.
 - Verify aprovado com 90 testes em seis arquivos; build aprovado com avisos de tamanho de bundle e comentários da dependência Zod. Sem commit/push.
+
+## Sessão 2026-10-18 — US-012 (em andamento)
+- Home em /home com Sidebar navegável (Visão geral, Campanhas, Vouchers, Relatórios, Auditoria), saudação exclusiva "Olá, Lucas!", banner DESTAQUE DA SEMANA, pílulas por categoria e grid de cards com mock; sem PageHeader.
+- PortalLayout agora navega por navigate() e recebe activeSection/onNavigate; criação de campanha confirma descarte para qualquer destino da Sidebar. UserAvatar compartilhado.
+- /vouchers, /relatorios e /auditoria mostram estado temporário "Em construção". Login segue em / até a US-011 entrar em main.
+- Novos testes: HomePage.test.tsx (10) e 1 em CreateCampaignPage.test.tsx. Verify e build NÃO executados (ambiente sem acesso ao npm). Sem commit/push.
+- Sugestão de commit: feat(ui): implementa Home com Sidebar global e cards de campanhas (US-012)

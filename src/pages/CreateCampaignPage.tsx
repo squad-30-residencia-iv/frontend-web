@@ -45,6 +45,7 @@ export function CreateCampaignPage() {
   const [scopeErrors, setScopeErrors] = useState<CampaignScopeErrors>({})
   const pendingFocusRef = useRef<string | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
+  const [leavePath, setLeavePath] = useState('/campanhas')
   const formRef = useRef<HTMLFormElement>(null)
   const information = draft.information
   const dirty = JSON.stringify(draft) !== savedDraft
@@ -104,9 +105,17 @@ export function CreateCampaignPage() {
     setStep(step === 3 ? 2 : 1)
   }
 
+  function handleNavigate(path: string) {
+    if (dirty) {
+      setLeavePath(path)
+      setDiscardOpen(true)
+    } else {
+      navigate(path)
+    }
+  }
+
   function handleReturn() {
-    if (dirty) setDiscardOpen(true)
-    else navigate('/campanhas')
+    handleNavigate('/campanhas')
   }
 
   function handleReturnLink(event: MouseEvent<HTMLAnchorElement>) {
@@ -247,7 +256,7 @@ export function CreateCampaignPage() {
     { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft).firstInvalid === null },
   ]
   return (
-    <PortalLayout onCampaignNavigate={handleReturn}>
+    <PortalLayout activeSection="campaigns" onNavigate={handleNavigate}>
       <div className="create-campaign-page">
         <header className="create-campaign-header">
           <nav aria-label="Caminho" className="create-campaign-breadcrumb">
@@ -354,9 +363,11 @@ export function CreateCampaignPage() {
           role="alertdialog"
           title="Descartar alterações?"
           secondaryAction={{ label: 'Continuar editando', autoFocus: true, onPress: () => setDiscardOpen(false) }}
-          primaryAction={{ label: 'Descartar alterações', variant: 'danger', onPress: () => navigate('/campanhas') }}
+          primaryAction={{ label: 'Descartar alterações', variant: 'danger', onPress: () => navigate(leavePath) }}
         >
-          As alterações não salvas serão descartadas. Deseja voltar ao Gerenciamento de Campanhas?
+          {leavePath === '/campanhas'
+            ? 'As alterações não salvas serão descartadas. Deseja voltar ao Gerenciamento de Campanhas?'
+            : 'As alterações não salvas serão descartadas. Deseja sair desta tela?'}
         </Modal>
       </div>
     </PortalLayout>

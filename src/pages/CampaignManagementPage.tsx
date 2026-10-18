@@ -96,7 +96,7 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
   function handleCreateCampaign() {
     navigate('/campanhas/nova')
   }
-  return <PortalLayout>
+  return <PortalLayout activeSection="campaigns">
     <header className="campaign-header">
       <div>
         <nav aria-label="Caminho" className="campaign-breadcrumb">

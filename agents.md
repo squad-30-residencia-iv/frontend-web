@@ -65,3 +65,11 @@ Qualquer assistente que iniciar uma sessão deve seguir este fluxo:
 - Registrar a paleta do portal em `src/styles.css`, no bloco `@theme`, com prefixo `--color-`. Isso gera as classes Tailwind. Não criar `tailwind.config.ts`.
 - Não redeclarar no `@theme` nomes que a HeroUI já usa: `--color-surface`, `--color-muted`, `--color-success`, `--color-warning` e `--color-warning-soft`.
 - Para a biblioteca seguir a mesma paleta, apontar no `:root` os tokens de origem: `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--accent`, `--danger`, `--success`, `--warning` e `--focus`.
+
+### [Skill] Layout do portal e navegação
+
+- Telas autenticadas usam `PortalLayout` (`src/components/layout/`). Informe `activeSection` (`home`, `campaigns`, `vouchers`, `reports`, `audit`) para destacar o item da Sidebar.
+- Os itens e rotas da Sidebar vivem em `components/layout/navigation.ts`. Novas seções entram ali; rotas ainda sem tela usam `SectionPlaceholderPage`.
+- A Sidebar navega com `navigate()`. Telas com alterações não salvas passam `onNavigate(path)` ao `PortalLayout` para confirmar antes de sair.
+- A Home tem cabeçalho próprio (`HomeGreeting`) e não usa o `PageHeader` das páginas internas.
+- O usuário exibido vem de `data/currentUser.ts` (mock) até a autenticação entrar em `main`; o avatar é o `UserAvatar` de `components/shared/`.

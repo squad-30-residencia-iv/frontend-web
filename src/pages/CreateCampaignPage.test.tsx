@@ -83,6 +83,18 @@ describe('Criação de campanha', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
+  it('confirma o descarte ao sair para outra seção pela sidebar', async () => {
+    const user = setup()
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Campanha em edição')
+    await user.click(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Visão geral' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Descartar alterações?' })
+    expect(dialog).toHaveTextContent('Deseja sair desta tela?')
+    expect(window.location.pathname).toBe('/campanhas/nova')
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar alterações' }))
+    expect(window.location.pathname).toBe('/home')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Olá, Lucas!' })).toBeVisible()
+  })
+
   it('confirma descarte, permite cancelar e devolve foco', async () => {
     const user = setup()
     await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Campanha em edição')
