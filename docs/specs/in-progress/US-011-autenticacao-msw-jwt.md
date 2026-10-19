@@ -137,10 +137,10 @@ export interface JwtPayload { sub: string; exp: number; iat?: number } // exp em
 Ordem do `agents.md`: tipos, integrações, telas e testes. Marque cada item com `[x]` ao concluir.
 
 - [x] 0. Dependências (`axios` e `msw` em desenvolvimento), `.gitignore`, `.env.example`, `src/vite-env.d.ts` e `public/mockServiceWorker.js`; `react-router` removido (o projeto usa navegação própria)
-- [ ] 1. Tipos e type guards (`src/services/auth.types.ts`)
-- [ ] 2. `src/services/tokenStorage.ts` (guardar, ler, limpar, decodificar JWT, checar expiração)
-- [ ] 3. `src/services/api.ts` (instância Axios + interceptores de Bearer e de 401)
-- [ ] 4. `src/services/auth.ts` (login, logout, me) e `src/services/loginValidation.ts`
+- [x ] 1. Tipos e type guards (`src/services/auth.types.ts`)
+- [x] 2. `src/services/tokenStorage.ts` (guardar, ler, limpar, decodificar JWT, checar expiração)
+- [x] 3. `src/services/api.ts` (instância Axios + interceptores de Bearer e de 401)
+- [x] 4. `src/services/auth.ts` (login, logout, me) e `src/services/loginValidation.ts`
 - [ ] 5. Mock em `src/mocks/` (handlers, JWT simulado, `browser`, `server`, `enableMocking`)
 - [ ] 6. `src/contexts/AuthContext.tsx` e `useAuth.ts` (restauração da sessão, login, logout)
 - [ ] 7. `ProtectedRoute.tsx`, `src/navigation/replaceRoute.ts` e proteção das duas páginas em `src/App.tsx`
