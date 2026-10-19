@@ -1,3 +1,4 @@
+import { PageHeader } from '../components/shared/PageHeader'
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
 import { PortalLayout } from '../components/layout/PortalLayout'
@@ -258,16 +259,14 @@ export function CreateCampaignPage() {
   return (
     <PortalLayout activeSection="campaigns" onNavigate={handleNavigate}>
       <div className="create-campaign-page">
-        <header className="create-campaign-header">
-          <nav aria-label="Caminho" className="create-campaign-breadcrumb">
-            <span>Portal</span>
-            <span aria-hidden="true">›</span>
-            <a href="/campanhas" onClick={handleReturnLink}>Campanhas</a>
-            <span aria-hidden="true">›</span>
-            <span aria-current="page">Nova campanha</span>
-          </nav>
-          <h1>Criar nova campanha</h1>
-        </header>
+        <PageHeader
+          title="Criar nova campanha"
+          breadcrumbs={[
+            { label: 'Portal' },
+            { label: 'Campanhas', href: '/campanhas', onClick: handleReturnLink },
+            { label: 'Nova campanha' },
+          ]}
+        />
         <nav aria-label="Etapas da criação" className="create-campaign-steps">
           <ol>
             {steps.map((stepLabel, index) => (
