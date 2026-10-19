@@ -1,0 +1,25 @@
+.user-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--user-avatar-bg, var(--color-line));
+  color: var(--user-avatar-fg, var(--color-neutral));
+}
+
+.user-avatar--md {
+  width: 34px;
+  height: 34px;
+}
+
+.user-avatar--lg {
+  width: 56px;
+  height: 56px;
+}
+
+.user-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -2,6 +2,14 @@ import { useSyncExternalStore } from 'react'
 import { LoginPage } from './pages/LoginPage'
 import { CampaignManagementPage } from './pages/CampaignManagementPage'
 import { CreateCampaignPage } from './pages/CreateCampaignPage'
+import { HomePage } from './pages/HomePage'
+import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
+
+const placeholderRoutes: Record<string, PlaceholderSection> = {
+  '/vouchers': 'vouchers',
+  '/relatorios': 'reports',
+  '/auditoria': 'audit',
+}
 
 function subscribeToPathname(onChange: () => void) {
   window.addEventListener('popstate', onChange)
@@ -12,7 +20,9 @@ function getPathname() {
 }
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
+  if (pathname === '/home') return <HomePage />
   if (pathname === '/campanhas/nova') return <CreateCampaignPage />
   if (pathname === '/campanhas') return <CampaignManagementPage />
+  if (pathname in placeholderRoutes) return <SectionPlaceholderPage section={placeholderRoutes[pathname]} />
   return <LoginPage />
 }

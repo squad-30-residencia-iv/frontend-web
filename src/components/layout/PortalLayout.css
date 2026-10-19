@@ -6,10 +6,10 @@
 .portal-brand-icon { background: var(--color-brand); border-radius: 7px; padding: 6px; }
 .portal-sidebar nav { display: grid; gap: 4px; }
 .portal-sidebar nav a { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 11px 12px; border-left: 3px solid transparent; border-radius: 7px; text-decoration: none; }
+.portal-sidebar nav a:hover { color: var(--color-sidebar-foreground); }
 .portal-sidebar nav a[aria-current] { background: var(--color-sidebar-foreground-bg); border-left-color: var(--color-brand); color: var(--color-sidebar-foreground); }
-.portal-profile { margin-top: auto; border-top: 1px solid var(--color-sidebar-foreground-bg); padding-top: 16px; display: flex; align-items: center; gap: 10px; }
+.portal-profile { --user-avatar-bg: var(--color-sidebar-foreground-bg); --user-avatar-fg: var(--color-sidebar-muted); margin-top: auto; border-top: 1px solid var(--color-sidebar-foreground-bg); padding-top: 16px; display: flex; align-items: center; gap: 10px; }
 .portal-profile strong { color: var(--color-sidebar-foreground); font-size: 12px; }
-.portal-avatar { background: var(--color-sidebar-foreground-bg); padding: 7px; border-radius: 50%; }
 .portal-main { padding: 28px; min-width: 0; }
 .portal-layout a:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 @media (min-width: 1400px) { .portal-main { padding: 36px; } }
