@@ -1,30 +1,6 @@
-.campaign-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
 
-.campaign-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 11px;
-  margin-bottom: 4px;
-}
 
-.campaign-breadcrumb span:last-child {
-  color: var(--color-brand);
-}
 
-.campaign-header h1 {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.3;
-  letter-spacing: -.4px;
-}
 
 .campaign-create.button {
   min-height: 34px;
@@ -404,19 +380,10 @@
 }
 
 @media (max-width:1000px) and (min-width:701px) {
-  .campaign-header {
-    margin-bottom: 14px;
-  }
 
-  .campaign-header h1 {
-    font-size: 17px;
-  }
 
-  .campaign-breadcrumb {
-    font-size: 9px;
-  }
 
-  .campaign-create.button {
+.campaign-create.button {
     font-size: 10px;
     height: 26px;
     min-height: 26px;
@@ -543,13 +510,8 @@
 }
 
 @media (max-width:700px) {
-  .campaign-header {
-    align-items: flex-start;
-  }
 
-  .campaign-header h1 {
-    font-size: 21px;
-  }
+
 
   .campaign-create.button {
     font-size: 11px;

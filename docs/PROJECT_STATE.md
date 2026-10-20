@@ -134,3 +134,12 @@
 - /vouchers, /relatorios e /auditoria mostram estado temporário "Em construção". Login segue em / até a US-011 entrar em main.
 - Novos testes: HomePage.test.tsx (10) e 1 em CreateCampaignPage.test.tsx. Verify e build NÃO executados (ambiente sem acesso ao npm). Sem commit/push.
 - Sugestão de commit: feat(ui): implementa Home com Sidebar global e cards de campanhas (US-012)
+
+## Entrega 2026-10-19 — PageHeader global (issue #12)
+- PageHeader compartilhado em components/shared: título, breadcrumbs configuráveis, ação opcional à direita e titleId opcional. Sem slot vazio quando não há ação.
+- Integrado à listagem/criação de campanhas e às páginas provisórias de Vouchers, Relatórios e Auditoria. CSS dos cabeçalhos centralizado; CSS antigo do placeholder removido.
+- Links internos via navigate, cliques modificados preservados e interceptação da saída da criação mantida. HomeGreeting exclusivo da Home e login preservados.
+- Exportar histórico não implementado: Auditoria permanece provisória, componente suporta ação configurada (teste). Não foi criada ação fictícia.
+- Verify aprovado: 108 testes em oito arquivos. Build aprovado com avisos existentes de bundle/Zod. Testes focados repetidos sem aviso JSDOM. Sem revisão visual em navegador nesta sessão.
+- Documentação docs/PAGE_HEADER.md e spec completed/US-012-pageheader-global.md. Sem commit/push.
+- Sugestão de commit: feat(ui): adiciona PageHeader global às páginas internas.
