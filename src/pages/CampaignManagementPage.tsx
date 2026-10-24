@@ -1,3 +1,4 @@
+import { PageHeader } from '../components/shared/PageHeader'
 import { useState } from 'react'
 import {
   CalendarDays,
@@ -97,21 +98,15 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
     navigate('/campanhas/nova')
   }
   return <PortalLayout activeSection="campaigns">
-    <header className="campaign-header">
-      <div>
-        <nav aria-label="Caminho" className="campaign-breadcrumb">
-          <span>Portal</span>
-          <ChevronRight size={12} />
-          <span>Campanhas</span>
-        </nav>
-        <h1>Gerenciamento de Campanhas</h1>
-      </div>
-      <Button
+    <PageHeader
+      title="Gerenciamento de Campanhas"
+      breadcrumbs={[{ label: 'Portal' }, { label: 'Campanhas' }]}
+      action={<Button
         className="campaign-create"
         startIcon={Plus}
         onPress={handleCreateCampaign}
-      >Nova campanha</Button>
-    </header>
+      >Nova campanha</Button>}
+    />
     {!approved && <section className="campaign-notice" aria-label="Campanha aguardando aprovação">
       <span className="campaign-notice-icon">
         <ShieldAlert size={17} />

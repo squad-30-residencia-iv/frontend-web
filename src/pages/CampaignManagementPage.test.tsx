@@ -1,16 +1,16 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { toast } from '@heroui/react'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CampaignManagementPage } from './CampaignManagementPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
+import { clearToasts } from '../test/clearToasts'
 
 beforeAll(() => {
   vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() })
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, onchange: null, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }))
 })
 afterAll(() => vi.unstubAllGlobals())
-afterEach(() => { act(() => toast.clear()) })
+afterEach(clearToasts)
 function setup() { render(<><CampaignManagementPage /><FeedbackProvider /></>); return userEvent.setup() }
 describe('Gerenciamento de Campanhas', () => {
   it('mostra referência, indicadores e sete campanhas na primeira página', () => {

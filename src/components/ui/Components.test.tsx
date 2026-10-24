@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from '@heroui/react'
 import { Mail, Plus } from 'lucide-react'
@@ -14,6 +14,7 @@ import { FeedbackProvider } from './FeedbackProvider'
 import { Loading } from './Loading'
 import { EmptyState } from './EmptyState'
 import { useFeedback } from './useFeedback'
+import { clearToasts } from '../../test/clearToasts'
 
 // jsdom não implementa consultas de mídia nem medição de layout do Toast.
 beforeAll(() => {
@@ -36,10 +37,7 @@ beforeAll(() => {
 
 afterAll(() => vi.unstubAllGlobals())
 
-afterEach(async () => {
-  act(() => toast.clear())
-  await waitFor(() => expect(toast.getQueue().visibleToasts).toHaveLength(0))
-})
+afterEach(clearToasts)
 
 describe('Componentes base', () => {
   it('repassa interação, ícones e propriedades do botão', async () => {

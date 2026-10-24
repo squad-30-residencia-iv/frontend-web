@@ -1,18 +1,18 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { toast } from '@heroui/react'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 import { CreateCampaignPage } from './CreateCampaignPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
 import { campaignDraftStorageKey, initialCampaignDraft } from '../data/campaignDraft'
+import { clearToasts } from '../test/clearToasts'
 
 beforeAll(() => {
   vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() })
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, onchange: null, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }))
 })
 beforeEach(() => { localStorage.clear(); window.history.replaceState(null, '', '/campanhas/nova') })
-afterEach(() => { act(() => toast.clear()); vi.restoreAllMocks(); window.history.replaceState(null, '', '/') })
+afterEach(async () => { await clearToasts(); vi.restoreAllMocks(); window.history.replaceState(null, '', '/') })
 afterAll(() => vi.unstubAllGlobals())
 function setup() {
   render(<><App /><FeedbackProvider /></>)
