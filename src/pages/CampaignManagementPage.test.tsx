@@ -79,6 +79,13 @@ describe('Gerenciamento de Campanhas', () => {
     expect(await screen.findByText('Campanha aprovada')).toBeVisible()
     expect(screen.queryByText('Nova campanha criada')).not.toBeInTheDocument()
   })
+  it('abre os detalhes pelo nome da campanha', async () => {
+    const user = setup()
+    const link = screen.getByRole('link', { name: 'Black Friday 2024' })
+    expect(link).toHaveAttribute('href', '/campanhas/1')
+    await user.click(link)
+    expect(window.location.pathname).toBe('/campanhas/1')
+  })
   it('navega para a criação', async () => {
     const user = setup()
     await user.click(screen.getByRole('button', { name: 'Nova campanha' }))
