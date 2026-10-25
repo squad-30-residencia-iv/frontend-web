@@ -14,10 +14,11 @@ export interface PageHeaderProps {
   breadcrumbs: readonly PageBreadcrumb[]
   action?: ReactNode
   titleId?: string
+  subtitle?: string
 }
 
 // As páginas definem seu caminho e ação; a Home mantém o HomeGreeting exclusivo.
-export function PageHeader({ title, breadcrumbs, action, titleId }: PageHeaderProps) {
+export function PageHeader({ title, breadcrumbs, action, titleId, subtitle }: PageHeaderProps) {
   function handleLink(event: MouseEvent<HTMLAnchorElement>, item: PageBreadcrumb) {
     item.onClick?.(event)
     if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return
@@ -43,6 +44,7 @@ export function PageHeader({ title, breadcrumbs, action, titleId }: PageHeaderPr
         </ol>
       </nav>
       <h1 id={titleId}>{title}</h1>
+      {subtitle && <p className="page-header-subtitle">{subtitle}</p>}
     </div>
     {action != null && action !== false && <div className="page-header-action">{action}</div>}
   </header>

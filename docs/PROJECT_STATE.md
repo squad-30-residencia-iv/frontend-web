@@ -143,3 +143,12 @@
 - Verify aprovado: 108 testes em oito arquivos. Build aprovado com avisos existentes de bundle/Zod. Testes focados repetidos sem aviso JSDOM. Sem revisão visual em navegador nesta sessão.
 - Documentação docs/PAGE_HEADER.md e spec completed/US-012-pageheader-global.md. Sem commit/push.
 - Sugestão de commit: feat(ui): adiciona PageHeader global às páginas internas.
+
+## Entrega 2026-10-25 — US-013: Consulta de Vouchers
+- /vouchers substitui placeholder por tela com PortalLayout, PageHeader com subtítulo opcional, cards calculados, busca/filtros aplicados por botão/Enter, limpar filtros, tabela mascarada, badges e paginação acessível de sete itens.
+- 5.899 mocks coerentes com os quatro cards e 843 páginas; sete linhas iniciais da imagem preservadas. Divergência do rodapé 120 na imagem documentada.
+- Tipos e carregador local separados; loading/success/empty/error/retry e proteção contra atualização após desmontagem. Sem API ou dependências novas.
+- Ações HeroUI navegam para /vouchers/:id/historico com destino provisório e retorno; histórico não implementado.
+- Testes da Home/PageHeader atualizados ao substituir placeholder. Verify aprovado: 117 testes em nove arquivos, incluindo dez novos de vouchers. Build aprovado com avisos existentes de bundle/Zod; sem revisão visual em navegador.
+- Relatório docs/VOUCHER_LOOKUP.md e spec completed/US-013-consulta-vouchers.md. Sem commit/push.
+- Sugestão de commit: feat(vouchers): implementa consulta com filtros e paginação local.
