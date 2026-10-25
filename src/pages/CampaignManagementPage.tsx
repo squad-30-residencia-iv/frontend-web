@@ -1,5 +1,5 @@
 import { PageHeader } from '../components/shared/PageHeader'
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import {
   CalendarDays,
   CheckSquare,
@@ -97,6 +97,12 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
   function handleCreateCampaign() {
     navigate('/campanhas/nova')
   }
+  function handleOpenDetails(event: MouseEvent<HTMLAnchorElement>, campaignId: string) {
+    // Ctrl/Cmd/Shift/Alt e botão do meio mantêm o comportamento nativo (nova aba/janela).
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return
+    event.preventDefault()
+    navigate(`/campanhas/${campaignId}`)
+  }
   return <PortalLayout activeSection="campaigns">
     <PageHeader
       title="Gerenciamento de Campanhas"
@@ -185,7 +191,11 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
             <tbody>
               {visible.map(campaign => <tr key={campaign.id}>
                 <th scope="row">
-                  {campaign.name}
+                  <a
+                    className="campaign-name-link"
+                    href={`/campanhas/${campaign.id}`}
+                    onClick={event => handleOpenDetails(event, campaign.id)}
+                  >{campaign.name}</a>
                 </th>
                 <td className="campaign-date">
                   {dateFormat(campaign.start).slice(0, 5)} a {' '}
