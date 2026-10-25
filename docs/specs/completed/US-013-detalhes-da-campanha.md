@@ -1,9 +1,8 @@
 # Especificação Técnica: US-013 - Detalhes da campanha
-
-> Status: In Progress
+> Status: Completed
 > História de Usuário Relacionada: [colar o link da issue]
 > Responsável: [seu nome, de git config user.name]
-> Data: 2026-10-24
+> Data: 2026-10-25
 > Branch: `feat/05_detalhes-da-compra`
 > Protótipo: https://www.figma.com/proto/SW0o83ES2HBhP5nicacdpt/Portal-Campanhas--Copy-?node-id=2198-757
 
@@ -37,18 +36,18 @@ Sem endpoint. A fronteira é `getCampaignDetails(id)` em `src/data/campaignDetai
 
 ## 4. Checklist de Implementação
 
-- [ ] 1. Tipos
-- [ ] 2. Dados locais e cálculos
-- [ ] 3. `CampaignDetailsPage` (TSX e CSS), rota em `App.tsx` e link na listagem
-- [ ] 4. Testes da página e do link da listagem
-- [ ] 5. `npm run verify` e `npm run build` aprovados
-- [ ] 6. `PROJECT_STATE.md` atualizado
+- [x] 1. Tipos
+- [x] 2. Dados locais e cálculos
+- [x] 3. `CampaignDetailsPage` (TSX e CSS), rota em `App.tsx` e link na listagem
+- [x] 4. Testes da página e do link da listagem
+- [x] 5. `npm run verify` e `npm run build` aprovados
+- [x] 6. `PROJECT_STATE.md` atualizado
 
 ---
 
 ## 5. Casos de Teste Essenciais
 
-- [ ] Renderiza todos os blocos da campanha de referência.
-- [ ] Campanha agendada, encerrada e pausada mostram textos e ações corretos.
-- [ ] Campanha inexistente e endereço malformado mostram "Campanha não encontrada".
-- [ ] Nome da campanha na listagem abre `/campanhas/:id`.
+- [x] Renderiza todos os blocos da campanha de referência.
+- [x] Campanha agendada, encerrada e pausada mostram textos e ações corretos.
+- [x] Campanha inexistente e endereço malformado mostram "Campanha não encontrada".
+- [x] Nome da campanha na listagem abre `/campanhas/:id`.
