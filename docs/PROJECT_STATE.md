@@ -157,3 +157,7 @@
 - Corrigida sobreposição da seta do Select com o valor selecionado, usando indicador em fluxo normal e tipografia herdada.
 - Alturas/espaçamentos uniformes, rótulos alinhados, reticências para valores longos e estados de hover/foco no CSS local.
 - Build aprovado. Sem mudanças na lógica; sem commit/push.
+
+## Ajuste 2026-10-26 — filtros de campanhas
+- Aplicado aos filtros Status/Período o mesmo padrão visual da consulta de vouchers: seta em fluxo normal, fontes e alturas uniformes, espaçamento, reticências e hover/foco.
+- Alteração restrita ao CSS da tela, mantendo lógica e navegação. Build aprovado; sem commit/push.
