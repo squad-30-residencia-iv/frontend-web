@@ -152,3 +152,8 @@
 - Testes da Home/PageHeader atualizados ao substituir placeholder. Verify aprovado: 117 testes em nove arquivos, incluindo dez novos de vouchers. Build aprovado com avisos existentes de bundle/Zod; sem revisão visual em navegador.
 - Relatório docs/VOUCHER_LOOKUP.md e spec completed/US-013-consulta-vouchers.md. Sem commit/push.
 - Sugestão de commit: feat(vouchers): implementa consulta com filtros e paginação local.
+
+## Ajuste 2026-10-26 — filtros de vouchers
+- Corrigida sobreposição da seta do Select com o valor selecionado, usando indicador em fluxo normal e tipografia herdada.
+- Alturas/espaçamentos uniformes, rótulos alinhados, reticências para valores longos e estados de hover/foco no CSS local.
+- Build aprovado. Sem mudanças na lógica; sem commit/push.

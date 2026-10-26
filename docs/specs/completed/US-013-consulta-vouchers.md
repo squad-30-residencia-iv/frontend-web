@@ -10,3 +10,7 @@ A referência combina cards somando 5.899 vouchers, total 120 e página 843: val
 
 Validação: npm run verify aprovado com 117 testes em 9 arquivos. Build de produção aprovado; revisão visual manual em navegador não realizada. Sem commit/push.
 
+
+## Ajuste 2026-10-26 — apresentação dos filtros
+- Rótulos e valores alinhados, tipografia compacta uniforme, alturas/espaçamentos padronizados e estados de hover/foco.
+- Indicador do Select em fluxo normal para evitar sobreposição ao texto; valores longos com reticências. Alteração restrita ao CSS da consulta.

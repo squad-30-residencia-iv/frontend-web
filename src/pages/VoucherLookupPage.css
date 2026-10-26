@@ -95,25 +95,58 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 32px;
   border: 1px solid var(--border);
-  padding: 0 9px;
+  padding: 0 10px;
   border-radius: 6px;
 }
 .voucher-filter > label {
+  flex-shrink: 0;
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
 }
 .voucher-filter .select__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 58px;
   min-height: 28px;
   height: 28px;
   padding: 0;
   border: 0;
   box-shadow: none;
   background: transparent;
-  gap: 8px;
+  gap: 10px;
   font-size: 11px;
+}
+.voucher-filter .select__value {
+  min-width: 0;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+.voucher-filter .select__indicator {
+  position: static;
+  inset: auto;
+  margin: 0;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.voucher-filter:hover {
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--border));
+}
+.voucher-filter:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 12%, transparent);
 }
 .voucher-filter-button.button, .voucher-clear.button {
   min-height: 28px;
