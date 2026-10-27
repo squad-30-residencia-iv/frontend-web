@@ -171,3 +171,13 @@
 - CampaignActionsMenu passa a aceitar Pick<Campaign, 'name'>; o nome da campanha na listagem virou link.
 - Verify aprovado: [N] testes em [M] arquivos. Build aprovado com avisos existentes de bundle/Zod. Revisão visual no navegador conferida com o Figma na campanha de referência.
 - Spec completed/US-013-detalhes-da-campanha.md. Pendências: contrato de API a confirmar com o backend.
+
+## Entrega 2026-10-27 — US-014: Auditoria
+- /auditoria substitui placeholder: PortalLayout audit, PageHeader e Exportar histórico, quatro cards calculados, filtros locais aplicados por botão/Enter e paginação acessível de sete registros.
+- Repositório centralizado tipado com 80 registros: oito campanhas, três responsáveis e 45 críticas; números coerentes em vez dos totais conflitantes da imagem. Primeiras três linhas da referência preservadas.
+- Detalhes em Modal compartilhado pelo menu HeroUI: alterações antes/depois, motivo de bloqueio, alertas prioritários, falha técnica e metadados conforme aplicabilidade. Sem blocos extras na página.
+- Exportação CSV de todos os resultados filtrados (não só página atual), UTF-8/BOM, escaping e proteção contra fórmulas; download local e feedback de sucesso/erro. Nenhum endpoint ou dependência nova.
+- Loading, success, vazio, erro/retry, filtros preservados em falha de exportação, responsividade e status com cores. Home e PageHeader tests ajustados à substituição do placeholder.
+- Verify aprovado: 151 testes em 12 arquivos, incluindo 20 novos. Build aprovado com avisos existentes de bundle/Zod; diff --check limpo. Sem revisão visual manual em navegador nesta sessão.
+- Relatório docs/AUDIT.md; spec completed/US-014-auditoria.md. Sem commit/push.
+- Sugestão de commit: feat(audit): implementa auditoria com detalhes e exportação CSV.

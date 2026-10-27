@@ -1,0 +1,45 @@
+.audit-record-details {
+  display: grid;
+  gap: 20px;
+  overflow-wrap: anywhere;
+}
+
+.audit-record-details dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.audit-record-details dt {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.audit-record-details dd,
+.audit-record-details p,
+.audit-record-details li {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.audit-record-details h3 {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.audit-record-details section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.audit-record-details ul {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 500px) {
+  .audit-record-details dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

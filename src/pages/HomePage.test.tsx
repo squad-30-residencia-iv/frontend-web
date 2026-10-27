@@ -122,7 +122,7 @@ describe('Home', () => {
     await user.click(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Auditoria' }))
     await waitFor(() => expect(window.location.pathname).toBe('/auditoria'))
     expect(screen.getByRole('heading', { level: 1, name: 'Auditoria' })).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Em construção' })).toBeVisible()
+    expect(await screen.findByRole('table', { name: 'Histórico de operações nas campanhas' })).toBeVisible()
     expect(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Auditoria' })).toHaveAttribute('aria-current', 'page')
   })
 

@@ -1,3 +1,4 @@
+import { AuditPage } from './pages/AuditPage'
 import { VoucherLookupPage, VoucherHistoryPending } from './pages/VoucherLookupPage'
 import { useSyncExternalStore } from 'react'
 import { LoginPage } from './pages/LoginPage'
@@ -21,7 +22,6 @@ function safeDecode(value: string) {
 
 const placeholderRoutes: Record<string, PlaceholderSection> = {
   '/relatorios': 'reports',
-  '/auditoria': 'audit',
 }
 
 function subscribeToPathname(onChange: () => void) {
@@ -33,6 +33,7 @@ function getPathname() {
 }
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
+  if (pathname === '/auditoria') return <AuditPage />
   if (pathname === '/vouchers') return <VoucherLookupPage />
   if (/^\/vouchers\/[^/]+\/historico$/.test(pathname)) return <VoucherHistoryPending />
   if (pathname === '/home') return <HomePage />
