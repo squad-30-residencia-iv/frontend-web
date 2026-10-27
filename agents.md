@@ -73,3 +73,4 @@ Qualquer assistente que iniciar uma sessão deve seguir este fluxo:
 - A Sidebar navega com `navigate()`. Telas com alterações não salvas passam `onNavigate(path)` ao `PortalLayout` para confirmar antes de sair.
 - A Home tem cabeçalho próprio (`HomeGreeting`) e não usa o `PageHeader` das páginas internas.
 - O usuário exibido vem de `data/currentUser.ts` (mock) até a autenticação entrar em `main`; o avatar é o `UserAvatar` de `components/shared/`.
+- Rotas com parâmetro (ex.: `/campanhas/:id`) são resolvidas em `App.tsx` por regex no pathname e recebem o id por prop. Links internos usam `href` e `onClick` com `navigate()`, preservando Ctrl/Cmd/Shift/Alt.

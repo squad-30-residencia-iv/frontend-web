@@ -5,6 +5,19 @@ import { CampaignManagementPage } from './pages/CampaignManagementPage'
 import { CreateCampaignPage } from './pages/CreateCampaignPage'
 import { HomePage } from './pages/HomePage'
 import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
+import { CampaignDetailsPage } from './pages/CampaignDetailsPage'
+
+const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
+
+function safeDecode(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+
 
 const placeholderRoutes: Record<string, PlaceholderSection> = {
   '/relatorios': 'reports',
@@ -25,6 +38,8 @@ export function App() {
   if (pathname === '/home') return <HomePage />
   if (pathname === '/campanhas/nova') return <CreateCampaignPage />
   if (pathname === '/campanhas') return <CampaignManagementPage />
+  const campaignDetailsMatch = campaignDetailsPattern.exec(pathname)
+  if (campaignDetailsMatch) return <CampaignDetailsPage campaignId={safeDecode(campaignDetailsMatch[1])} />
   if (pathname in placeholderRoutes) return <SectionPlaceholderPage section={placeholderRoutes[pathname]} />
   return <LoginPage />
 }
