@@ -26,7 +26,7 @@
 - Documentação dos componentes em `docs/UI_COMPONENTS.md`. A vitrine `/ui.html` foi removida.
 - Paleta do portal em `src/styles.css`: cores próprias no `@theme` e tokens da HeroUI apontando para a mesma paleta.
 - Validação: `npm run build`, `npm test -- --run` e `npm run verify` aprovados; 16 testes. Sem script de lint.
-
+- US-013: tela Detalhes da campanha em `/campanhas/:id` (detalhes no bloco "Entrega 2026-10-25 — US-013" abaixo).
 ---
 
 ## ⚠️ Bloqueios & Decisões Recentes
@@ -143,3 +143,14 @@
 - Verify aprovado: 108 testes em oito arquivos. Build aprovado com avisos existentes de bundle/Zod. Testes focados repetidos sem aviso JSDOM. Sem revisão visual em navegador nesta sessão.
 - Documentação docs/PAGE_HEADER.md e spec completed/US-012-pageheader-global.md. Sem commit/push.
 - Sugestão de commit: feat(ui): adiciona PageHeader global às páginas internas.
+
+
+
+## Entrega 2026-10-25 — US-013: detalhes da campanha
+- Tela em /campanhas/:id (branch feat/05_detalhes-da-compra), aberta pelo nome da campanha na listagem. Rota resolvida em App.tsx por pathname, sem roteador; /campanhas/nova preservada.
+- Página única em pages/CampaignDetailsPage (TSX e CSS ao lado) com PortalLayout e PageHeader: resumo, cinco indicadores, vigência, validade dos vouchers, últimos vouchers e informações detalhadas.
+- Dados locais em data/campaignDetails.ts (fronteira getCampaignDetails para trocar por API). A campanha do protótipo abre em /campanhas/material-novo-ideias-novas; as da listagem derivam de campaigns.ts e homeOverview.ts, com o restante demonstrativo e identificado na tela.
+- Pausar/Retomar, Editar e menus de ações mostram "Ação em breve"; "Ver todos os vouchers" leva a /vouchers (em construção). Sem imagem da campanha (bloco decorativo). Sem implementação de pausar/editar nem da tela de vouchers.
+- CampaignActionsMenu passa a aceitar Pick<Campaign, 'name'>; o nome da campanha na listagem virou link.
+- Verify aprovado: [N] testes em [M] arquivos. Build aprovado com avisos existentes de bundle/Zod. Revisão visual no navegador conferida com o Figma na campanha de referência.
+- Spec completed/US-013-detalhes-da-campanha.md. Pendências: contrato de API a confirmar com o backend.
