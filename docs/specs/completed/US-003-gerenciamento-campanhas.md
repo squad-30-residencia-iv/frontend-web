@@ -13,3 +13,6 @@ Menu fechado na referência: abrir aviso de opções ainda não definidas, sem i
 - [x] Layout desktop/responsivo, busca, filtros, paginação, menu, aprovação, loading e vazio.
 - [x] Testes de comportamento, build e verify.
 
+
+## Ajuste visual — 2026-10-26
+Filtros Status/Período padronizados com os filtros de vouchers: indicador sem sobreposição, texto alinhado, altura uniforme e estados de hover/foco. Build aprovado. Sem mudança funcional.

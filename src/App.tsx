@@ -1,3 +1,4 @@
+import { VoucherLookupPage, VoucherHistoryPending } from './pages/VoucherLookupPage'
 import { useSyncExternalStore } from 'react'
 import { LoginPage } from './pages/LoginPage'
 import { CampaignManagementPage } from './pages/CampaignManagementPage'
@@ -19,7 +20,6 @@ function safeDecode(value: string) {
 
 
 const placeholderRoutes: Record<string, PlaceholderSection> = {
-  '/vouchers': 'vouchers',
   '/relatorios': 'reports',
   '/auditoria': 'audit',
 }
@@ -33,6 +33,8 @@ function getPathname() {
 }
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
+  if (pathname === '/vouchers') return <VoucherLookupPage />
+  if (/^\/vouchers\/[^/]+\/historico$/.test(pathname)) return <VoucherHistoryPending />
   if (pathname === '/home') return <HomePage />
   if (pathname === '/campanhas/nova') return <CreateCampaignPage />
   if (pathname === '/campanhas') return <CampaignManagementPage />

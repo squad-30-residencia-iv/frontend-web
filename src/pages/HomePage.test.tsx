@@ -130,7 +130,7 @@ describe('Home', () => {
     window.history.replaceState(null, '', '/vouchers')
     const user = userEvent.setup()
     render(<App />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Vouchers' })).toBeVisible()
+    expect(screen.getByRole('heading', { level: 1, name: 'Consulta de Vouchers' })).toBeVisible()
     await user.click(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Visão geral' }))
     expect(window.location.pathname).toBe('/home')
     expect(await screen.findByRole('heading', { level: 1, name: 'Olá, Lucas!' })).toBeVisible()
