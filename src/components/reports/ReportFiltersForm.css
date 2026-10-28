@@ -1,0 +1,138 @@
+.report-filters {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  margin-bottom: 20px;
+}
+
+.report-filters-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.report-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+.report-filter > label {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.report-filter .select__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 58px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.report-filter .select__value {
+  min-width: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.report-filter .select__indicator {
+  position: static;
+  inset: auto;
+  margin: 0;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.report-filter:hover {
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--border));
+}
+
+.report-filter:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 12%, transparent);
+}
+
+.report-filter-button.button,
+.report-filter-clear.button {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+.report-filter-clear.button {
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.report-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-canvas) 55%, var(--surface));
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.report-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 3px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.report-chip button:hover {
+  color: var(--foreground);
+}
+
+.report-chip button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 700px) {
+  .report-filter {
+    flex: 1 1 auto;
+  }
+}

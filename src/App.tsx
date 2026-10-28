@@ -6,6 +6,7 @@ import { CreateCampaignPage } from './pages/CreateCampaignPage'
 import { HomePage } from './pages/HomePage'
 import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
 import { CampaignDetailsPage } from './pages/CampaignDetailsPage'
+import { ReportsPage } from './pages/ReportsPage'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
 
@@ -20,7 +21,6 @@ function safeDecode(value: string) {
 
 
 const placeholderRoutes: Record<string, PlaceholderSection> = {
-  '/relatorios': 'reports',
   '/auditoria': 'audit',
 }
 
@@ -36,6 +36,7 @@ export function App() {
   if (pathname === '/vouchers') return <VoucherLookupPage />
   if (/^\/vouchers\/[^/]+\/historico$/.test(pathname)) return <VoucherHistoryPending />
   if (pathname === '/home') return <HomePage />
+  if (pathname === '/relatorios') return <ReportsPage />
   if (pathname === '/campanhas/nova') return <CreateCampaignPage />
   if (pathname === '/campanhas') return <CampaignManagementPage />
   const campaignDetailsMatch = campaignDetailsPattern.exec(pathname)

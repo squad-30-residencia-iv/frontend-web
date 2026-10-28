@@ -171,3 +171,12 @@
 - CampaignActionsMenu passa a aceitar Pick<Campaign, 'name'>; o nome da campanha na listagem virou link.
 - Verify aprovado: [N] testes em [M] arquivos. Build aprovado com avisos existentes de bundle/Zod. Revisão visual no navegador conferida com o Figma na campanha de referência.
 - Spec completed/US-013-detalhes-da-campanha.md. Pendências: contrato de API a confirmar com o backend.
+
+## Sessão 2026-10-27 — US-013 Relatórios e Indicadores (em andamento)
+- /relatorios substitui o placeholder: filtros (7) com Aplicar/Limpar/chips e cascata Rede → Região → Estabelecimento, 5 KPIs, gráfico mensal e rosca em SVG próprio, Top 5 campanhas e Desempenho por região (Tkt Médio mock), Exportar CSV, estados de carregando/vazio/nenhuma campanha/erro. Filtros na URL via replaceState.
+- Decisões do planejamento: cancelados entram na conta, Print 2 vai para Auditoria, Tkt Médio mock, Exportar CSV no cabeçalho.
+- Dados em data/reports.ts (fetchReport/fetchReportCatalog são o ponto de troca pela API); sem dependência nova (Recharts não usado).
+- Tabelas derivadas do mesmo conjunto e diferentes da imagem, que não fecha com os cards; documentado em docs/REPORTS.md.
+- Testes novos: reports.test.ts, reportFormatters.test.ts, ReportsPage.test.tsx; PageHeader.test.tsx ajustado.
+- PENDENTE: `npm run verify` e `npm run build` NÃO executados (registro npm bloqueado no ambiente) e sem revisão visual em navegador. Spec segue em docs/specs/in-progress/ até o verify passar.
+- Branch sugerida feat/04-pagina_relatorios. Sem commit/push. Sugestão de commit: feat(reports): implementa tela de relatórios e indicadores com filtros e exportação CSV (US-013).
