@@ -188,29 +188,6 @@
   color: var(--muted);
   font-size: 11px;
 }
-.audit-tone-active {
-  --audit-tone: var(--success);
-}
-.audit-tone-scheduled {
-  --audit-tone: var(--color-info);
-}
-.audit-tone-ended {
-  --audit-tone: var(--color-neutral);
-}
-.audit-tone-warning {
-  --audit-tone: var(--warning);
-}
-.audit-tone-blocked, .audit-tone-failed {
-  --audit-tone: var(--danger);
-}
-.audit-status {
-  display: inline-block;
-  color: var(--audit-tone);
-  background: color-mix(in srgb, var(--audit-tone) 12%, var(--surface));
-  font-size: 10px;
-  padding: 3px 6px;
-  border-radius: 4px;
-}
 .audit-actions-button.button {
   min-height: 26px;
   height: 26px;

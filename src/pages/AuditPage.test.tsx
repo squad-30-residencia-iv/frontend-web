@@ -33,11 +33,6 @@ async function selectOption(user: ReturnType<typeof userEvent.setup>, label: Reg
   await user.click(await screen.findByRole('option', { name: option }))
 }
 
-async function openDetails(user: ReturnType<typeof userEvent.setup>, code: string) {
-  await user.click(screen.getByRole('button', { name: `Ações de ${code}` }))
-  await user.click(await screen.findByRole('menuitem', { name: 'Ver detalhes' }))
-  return screen.findByRole('dialog', { name: 'Detalhes do registro' })
-}
 
 describe('Auditoria', () => {
   it('substitui a rota provisória, mantém sidebar ativa e renderiza cards e tabela', async () => {
@@ -119,35 +114,6 @@ describe('Auditoria', () => {
     expect(screen.getByRole('button', { name: 'Próxima página' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Página 1' }))
     expect(screen.getByRole('button', { name: 'Ações de AUD-0001' })).toBeVisible()
-  })
-
-  it('abre detalhes por teclado com alterações e metadados e fecha com Escape', async () => {
-    const user = await setup()
-    screen.getByRole('button', { name: 'Ações de AUD-0001' }).focus()
-    await user.keyboard('{Enter}')
-    await user.click(await screen.findByRole('menuitem', { name: 'Ver detalhes' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Detalhes do registro' })
-    expect(dialog).toHaveTextContent('Maria Eduarda Silva')
-    expect(dialog).toHaveTextContent('20/11/2024 às 14:30')
-    expect(dialog).toHaveTextContent('Analista')
-    expect(dialog).toHaveTextContent('Ativa')
-    expect(within(dialog).getByRole('region', { name: 'Alterações realizadas' })).toHaveTextContent('Depois: Black Friday 2024')
-    expect(within(dialog).queryByRole('region', { name: 'Falha técnica' })).not.toBeInTheDocument()
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it.each([
-    ['AUD-0004', 'Motivo de bloqueio', 'Limite de emissão excedido'],
-    ['AUD-0005', 'Alertas prioritários', 'Revisão prioritária'],
-    ['AUD-0006', 'Falha técnica', 'DEMO-VALIDATION'],
-  ])('expõe detalhes operacionais de %s somente no modal', async (code, section, text) => {
-    const user = await setup()
-    expect(screen.queryByText(new RegExp(text))).not.toBeInTheDocument()
-    const dialog = await openDetails(user, code)
-    expect(within(dialog).getByRole('region', { name: section })).toHaveTextContent(text)
-    await user.click(within(dialog).getByRole('button', { name: 'Fechar' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('exporta todos os resultados aplicados, inclusive os fora da página atual', async () => {

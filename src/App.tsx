@@ -1,4 +1,5 @@
 import { AuditPage } from './pages/AuditPage'
+import { AuditOperationDetailsPage } from './pages/AuditOperationDetailsPage'
 import { VoucherLookupPage, VoucherHistoryPending } from './pages/VoucherLookupPage'
 import { useSyncExternalStore } from 'react'
 import { LoginPage } from './pages/LoginPage'
@@ -34,6 +35,8 @@ function getPathname() {
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
   if (pathname === '/auditoria') return <AuditPage />
+  const auditOperationMatch = /^\/auditoria\/([^/]+)$/.exec(pathname)
+  if (auditOperationMatch) return <AuditOperationDetailsPage key={auditOperationMatch[1]} operationId={safeDecode(auditOperationMatch[1])} />
   if (pathname === '/vouchers') return <VoucherLookupPage />
   if (/^\/vouchers\/[^/]+\/historico$/.test(pathname)) return <VoucherHistoryPending />
   if (pathname === '/home') return <HomePage />

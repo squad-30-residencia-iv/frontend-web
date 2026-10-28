@@ -20,6 +20,7 @@ export interface AuditRecord {
   status: AuditStatus
   critical: boolean
   changes: readonly AuditChange[]
+  justification?: string
   blockingReason?: string
   priorityAlerts?: readonly string[]
   technicalFailure?: { code: string; message: string }

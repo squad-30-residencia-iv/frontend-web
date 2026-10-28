@@ -2,7 +2,8 @@ import { Dropdown } from '@heroui/react'
 import { ChevronLeft, ChevronRight, EllipsisVertical } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
-import { auditOperationLabels, auditStatusLabels, formatAuditDateTime } from '../../data/auditRepository'
+import { auditOperationLabels, formatAuditDateTime } from '../../data/auditRepository'
+import { AuditStatusBadge } from './AuditStatusBadge'
 import type { AuditRecord } from '../../types/audit'
 
 export const auditPageSize = 7
@@ -40,7 +41,7 @@ export function AuditTable({ records, page, onPageChange, onDetails, onClear, ha
           <td>{record.responsibleName}</td>
           <td>{auditOperationLabels[record.operation]}</td>
           <td>{record.profile}</td>
-          <td><span className={`audit-status audit-tone-${record.status}`}><span aria-hidden="true">● </span>{auditStatusLabels[record.status]}</span></td>
+          <td><AuditStatusBadge status={record.status} /></td>
           <td><Dropdown>
             <Button
               className="audit-actions-button"

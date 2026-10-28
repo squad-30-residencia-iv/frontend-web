@@ -39,9 +39,16 @@ export const auditRecords: readonly AuditRecord[] = Array.from({ length: 80 }, (
     occurredAt: initialDates[index] ?? `2026-10-${String(index % 25 + 1).padStart(2, '0')}T14:30:00-03:00`,
     responsibleId: user.id, responsibleName: user.name, profile: user.profile,
     operation, status: operationStatus[operation], critical,
-    changes: operation === 'edit' ? [{ field: 'Nome da campanha', before: 'Campanha em preparação', after: campaigns[index % campaigns.length] }]
+    changes: index === 0 ? [
+      { field: 'Quantidade total', before: '5.000 vouchers', after: '8.000 vouchers' },
+      { field: 'Data de término', before: '20/11/2024', after: '30/11/2024' },
+      { field: 'Canal permitido', before: 'Físico', after: 'Físico e virtual' },
+    ] : operation === 'edit' ? [{ field: 'Nome da campanha', before: 'Campanha em preparação', after: campaigns[index % campaigns.length] }]
       : operation === 'approve' ? [{ field: 'Status', before: 'Rascunho', after: 'Agendada' }]
         : operation === 'pause' ? [{ field: 'Emissão de vouchers', before: 'Habilitada', after: 'Pausada' }] : [],
+    ...(!critical ? {
+      justification: index === 0 ? 'A quantidade foi ampliada devido à alta adesão.' : 'Configuração revisada pelo responsável nesta operação demonstrativa.',
+    } : {}),
     ...(operation === 'block' ? { blockingReason: 'Limite de emissão excedido na validação demonstrativa.' } : {}),
     ...(operation === 'priority-alert' ? { priorityAlerts: ['Volume de operações acima do limite demonstrativo.', 'Revisão prioritária solicitada ao gestor.'] } : {}),
     ...(operation === 'technical-failure' ? { technicalFailure: { code: 'DEMO-VALIDATION', message: 'Falha técnica simulada ao validar a configuração. Nenhuma alteração foi aplicada.' } } : {}),
@@ -51,6 +58,20 @@ export const auditRecords: readonly AuditRecord[] = Array.from({ length: 80 }, (
 // Fronteira local injetável, sem endpoint, rede ou atraso artificial.
 export function loadAuditRecords(): Promise<readonly AuditRecord[]> {
   return Promise.resolve(auditRecords)
+}
+
+export function loadAuditRecord(operationId: string): Promise<AuditRecord | undefined> {
+  return loadAuditRecords().then(records => records.find(record => record.id === operationId))
+}
+
+export function getAuditJustification(record: AuditRecord): string {
+  const information = [
+    record.justification,
+    record.blockingReason,
+    ...(record.priorityAlerts ?? []),
+    record.technicalFailure ? `${record.technicalFailure.code}: ${record.technicalFailure.message}` : undefined,
+  ].filter((value): value is string => Boolean(value?.trim()))
+  return information.length ? information.join('\n') : 'Nenhuma justificativa registrada para esta operação.'
 }
 
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()

@@ -8,7 +8,7 @@ import { Loading } from '../components/ui/Loading'
 import { useFeedback } from '../components/ui/useFeedback'
 import { AuditFilters } from '../components/audit/AuditFilters'
 import { AuditTable } from '../components/audit/AuditTable'
-import { AuditRecordDetails } from '../components/audit/AuditRecordDetails'
+import { openAuditOperation, readAuditListState } from '../navigation/auditNavigation'
 import { downloadAuditCsv } from '../data/auditExport'
 import { emptyAuditFilters, filterAuditRecords, getAuditSummary, loadAuditRecords } from '../data/auditRepository'
 import type { AuditFilters as Filters, AuditRecord } from '../types/audit'
@@ -23,10 +23,10 @@ export interface AuditPageProps {
 export function AuditPage({ loadRecords = loadAuditRecords }: AuditPageProps) {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
-  const [filters, setFilters] = useState<Filters>(emptyAuditFilters)
-  const [applied, setApplied] = useState<Filters>(emptyAuditFilters)
-  const [page, setPage] = useState(1)
-  const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null)
+  const [initialView] = useState(readAuditListState)
+  const [filters, setFilters] = useState<Filters>(initialView?.filters ?? emptyAuditFilters)
+  const [applied, setApplied] = useState<Filters>(initialView?.applied ?? emptyAuditFilters)
+  const [page, setPage] = useState(initialView?.page ?? 1)
   const feedback = useFeedback()
 
   useEffect(() => {
@@ -61,6 +61,10 @@ export function AuditPage({ loadRecords = loadAuditRecords }: AuditPageProps) {
 
   function updateFilter(field: keyof Filters, value: string) {
     setFilters(current => ({ ...current, [field]: value }))
+  }
+
+  function showDetails(record: AuditRecord) {
+    openAuditOperation(record.id, { filters, applied, page })
   }
 
   function exportHistory() {
@@ -100,10 +104,9 @@ export function AuditPage({ loadRecords = loadAuditRecords }: AuditPageProps) {
           </article>)}
         </section>
         <AuditFilters filters={filters} records={state.records} onChange={updateFilter} onApply={applyFilters} onClear={clearFilters} />
-        <AuditTable records={filtered} page={page} onPageChange={setPage} onDetails={setSelectedRecord}
+        <AuditTable records={filtered} page={page} onPageChange={setPage} onDetails={showDetails}
           onClear={clearFilters} hasRecords={state.records.length > 0} />
       </>}
-      <AuditRecordDetails record={selectedRecord} onClose={() => setSelectedRecord(null)} />
     </div>
   </PortalLayout>
 }

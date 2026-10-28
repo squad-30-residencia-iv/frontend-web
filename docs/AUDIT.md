@@ -11,7 +11,7 @@ A rota `/auditoria` substitui o placeholder, com PortalLayout audit e PageHeader
 - Cards globais não mudam com filtros. A tabela tem rolagem horizontal focável; cards tornam-se duas colunas em telas pequenas.
 
 ## Detalhes operacionais
-Menu de ações abre Modal compartilhado. Metadados de data/hora, usuário, perfil, status, operação e campanha sempre presentes. Alterações antes/depois, motivo de bloqueio, alertas e falha técnica aparecem apenas quando aplicáveis ao registro. Nenhum bloco adicional foi inserido na página principal.
+Menu de ações navega para /auditoria/:operationId (US-015), substituindo o modal inicial. Metadados de data/hora, usuário, perfil, status, operação e campanha sempre presentes. Alterações antes/depois, motivo de bloqueio, alertas e falha técnica aparecem apenas quando aplicáveis ao registro. Nenhum bloco adicional foi inserido na página principal.
 
 ## CSV
 Exporta todos os registros dos filtros aplicados, incluindo páginas não visíveis. Edições pendentes dos campos não alteram a exportação. Cabeçalhos em português, UTF-8 com BOM, separador ponto e vírgula, escape de aspas/quebras e neutralização de fórmulas. Inclui informações operacionais dos detalhes. Download via Blob/object URL temporário, sem servidor. Ação desabilitada em loading, erro e zero resultados; falha de exportação mantém filtros e mostra feedback compartilhado.
@@ -26,7 +26,7 @@ Loading, success, vazio e error/retry seguem o padrão da Home. Efeitos descarta
 - `src/data/auditRepository.test.ts`
 - `src/components/audit/AuditFilters.tsx`
 - `src/components/audit/AuditTable.tsx`
-- `src/components/audit/AuditRecordDetails.tsx` e CSS
+- `src/pages/AuditOperationDetailsPage.tsx` e CSS (US-015; substitui o modal inicial)
 - `src/pages/AuditPage.tsx`, CSS e testes
 - `src/App.tsx`
 - Testes de Home e PageHeader atualizados à substituição do placeholder
@@ -38,3 +38,5 @@ Sem commit/push. Revisão visual manual em navegador não realizada nesta sessã
 - npm run verify: aprovado, 151 testes em 12 arquivos; 20 novos de auditoria (14 UI e seis de repositório/CSV).
 - npm run build: aprovado. Avisos existentes sobre tamanho do bundle e comentários da dependência Zod, sem erro.
 - git diff --check: sem erros de whitespace.
+
+A continuação de detalhes está documentada em docs/AUDIT_OPERATION_DETAILS.md. O CSV agora também inclui Justificativa; a listagem mantém exportação de todos os resultados aplicados.
