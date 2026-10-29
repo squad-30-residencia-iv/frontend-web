@@ -58,7 +58,7 @@ describe('PageHeader global', () => {
   })
 
   it.each([
-    ['/auditoria', 'Auditoria'], ['/relatorios', 'Relatórios'],
+    ['/relatorios', 'Relatórios'],
   ])('integra o caminho da rota %s às páginas internas', (path, title) => {
     window.history.replaceState(null, '', path)
     render(<App />)

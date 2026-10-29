@@ -1,0 +1,161 @@
+.audit-operation-page {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.audit-operation-page .page-header {
+  margin-bottom: 20px;
+}
+
+.audit-operation-export.button {
+  min-height: 32px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  box-shadow: 0 3px 6px color-mix(in srgb, var(--color-brand) 20%, transparent);
+}
+
+.audit-operation-export svg {
+  width: 15px;
+}
+
+.audit-operation-page section {
+  margin-bottom: 20px;
+}
+
+.audit-operation-page h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.audit-operation-scroll {
+  overflow-x: auto;
+}
+
+.audit-operation-scroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.audit-operation-page table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.audit-operation-page thead {
+  background: color-mix(in srgb, var(--color-canvas) 45%, var(--surface));
+}
+
+.audit-operation-page th,
+.audit-operation-page td {
+  padding: 14px;
+}
+
+.audit-operation-page thead th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.audit-operation-page tbody th {
+  font-weight: 600;
+}
+
+.audit-operation-information-table {
+  min-width: 740px;
+}
+
+.audit-operation-information-table tbody tr {
+  height: 72px;
+  border-bottom: 1px solid var(--border);
+}
+
+.audit-operation-changes-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+
+.audit-operation-changes-table {
+  min-width: 520px;
+  table-layout: fixed;
+}
+
+.audit-operation-changes-table th:nth-child(1),
+.audit-operation-changes-table th:nth-child(2) {
+  width: 40%;
+}
+
+.audit-operation-changes-table th:nth-child(3) {
+  width: 20%;
+}
+
+.audit-operation-changes-table td,
+.audit-operation-changes-table th {
+  overflow-wrap: anywhere;
+}
+
+.audit-operation-changes-table tr:not(:last-child),
+.audit-operation-changes-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.audit-operation-muted,
+.audit-operation-no-changes {
+  color: var(--muted);
+}
+
+.audit-operation-justification p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 2%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.audit-operation-footer {
+  padding: 12px;
+  background: color-mix(in srgb, var(--color-canvas) 45%, var(--surface));
+}
+
+.audit-operation-footer .button {
+  min-height: 28px;
+  height: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.audit-operation-footer svg {
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.audit-operation-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 700px) {
+  .audit-operation-page h2 {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+}
