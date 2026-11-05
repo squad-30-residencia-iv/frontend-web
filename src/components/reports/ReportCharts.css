@@ -1,0 +1,155 @@
+.report-card {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  min-width: 0;
+}
+
+.report-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.report-card-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.report-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.report-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.report-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--report-color);
+}
+
+.report-series-issued {
+  --report-color: #e4e4e7;
+  fill: var(--report-color);
+}
+
+.report-series-redeemed {
+  --report-color: var(--color-brand);
+  fill: var(--report-color);
+}
+
+.report-series-expired {
+  --report-color: var(--warning);
+  fill: var(--report-color);
+}
+
+.report-status-redeemed {
+  --report-color: var(--color-info);
+  stroke: var(--report-color);
+}
+
+.report-status-available {
+  --report-color: var(--success);
+  stroke: var(--report-color);
+}
+
+.report-status-expired {
+  --report-color: var(--warning);
+  stroke: var(--report-color);
+}
+
+.report-status-cancelled {
+  --report-color: var(--danger);
+  stroke: var(--report-color);
+}
+
+.report-dot.report-status-redeemed,
+.report-dot.report-status-available,
+.report-dot.report-status-expired,
+.report-dot.report-status-cancelled {
+  stroke: none;
+}
+
+.report-bar-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.report-grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.report-axis-label {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.report-donut-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.report-donut-svg {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+}
+
+.report-donut-track {
+  stroke: var(--border);
+}
+
+.report-donut-total {
+  fill: var(--foreground);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.report-donut-caption {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.report-donut-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.report-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.report-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

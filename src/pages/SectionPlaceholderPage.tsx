@@ -4,7 +4,7 @@ import { portalNavigation, type PortalSection } from '../components/layout/navig
 import { EmptyState } from '../components/ui/EmptyState'
 
 
-export type PlaceholderSection = Extract<PortalSection, 'vouchers' | 'reports' | 'audit'>
+export type PlaceholderSection = Extract<PortalSection, 'vouchers' | 'audit'>
 
 export interface SectionPlaceholderPageProps {
   section: PlaceholderSection
