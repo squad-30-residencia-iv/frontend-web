@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CampaignManagementPage } from './CampaignManagementPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
 import { clearToasts } from '../test/clearToasts'
@@ -11,6 +11,7 @@ beforeAll(() => {
 })
 afterAll(() => vi.unstubAllGlobals())
 afterEach(clearToasts)
+beforeEach(() => localStorage.clear())
 function setup() { render(<><CampaignManagementPage /><FeedbackProvider /></>); return userEvent.setup() }
 describe('Gerenciamento de Campanhas', () => {
   it('mostra referência, indicadores e sete campanhas na primeira página', () => {
@@ -61,7 +62,7 @@ describe('Gerenciamento de Campanhas', () => {
     trigger.focus()
     await user.keyboard('{Enter}')
     expect(await screen.findByRole('menu')).toBeVisible()
-    expect(screen.getByRole('menuitem')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('menuitem', { name: 'Pausar' })).not.toHaveAttribute('aria-disabled', 'true')
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
     await waitFor(() => expect(trigger).toHaveFocus())
@@ -76,7 +77,7 @@ describe('Gerenciamento de Campanhas', () => {
     await user.click(screen.getByRole('button', { name: 'Aprovar' }))
     dialog = await screen.findByRole('alertdialog')
     await user.click(within(dialog).getByRole('button', { name: 'Aprovar' }))
-    expect(await screen.findByText('Campanha aprovada')).toBeVisible()
+    expect(await screen.findByText('Campanha aprovada.')).toBeVisible()
     expect(screen.queryByText('Nova campanha criada')).not.toBeInTheDocument()
   })
   it('abre os detalhes pelo nome da campanha', async () => {

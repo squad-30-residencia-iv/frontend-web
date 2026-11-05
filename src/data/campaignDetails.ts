@@ -1,11 +1,11 @@
-import { campaigns as mockCampaigns } from './campaigns'
-import { loadCreatedCampaigns } from './campaignRepository'
+import { detailsReferenceCampaign } from './campaigns'
+import { getCampaignById } from './campaignRepository'
 import { homeOverview } from './homeOverview'
 import type { Campaign, CampaignStatus } from '../types/campaign'
 import type { CampaignDetails, CampaignInfoSection, CampaignVoucher, CampaignVoucherMetrics, VoucherStatus } from '../types/campaignDetails'
 
 /** Campanha de referência do protótipo. Não consta na listagem: abra em /campanhas/material-novo-ideias-novas. */
-export const referenceCampaignId = 'material-novo-ideias-novas'
+export const referenceCampaignId = detailsReferenceCampaign.id
 
 const MINUTE = 60_000
 const DAY = 86_400_000
@@ -30,7 +30,7 @@ const referenceDetails: CampaignDetails = {
   id: referenceCampaignId,
   category: 'Papelaria',
   status: 'active',
-  name: 'Material novo, ideias novas',
+  name: detailsReferenceCampaign.name,
   description: 'Cadernos, estojos e itens criativos para renovar sua rotina.',
   benefitLabel: '20% OFF',
   startsAt: '2026-10-01T08:00:00-03:00',
@@ -188,9 +188,10 @@ function deriveDetails(campaign: Campaign): CampaignDetails {
 }
 
 export function getCampaignDetails(campaignId: string): CampaignDetails | null {
-  if (campaignId === referenceCampaignId) return referenceDetails
-  const campaign = [...loadCreatedCampaigns(), ...mockCampaigns].find(item => item.id === campaignId)
-  return campaign ? deriveDetails(campaign) : null
+  const campaign = getCampaignById(campaignId)
+  if (!campaign) return null
+  const details = campaignId === referenceCampaignId ? referenceDetails : deriveDetails(campaign)
+  return { ...details, status: campaign.status, rejectionReason: campaign.rejectionReason }
 }
 
 export type CampaignPhase = 'scheduled' | 'running' | 'ended'

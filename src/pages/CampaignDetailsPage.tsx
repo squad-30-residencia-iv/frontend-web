@@ -1,4 +1,4 @@
-import { useMemo, type MouseEvent, type ReactNode } from 'react'
+import { useMemo, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 import {
   ArrowRight,
   CalendarClock,
@@ -7,8 +7,6 @@ import {
   Clock,
   Info,
   Megaphone,
-  Pause,
-  Play,
   SquarePen,
   Ticket,
   type LucideIcon,
@@ -16,13 +14,18 @@ import {
 import { PageHeader } from '../components/shared/PageHeader'
 import { PortalLayout } from '../components/layout/PortalLayout'
 import { CampaignActionsMenu } from '../components/campaigns/CampaignActionsMenu'
+import { CampaignActionDialog, type SelectedCampaignAction } from '../components/campaigns/CampaignActionDialog'
+import { FeedbackAlert } from '../components/ui/FeedbackAlert'
+import { currentUser } from '../data/currentUser'
+import { getCampaignRevision, subscribeCampaigns } from '../data/campaignRepository'
+import { campaignActionLabels, getCampaignActions } from '../data/campaignWorkflow'
 import { formatNumber } from '../components/home/formatters'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useFeedback } from '../components/ui/useFeedback'
 import { getCampaignDetails, getCampaignMetrics, getCampaignTiming, type CampaignPhase } from '../data/campaignDetails'
 import { navigate } from '../navigation/navigate'
-import { statusLabels, type CampaignStatus } from '../types/campaign'
+import { statusLabels, type CampaignStatus, type CampaignRole } from '../types/campaign'
 import {
   voucherStatusLabels,
   type CampaignDetails,
@@ -75,6 +78,7 @@ function formatPercent(value: number): string {
 type StatusTone = 'success' | 'info' | 'warning' | 'neutral'
 
 const campaignStatusTones: Record<CampaignStatus, StatusTone> = {
+  draft: 'neutral', pending: 'warning', rejected: 'neutral',
   active: 'success',
   scheduled: 'info',
   paused: 'warning',
@@ -186,32 +190,35 @@ const phaseLabels: Record<CampaignPhase, string> = {
 
 function CampaignSchedulePanels({ details }: { details: CampaignDetails }) {
   const timing = getCampaignTiming(details.startsAt, details.endsAt, details.referenceAt)
+  if (details.status === 'ended') timing.phase = 'ended'
   const { voucherValidity, lastUsedVoucher } = details
   const isPaused = details.status === 'paused'
+  const awaitingActivation = ['draft', 'pending', 'rejected'].includes(details.status)
 
   return <div className="details-panels">
     <section className="details-panel" aria-labelledby="details-schedule-title">
       <div className="details-panel-heading">
         <h2 id="details-schedule-title">Vigência da campanha</h2>
         <StatusPill tone={isPaused ? campaignStatusTones.paused : campaignStatusTones[details.status]}>
-          {isPaused ? statusLabels.paused : phaseLabels[timing.phase]}
+          {awaitingActivation ? statusLabels[details.status] : isPaused ? statusLabels.paused : phaseLabels[timing.phase]}
         </StatusPill>
       </div>
 
       <div className="details-countdown">
         <span className="details-countdown-icon"><CalendarClock size={22} aria-hidden="true" /></span>
-        {timing.phase === 'running' && <div>
+        {awaitingActivation && <div><strong>{statusLabels[details.status]}</strong><p>A emissão de vouchers não está habilitada.</p></div>}
+        {!awaitingActivation && timing.phase === 'running' && <div>
           <strong>
             {timing.days} {timing.days === 1 ? 'dia' : 'dias'}{' '}
             <small>para encerrar</small>
           </strong>
           <p>Mais {timing.hours}h {timing.minutes}min · emissão de vouchers {isPaused ? 'pausada' : 'ativa'}</p>
         </div>}
-        {timing.phase === 'scheduled' && <div>
+        {!awaitingActivation && timing.phase === 'scheduled' && <div>
           <strong>Campanha ainda não iniciada</strong>
           <p>Começa em {formatDateTime(details.startsAt)}</p>
         </div>}
-        {timing.phase === 'ended' && <div>
+        {!awaitingActivation && timing.phase === 'ended' && <div>
           <strong>Campanha encerrada</strong>
           <p>Encerrada em {formatDateTime(details.endsAt)}</p>
         </div>}
@@ -360,19 +367,22 @@ function CampaignInfoSections({ sections }: { sections: readonly CampaignInfoSec
 
 export interface CampaignDetailsPageProps {
   campaignId: string
+  actorRole?: CampaignRole | null
 }
 
 const campaignsPath = '/campanhas'
 const title = 'Detalhes da campanha'
 
-export function CampaignDetailsPage({ campaignId }: CampaignDetailsPageProps) {
+export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campaignRole ?? null }: CampaignDetailsPageProps) {
   const feedback = useFeedback()
-  const details = useMemo(() => getCampaignDetails(campaignId), [campaignId])
+  const revision = useSyncExternalStore(subscribeCampaigns, getCampaignRevision)
+  const details = useMemo(() => getCampaignDetails(campaignId), [campaignId, revision])
+  const [selectedAction, setSelectedAction] = useState<SelectedCampaignAction | null>(null)
 
   function handleComingSoon() {
     feedback.info({
       title: 'Ação em breve',
-      description: 'Pausar, retomar e editar campanhas serão liberados em uma próxima etapa.',
+      description: 'A edição da campanha estará disponível em uma próxima etapa.',
     })
   }
 
@@ -397,31 +407,31 @@ export function CampaignDetailsPage({ campaignId }: CampaignDetailsPageProps) {
     </PortalLayout>
   }
 
-  const isPaused = details.status === 'paused'
-  const canTogglePause = details.status !== 'ended'
+  const actions = getCampaignActions(details.status, actorRole)
 
   return <PortalLayout activeSection="campaigns">
     <PageHeader
       title={title}
       breadcrumbs={breadcrumbs}
       action={<div className="details-actions">
-        {canTogglePause && <Button
+        {actions.map(action => <Button
+          key={action}
           className="details-action"
           variant="secondary"
-          startIcon={isPaused ? Play : Pause}
-          onPress={handleComingSoon}
-        >{isPaused ? 'Retomar' : 'Pausar'}</Button>}
+          onPress={() => setSelectedAction({ campaign: details, action })}
+        >{campaignActionLabels[action]}</Button>)}
         <Button
           className="details-action"
           variant="secondary"
           startIcon={SquarePen}
           onPress={handleComingSoon}
         >Editar campanha</Button>
-        <CampaignActionsMenu campaign={{ name: details.name }} />
+        <CampaignActionsMenu campaign={details} role={actorRole} onAction={action => setSelectedAction({ campaign: details, action })} />
       </div>}
     />
     <div className="details-page">
       <CampaignSummaryCard details={details} />
+      {details.status === 'rejected' && details.rejectionReason && <FeedbackAlert type="info" title="Motivo da reprovação" description={details.rejectionReason} />}
       <p className="details-notice">
         <Info size={14} aria-hidden="true" />
         Dados de demonstração: desempenho, vouchers e configuração ilustrativos. Referência temporal: {formatDateTime(details.referenceAt, ', ')}.
@@ -431,5 +441,6 @@ export function CampaignDetailsPage({ campaignId }: CampaignDetailsPageProps) {
       <VoucherTable vouchers={details.recentVouchers} totalIssued={details.metrics.issued} />
       <CampaignInfoSections sections={details.info} />
     </div>
+    <CampaignActionDialog selected={selectedAction} role={actorRole} onClose={() => setSelectedAction(null)} />
   </PortalLayout>
 }

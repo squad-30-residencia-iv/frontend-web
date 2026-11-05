@@ -613,3 +613,11 @@
   outline-offset: 3px;
   border-radius: 2px;
 }
+.campaign-tone-draft, .campaign-tone-rejected {
+  color: var(--color-neutral);
+  background: color-mix(in srgb, var(--color-neutral) 10%, var(--surface));
+}
+.campaign-tone-pending {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+}

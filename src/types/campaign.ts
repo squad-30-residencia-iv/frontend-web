@@ -1,4 +1,7 @@
-export type CampaignStatus = 'active' | 'scheduled' | 'paused' | 'ended'
+export const campaignStatuses = ['active', 'scheduled', 'paused', 'ended', 'draft', 'pending', 'rejected'] as const
+export type CampaignStatus = typeof campaignStatuses[number]
+export type CampaignRole = 'analyst' | 'manager'
+export type CampaignAction = 'submit' | 'approve' | 'reject' | 'pause' | 'end'
 export interface Campaign {
   id: string
   name: string
@@ -8,9 +11,11 @@ export interface Campaign {
   vouchers: number
   usage: number
   status: CampaignStatus
+  rejectionReason?: string
 }
 export const statusLabels: Record<CampaignStatus, string> = {
   active: 'Ativa', scheduled: 'Agendada', paused: 'Pausada', ended: 'Encerrada',
+  draft: 'Rascunho', pending: 'Pendente de aprovação', rejected: 'Reprovada',
 }
 
 export interface CampaignBenefit {
