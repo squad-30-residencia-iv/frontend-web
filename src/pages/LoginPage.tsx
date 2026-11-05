@@ -124,7 +124,6 @@ export function LoginPage() {
           <form
             onSubmit={handleSubmit}
             noValidate
-            validationBehavior="aria"
             className="mt-[clamp(24px,3.3vw,38px)] flex flex-col gap-4"
           >
             <Input
