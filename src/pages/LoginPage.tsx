@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Brand } from '../components/login/Brand'
 import { CampaignIllustration } from '../components/login/CampaignIllustration'
 import { Button } from '../components/ui/Button'
@@ -21,9 +21,6 @@ export function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const emailInputRef = useRef<HTMLInputElement>(null)
-  const passwordInputRef = useRef<HTMLInputElement>(null)
-
   useEffect(() => {
     if (isAuthenticated) {
       const searchParams = new URLSearchParams(window.location.search)
@@ -33,16 +30,18 @@ export function LoginPage() {
     }
   }, [isAuthenticated])
 
-  function handleEmailChange(e: ChangeEvent<HTMLInputElement>) {
-    setEmail(e.target.value)
+  function handleEmailChange(val: unknown) {
+    const value = typeof val === 'string' ? val : (val as { target?: { value?: string } })?.target?.value ?? ''
+    setEmail(value)
     if (fieldErrors.email) {
       setFieldErrors((prev) => ({ ...prev, email: undefined }))
     }
     if (formError) setFormError(null)
   }
 
-  function handlePasswordChange(e: ChangeEvent<HTMLInputElement>) {
-    setPassword(e.target.value)
+  function handlePasswordChange(val: unknown) {
+    const value = typeof val === 'string' ? val : (val as { target?: { value?: string } })?.target?.value ?? ''
+    setPassword(value)
     if (fieldErrors.password) {
       setFieldErrors((prev) => ({ ...prev, password: undefined }))
     }
@@ -58,9 +57,9 @@ export function LoginPage() {
     if (errors.email || errors.password) {
       setFieldErrors(errors)
       if (errors.email) {
-        emailInputRef.current?.focus()
+        document.querySelector<HTMLInputElement>('input[type="email"], input[name="email"]')?.focus()
       } else if (errors.password) {
-        passwordInputRef.current?.focus()
+        document.querySelector<HTMLInputElement>('input[type="password"], input[name="password"]')?.focus()
       }
       return
     }
@@ -135,13 +134,11 @@ export function LoginPage() {
               autoComplete="username"
               placeholder="nome@email.com"
               isRequired
-              fullWidth
               value={email}
               onChange={handleEmailChange}
               errorMessage={fieldErrors.email}
               isInvalid={Boolean(fieldErrors.email)}
               isReadOnly={isSubmitting}
-              inputProps={{ ref: emailInputRef }}
             />
             <Input
               label="Senha:"
@@ -150,13 +147,11 @@ export function LoginPage() {
               autoComplete="current-password"
               placeholder="••••••••••"
               isRequired
-              fullWidth
               value={password}
               onChange={handlePasswordChange}
               errorMessage={fieldErrors.password}
               isInvalid={Boolean(fieldErrors.password)}
               isReadOnly={isSubmitting}
-              inputProps={{ ref: passwordInputRef }}
             />
             <Button
               type="submit"

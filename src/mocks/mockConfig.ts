@@ -1,3 +1,3 @@
 export const mockConfig = {
-  latencyMs: 50,
+  latencyMs: process.env.NODE_ENV === 'test' ? 0 : 50,
 }

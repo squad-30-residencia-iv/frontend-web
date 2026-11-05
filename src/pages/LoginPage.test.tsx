@@ -23,7 +23,9 @@ describe('LoginPage', () => {
     renderLoginPage()
     expect(screen.getByRole('heading', { name: 'Bem-vindo de volta!' })).toBeVisible()
     expect(screen.getByLabelText('E-mail corporativo:')).toHaveAttribute('type', 'email')
+    expect(screen.getByLabelText('E-mail corporativo:')).toBeRequired()
     expect(screen.getByLabelText('Senha:')).toHaveAttribute('type', 'password')
+    expect(screen.getByLabelText('Senha:')).toBeRequired()
   })
 
   it('exibe erros de validação ao enviar com campos vazios sem chamar API', async () => {
