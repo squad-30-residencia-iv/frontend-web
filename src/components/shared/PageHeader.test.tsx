@@ -58,13 +58,13 @@ describe('PageHeader global', () => {
   })
 
   it.each([
-    ['/auditoria', 'Auditoria'],
-  ])('integra o caminho da rota %s às páginas internas', (path, title) => {
+    ['/relatorios', 'Relatórios e indicadores', 'Relatórios'],
+    ['/auditoria', 'Auditoria', 'Auditoria'],
+  ])('integra o caminho da rota %s às páginas internas', (path, title, current) => {
     window.history.replaceState(null, '', path)
     render(<App />)
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeVisible()
     const breadcrumb = screen.getByRole('navigation', { name: 'Caminho' })
-    expect(within(breadcrumb).getByText(title)).toHaveAttribute('aria-current', 'page')
-    expect(screen.queryByRole('button', { name: /Exportar histórico/ })).not.toBeInTheDocument()
+    expect(within(breadcrumb).getByText(current)).toHaveAttribute('aria-current', 'page')
   })
 })

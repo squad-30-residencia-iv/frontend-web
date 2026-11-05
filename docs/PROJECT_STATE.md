@@ -180,3 +180,24 @@
 - Testes novos: reports.test.ts, reportFormatters.test.ts, ReportsPage.test.tsx; PageHeader.test.tsx ajustado.
 - PENDENTE: `npm run verify` e `npm run build` NÃO executados (registro npm bloqueado no ambiente) e sem revisão visual em navegador. Spec segue em docs/specs/in-progress/ até o verify passar.
 - Branch sugerida feat/04-pagina_relatorios. Sem commit/push. Sugestão de commit: feat(reports): implementa tela de relatórios e indicadores com filtros e exportação CSV (US-013).
+
+## Entrega 2026-10-27 — US-014: Auditoria
+- /auditoria substitui placeholder: PortalLayout audit, PageHeader e Exportar histórico, quatro cards calculados, filtros locais aplicados por botão/Enter e paginação acessível de sete registros.
+- Repositório centralizado tipado com 80 registros: oito campanhas, três responsáveis e 45 críticas; números coerentes em vez dos totais conflitantes da imagem. Primeiras três linhas da referência preservadas.
+- Detalhes em Modal compartilhado pelo menu HeroUI: alterações antes/depois, motivo de bloqueio, alertas prioritários, falha técnica e metadados conforme aplicabilidade. Sem blocos extras na página.
+- Exportação CSV de todos os resultados filtrados (não só página atual), UTF-8/BOM, escaping e proteção contra fórmulas; download local e feedback de sucesso/erro. Nenhum endpoint ou dependência nova.
+- Loading, success, vazio, erro/retry, filtros preservados em falha de exportação, responsividade e status com cores. Home e PageHeader tests ajustados à substituição do placeholder.
+- Verify aprovado: 151 testes em 12 arquivos, incluindo 20 novos. Build aprovado com avisos existentes de bundle/Zod; diff --check limpo. Sem revisão visual manual em navegador nesta sessão.
+- Relatório docs/AUDIT.md; spec completed/US-014-auditoria.md. Sem commit/push.
+- Sugestão de commit: feat(audit): implementa auditoria com detalhes e exportação CSV.
+
+## Entrega 2026-10-27 — US-015: detalhes da operação
+- /auditoria/:operationId substitui o modal: PageHeader/PortalLayout audit, informações com badge reutilizado, tabela das alterações do evento e justificativa contextual, conforme referência.
+- loadAuditRecord por ID no repositório único; primeiro evento atualizado centralmente com quantidade, término e canal do protótipo. Justificativa opcional e fallback operacional para bloqueio/alerta/falha.
+- Exportar evento usa o mesmo CSV com um registro, nome de arquivo específico e coluna Justificativa. Estados loading/success/error/retry/not-found; proteção contra respostas antigas/troca de ID.
+- Estado da listagem (campos, filtros aplicados e página) preservado no histórico com validação Zod. Retorno por botão, breadcrumb e Voltar nativo; acesso direto sem contexto usa lista inicial.
+- Badge extraído para reutilização real lista/detalhes. AuditRecordDetails TSX/CSS removidos por terem sido substituídos pela rota; sem reorganização das demais telas.
+- Verify final aprovado com 165 testes em 14 arquivos; 16 testes da página e dois de navegação, substituindo quatro testes do modal. Timeout isolado de teste preexistente de descarte passou na repetição completa, sem alteração desse teste.
+- Build aprovado com avisos existentes de bundle/Zod; sem revisão visual manual em navegador nesta sessão. Sem commit/push.
+- Relatório docs/AUDIT_OPERATION_DETAILS.md; spec completed/US-015-detalhes-operacao.md; docs/AUDIT.md atualizado.
+- Sugestão de commit: feat(audit): adiciona detalhes da operação por ID e exportação do evento.
