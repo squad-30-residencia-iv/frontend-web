@@ -27,7 +27,7 @@ import { CampaignInformationForm } from '../components/campaigns/create/Campaign
 import { CampaignScopeForm } from '../components/campaigns/create/CampaignScopeForm'
 import type { CampaignScopeErrors } from '../data/campaignScope'
 import { CampaignReview } from '../components/campaigns/create/CampaignReview'
-import { activateCampaign } from '../data/campaignRepository'
+import { createCampaign } from '../data/campaignRepository'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -219,9 +219,9 @@ export function CreateCampaignPage() {
       return
     }
 
-    // O repositório mockado valida novamente antes de registrar a ativação.
+    // O repositório mockado valida novamente antes de salvar o rascunho.
     try {
-      activateCampaign(draft)
+      createCampaign(draft)
     } catch {
       feedback.error({
         title: 'Não foi possível concluir o salvamento.',
@@ -230,7 +230,7 @@ export function CreateCampaignPage() {
       return
     }
 
-    feedback.success({ title: 'Campanha criada com sucesso.' })
+    feedback.success({ title: 'Campanha salva como rascunho.' })
     navigate('/campanhas')
   }
   const benefitValidation = validateCampaignBenefits(draft.benefits)
@@ -353,7 +353,7 @@ export function CreateCampaignPage() {
               variant="secondary"
               onPress={handleSaveDraft}
             >Salvar rascunho</Button>
-            <Button type="submit" endIcon={ArrowRight}>{step === 5 ? 'Ativar campanha' : 'Continuar'}</Button>
+            <Button type="submit" endIcon={ArrowRight}>{step === 5 ? 'Salvar campanha' : 'Continuar'}</Button>
           </footer>
         </form>
         <Modal

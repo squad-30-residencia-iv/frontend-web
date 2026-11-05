@@ -201,3 +201,15 @@
 - Build aprovado com avisos existentes de bundle/Zod; sem revisão visual manual em navegador nesta sessão. Sem commit/push.
 - Relatório docs/AUDIT_OPERATION_DETAILS.md; spec completed/US-015-detalhes-operacao.md; docs/AUDIT.md atualizado.
 - Sugestão de commit: feat(audit): adiciona detalhes da operação por ID e exportação do evento.
+
+## Entrega 2026-11-05 — US-016: ciclo de campanhas com mock
+- Branch feat/09_UI-com-mock preservada. Estados active/scheduled/paused/ended mantidos; acrescentados draft/pending/rejected sem usar Agendada como pendência de aprovação.
+- Usuário confirmou: analista submete rascunho; gestor aprova/reprova pendente; ambos pausam ativa e encerram ativa/pausada; motivo da reprovação opcional. Sem retomada/reativação.
+- Política única em campaignWorkflow e mutações no campaignRepository existente. Persistência de status/motivo por ID, validação novamente na confirmação, bloqueio concorrente e notificação reativa da listagem/detalhes (inclusive storage entre abas). Falha simulável não altera status.
+- CampaignActionDialog reutiliza ConfirmationModal/Button/Input/feedback. Cancelamento, encerramento explícito, pending e guarda por ref impedem confirmação duplicada/fechamento. Erro mantém modal e dados para nova tentativa.
+- Perfil mockado recebe campaignRole tipado separado do cargo visual; default manager, sem autenticação ou concessão por string do cargo. actorRole injetável nos testes; perfil desconhecido sem ações.
+- Banner passa a aprovar campanha pendente real. IDs 79/80 são cenários draft/pending, mantendo total 80 e primeiras sete linhas. Referência isolada dos detalhes também reflete status do repositório.
+- Criação agora salva campanha em draft (Salvar campanha), eliminando ativação direta que contornava aprovação; registros antigos active preservados. Motivo opcional de reprovação aparece nos detalhes quando informado.
+- Verify aprovado: 233 testes em 19 arquivos; 40 novos (28 política/repositório e 12 UI). Build aprovado com avisos existentes de bundle/Zod, diff --check sem erros. Sem revisão visual manual em navegador nesta sessão.
+- Spec completed/US-016-ciclo-campanhas-mock.md; relatório docs/CAMPAIGN_WORKFLOW.md; docs/UI_COMPONENTS.md atualizado. Sem HTTP, novas dependências, commit ou push.
+- Sugestão de commit: feat(campaigns): implementa ciclo de aprovação e encerramento com mock.

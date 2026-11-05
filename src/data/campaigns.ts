@@ -15,3 +15,13 @@ export const campaigns: Campaign[] = [...referenceCampaigns, ...Array.from({ len
   ...referenceCampaigns[index % referenceCampaigns.length], status: remainingStatuses[index], id: String(index + 8), name: `Campanha demonstrativa ${String(index + 8).padStart(2, '0')}`,
 }))]
 
+// Cenários de workflow nos dois últimos mocks, sem alterar as sete linhas da referência.
+campaigns[78] = { ...campaigns[78], name: 'Campanha em rascunho (demonstração)', status: 'draft', vouchers: 0, usage: 0 }
+campaigns[79] = { ...campaigns[79], name: 'Campanha pendente (demonstração)', status: 'pending', vouchers: 0, usage: 0 }
+
+// Resumo canônico da referência exclusiva dos detalhes; não adiciona uma linha à listagem.
+export const detailsReferenceCampaign: Campaign = {
+  id: 'material-novo-ideias-novas', name: 'Material novo, ideias novas',
+  start: '2026-10-01', end: '2026-10-31', scope: 'Nacional', vouchers: 1240, usage: 40, status: 'active',
+}
+

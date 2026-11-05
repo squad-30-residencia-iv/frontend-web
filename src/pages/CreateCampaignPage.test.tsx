@@ -556,7 +556,7 @@ describe('Escopo e canais', () => {
     await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
-    expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Campanha salva como rascunho.')).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Físico, Virtual')
     expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
   })
@@ -667,7 +667,7 @@ describe('Revisão geral', () => {
     expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent('Sem limite')
     const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
     expect(within(summary).getByText('Condições de geração').closest('li')).toHaveTextContent('completo')
-    expect(screen.getByRole('button', { name: 'Ativar campanha' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Salvar campanha' })).toBeEnabled()
   })
 
   it('volta ao escopo, permite corrigir dados e atualiza a revisão', async () => {
@@ -691,8 +691,8 @@ describe('Revisão geral', () => {
     const user = await openReview()
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
     expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Ativar campanha' }))
-    expect(await screen.findByText('Campanha criada com sucesso.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByText('Campanha salva como rascunho.')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
     expect(window.location.pathname).toBe('/campanhas')
     expect(localStorage.getItem(campaignDraftStorageKey)).toBeNull()
@@ -704,11 +704,11 @@ describe('Revisão geral', () => {
   it('preserva revisão e dados quando não consegue limpar o rascunho local', async () => {
     const user = await openReview()
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('Storage indisponível') })
-    await user.click(screen.getByRole('button', { name: 'Ativar campanha' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
     expect(await screen.findByText('Não foi possível concluir o salvamento.')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha de escopo')
-    expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Campanha salva como rascunho.')).not.toBeInTheDocument()
   })
 })
 
@@ -723,11 +723,11 @@ it('revalida ao salvar e retorna à etapa apontada sem descartar o rascunho', as
   // Exercita a defesa do salvamento caso a validação geral passe a rejeitar a campanha.
   vi.spyOn(validationModule, 'validateCampaignDraft').mockReturnValue(invalidValidation)
 
-  await user.click(screen.getByRole('button', { name: 'Ativar campanha' }))
+  await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
   expect(screen.getByRole('heading', { name: 'Informações básicas' })).toBeVisible()
   expect(screen.getByText('Informe o nome da campanha.')).toBeVisible()
   expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveFocus()
   expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
   expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
-  expect(screen.queryByText('Campanha criada com sucesso.')).not.toBeInTheDocument()
+  expect(screen.queryByText('Campanha salva como rascunho.')).not.toBeInTheDocument()
 })

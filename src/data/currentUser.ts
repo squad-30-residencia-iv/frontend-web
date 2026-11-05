@@ -6,4 +6,5 @@ import type { PortalUser } from '../types/user'
 export const currentUser: PortalUser = {
   name: 'Lucas Silva',
   role: 'Gestor de Marketing',
+  campaignRole: 'manager',
 }

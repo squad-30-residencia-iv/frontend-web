@@ -1,5 +1,5 @@
 import { PageHeader } from '../components/shared/PageHeader'
-import { useState, type MouseEvent } from 'react'
+import { useMemo, useState, useSyncExternalStore, type MouseEvent } from 'react'
 import {
   CalendarDays,
   CheckSquare,
@@ -17,11 +17,11 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loading } from '../components/ui/Loading'
 import { EmptyState } from '../components/ui/EmptyState'
-import { ConfirmationModal } from '../components/ui/ConfirmationModal'
-import { useFeedback } from '../components/ui/useFeedback'
+import { CampaignActionDialog, type SelectedCampaignAction } from '../components/campaigns/CampaignActionDialog'
+import { currentUser } from '../data/currentUser'
 import { CampaignActionsMenu } from '../components/campaigns/CampaignActionsMenu'
-import { campaigns as mockCampaigns } from '../data/campaigns'
-import { loadCreatedCampaigns } from '../data/campaignRepository'
+import type { CampaignRole } from '../types/campaign'
+import { applyCampaignStatusChanges, getCampaigns, getCampaignRevision, subscribeCampaigns } from '../data/campaignRepository'
 import { statusLabels, type Campaign } from '../types/campaign'
 import { navigate } from '../navigation/navigate'
 import './CampaignManagementPage.css'
@@ -29,27 +29,26 @@ import './CampaignManagementPage.css'
 const numberFormat = new Intl.NumberFormat('pt-BR')
 const dateFormat = (date: string) => date.split('-').reverse().join('/')
 const metrics = [
-  { label: 'Campanhas Ativas', value: 24, change: '+4.8%', icon: Play, tone: 'active' },
-  { label: 'Agendadas', value: 8, change: '+1.2%', icon: CalendarDays, tone: 'scheduled' },
-  { label: 'Pausadas', value: 3, change: '-2.4%', icon: Pause, tone: 'paused' },
-  { label: 'Encerradas', value: 45, change: '+12.5%', icon: CheckSquare, tone: 'ended' },
+  { label: 'Campanhas Ativas', change: '+4.8%', icon: Play, tone: 'active' },
+  { label: 'Agendadas', change: '+1.2%', icon: CalendarDays, tone: 'scheduled' },
+  { label: 'Pausadas', change: '-2.4%', icon: Pause, tone: 'paused' },
+  { label: 'Encerradas', change: '+12.5%', icon: CheckSquare, tone: 'ended' },
 ]
 const statusOptions = [{ value: 'all', label: 'Todos os status' }, ...Object.entries(statusLabels).map(([value, label]) => ({ value, label }))]
 const periodOptions = [{ value: 'all', label: 'Todos os períodos' }, { value: '30', label: 'Últimos 30 dias' }, { value: '90', label: 'Últimos 90 dias' }]
 const pageSize = 7
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-export interface CampaignManagementPageProps { campaigns?: readonly Campaign[]; isLoading?: boolean }
+export interface CampaignManagementPageProps { campaigns?: readonly Campaign[]; isLoading?: boolean; actorRole?: CampaignRole | null }
 
-export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading = false }: CampaignManagementPageProps) {
-  const [createdCampaigns] = useState(loadCreatedCampaigns)
-  const campaigns = providedCampaigns ?? [...createdCampaigns, ...mockCampaigns]
-  const feedback = useFeedback()
+export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading = false, actorRole = currentUser.campaignRole ?? null }: CampaignManagementPageProps) {
+  const revision = useSyncExternalStore(subscribeCampaigns, getCampaignRevision)
+  const campaigns = useMemo(() => providedCampaigns ? applyCampaignStatusChanges(providedCampaigns) : getCampaigns(), [providedCampaigns, revision])
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [period, setPeriod] = useState('all')
   const [page, setPage] = useState(1)
-  const [approvalOpen, setApprovalOpen] = useState(false)
-  const [approved, setApproved] = useState(false)
+  const [selectedAction, setSelectedAction] = useState<SelectedCampaignAction | null>(null)
+  const awaitingApproval = actorRole === 'manager' ? campaigns.find(campaign => campaign.status === 'pending') : undefined
   const filtered = campaigns.filter(campaign => {
     const matchesSearch = normalize(campaign.name).includes(normalize(search))
     const matchesStatus = status === 'all' || campaign.status === status
@@ -85,14 +84,6 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
     setPage(1)
   }
 
-  function handleApproveCampaign() {
-    setApproved(true)
-    setApprovalOpen(false)
-    feedback.success({
-      title: 'Campanha aprovada',
-      description: 'A aprovação foi registrada localmente nesta demonstração.',
-    })
-  }
 
   function handleCreateCampaign() {
     navigate('/campanhas/nova')
@@ -113,15 +104,15 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
         onPress={handleCreateCampaign}
       >Nova campanha</Button>}
     />
-    {!approved && <section className="campaign-notice" aria-label="Campanha aguardando aprovação">
+    {awaitingApproval && <section className="campaign-notice" aria-label="Campanha aguardando aprovação">
       <span className="campaign-notice-icon">
         <ShieldAlert size={17} />
       </span>
       <div>
         <strong>Nova campanha criada</strong>
-        <p>Uma nova campanha foi criada e aguarda sua aprovação.</p>
+        <p>A campanha {awaitingApproval.name} aguarda sua aprovação.</p>
       </div>
-      <Button className="campaign-approve" onPress={() => setApprovalOpen(true)}>Aprovar</Button>
+      <Button className="campaign-approve" onPress={() => setSelectedAction({ campaign: awaitingApproval, action: 'approve' })}>Aprovar</Button>
     </section>}
     <section className="campaign-metrics" aria-label="Resumo de campanhas">
       {metrics.map(({ label, change, icon: Icon, tone }) => <article className="campaign-metric" key={label}>
@@ -225,7 +216,7 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
                   </span>
                 </td>
                 <td>
-                  <CampaignActionsMenu campaign={campaign} />
+                  <CampaignActionsMenu campaign={campaign} role={actorRole} onAction={action => setSelectedAction({ campaign, action })} />
                 </td>
               </tr>)}
             </tbody>
@@ -272,12 +263,6 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
         </footer>
       </>}
     </section>
-    <ConfirmationModal
-      action="approve"
-      itemName="nova campanha"
-      isOpen={approvalOpen}
-      onOpenChange={setApprovalOpen}
-      onConfirm={handleApproveCampaign}
-    />
+    <CampaignActionDialog selected={selectedAction} role={actorRole} onClose={() => setSelectedAction(null)} />
   </PortalLayout>
 }
