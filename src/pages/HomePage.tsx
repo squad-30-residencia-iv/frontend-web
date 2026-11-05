@@ -8,6 +8,7 @@ import { PortalLayout } from '../components/layout/PortalLayout'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Loading } from '../components/ui/Loading'
+import { useAuth } from '../contexts/AuthContext'
 import { currentUser } from '../data/currentUser'
 import { fetchHomeOverview } from '../data/homeOverview'
 import { navigate } from '../navigation/navigate'
@@ -25,8 +26,17 @@ export interface HomePageProps {
 }
 
 export function HomePage({ loadOverview = fetchHomeOverview }: HomePageProps) {
+  const { user } = useAuth()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+
+  const activeUser = user
+    ? {
+        name: user.name,
+        role: user.role === 'admin' ? 'Administrador' : 'Analista de Campanhas',
+        avatarUrl: undefined,
+      }
+    : currentUser
 
   useEffect(() => {
     let cancelled = false
@@ -47,7 +57,7 @@ export function HomePage({ loadOverview = fetchHomeOverview }: HomePageProps) {
 
   return <PortalLayout activeSection="home">
     <div className="home-page" aria-busy={state.status === 'loading'}>
-      <HomeGreeting user={currentUser} />
+      <HomeGreeting user={activeUser} />
       {state.status === 'loading' && <Loading message="Carregando campanhas…" />}
       {state.status === 'error' && <EmptyState
         icon={TriangleAlert}

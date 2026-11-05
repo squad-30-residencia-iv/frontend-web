@@ -1,10 +1,10 @@
 # Especificação Técnica: US-011 - Autenticação com JWT, MSW e rotas protegidas
 
-> Status: In Progress
+> Status: Completed
 > História de Usuário Relacionada: Autenticação com JWT (Esquadrão 1)
 > Responsável: bergue-vitor
 > Data: 2026-10-16
-> Branch: `feat/01_autenticacao-login`
+> Branch: `feat/auth-jwt-msw`
 > Rastreabilidade: substitui o rascunho `docs/specs/backlog/spec-auth-msw-jwt.md` (se existir) e a primeira versão desta spec, que previa `react-router`.
 
 ---
@@ -137,18 +137,18 @@ export interface JwtPayload { sub: string; exp: number; iat?: number } // exp em
 Ordem do `agents.md`: tipos, integrações, telas e testes. Marque cada item com `[x]` ao concluir.
 
 - [x] 0. Dependências (`axios` e `msw` em desenvolvimento), `.gitignore`, `.env.example`, `src/vite-env.d.ts` e `public/mockServiceWorker.js`; `react-router` removido (o projeto usa navegação própria)
-- [x ] 1. Tipos e type guards (`src/services/auth.types.ts`)
+- [x] 1. Tipos e type guards (`src/services/auth.types.ts`)
 - [x] 2. `src/services/tokenStorage.ts` (guardar, ler, limpar, decodificar JWT, checar expiração)
 - [x] 3. `src/services/api.ts` (instância Axios + interceptores de Bearer e de 401)
 - [x] 4. `src/services/auth.ts` (login, logout, me) e `src/services/loginValidation.ts`
-- [ ] 5. Mock em `src/mocks/` (handlers, JWT simulado, `browser`, `server`, `enableMocking`)
-- [ ] 6. `src/contexts/AuthContext.tsx` e `useAuth.ts` (restauração da sessão, login, logout)
-- [ ] 7. `ProtectedRoute.tsx`, `src/navigation/replaceRoute.ts` e proteção das duas páginas em `src/App.tsx`
-- [ ] 8. `PortalLayout` com o usuário logado e o botão "Sair"
-- [ ] 9. `LoginPage` integrada ao `useAuth`; `main.tsx` aguarda o mock antes de renderizar
-- [ ] 10. Testes de serviços, mock, contexto, layout, rotas e login (incluindo o ajuste do `CreateCampaignPage.test.tsx`)
-- [ ] 11. `npm run verify` e `npm run build` aprovados
-- [ ] 12. Documentação e memória atualizadas (`save-session`)
+- [x] 5. Mock em `src/mocks/` (handlers, JWT simulado, `browser`, `server`, `enableMocking`)
+- [x] 6. `src/contexts/AuthContext.tsx` e `useAuth.ts` (restauração da sessão, login, logout)
+- [x] 7. `ProtectedRoute.tsx`, `src/navigation/replaceRoute.ts` e proteção das duas páginas em `src/App.tsx`
+- [x] 8. `PortalLayout` com o usuário logado e o botão "Sair"
+- [x] 9. `LoginPage` integrada ao `useAuth`; `main.tsx` aguarda o mock antes de renderizar
+- [x] 10. Testes de serviços, mock, contexto, layout, rotas e login (incluindo o ajuste do `CreateCampaignPage.test.tsx`)
+- [x] 11. `npm run verify` e `npm run build` aprovados
+- [x] 12. Documentação e memória atualizadas (`save-session`)
 
 ---
 
@@ -156,10 +156,10 @@ Ordem do `agents.md`: tipos, integrações, telas e testes. Marque cada item com
 
 **Critérios de aceite da história**
 
-- [ ] **CA1:** com MSW ativo, o login válido grava o token, guarda o perfil e redireciona (`LoginPage.test.tsx`).
-- [ ] **CA2:** sem token, `/campanhas` e `/campanhas/nova` redirecionam para `/login` (`App.test.tsx`).
-- [ ] **CA3:** "Sair" remove o token, encerra a sessão no mock e leva a `/login` (`App.test.tsx`, `AuthContext.test.tsx`, `PortalLayout.test.tsx`).
-- [ ] **CA4:** o mock recusa requisição privada sem `Bearer` válido (`mocks/handlers/auth.test.ts`).
+- [x] **CA1:** com MSW ativo, o login válido grava o token, guarda o perfil e redireciona (`LoginPage.test.tsx`).
+- [x] **CA2:** sem token, `/campanhas` e `/campanhas/nova` redirecionam para `/login` (`App.test.tsx`).
+- [x] **CA3:** "Sair" remove o token, encerra a sessão no mock e leva a `/login` (`App.test.tsx`, `AuthContext.test.tsx`, `PortalLayout.test.tsx`).
+- [x] **CA4:** o mock recusa requisição privada sem `Bearer` válido (`mocks/handlers/auth.test.ts`).
 
 **Cenários adicionais cobertos:** credencial inválida e usuário inexistente com a mesma mensagem; 422, 500, falha de rede e resposta fora do contrato; carregamento sem envio duplicado; volta para a página de origem e rejeição de `?from=` externo; token expirado, malformado e adulterado; token válido sem usuário guardado; 401 do servidor encerra a sessão; `allowedRoles`; interceptor não anexa token no login nem token expirado; `enableMocking` não liga fora de DEV nem com `VITE_USE_MOCK` diferente de `true`; `localStorage` indisponível; `PortalLayout` sem `AuthProvider` mantém o perfil padrão; as telas de campanhas do time seguem passando com sessão.
 

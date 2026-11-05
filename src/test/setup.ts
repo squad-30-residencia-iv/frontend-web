@@ -1,5 +1,20 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterAll, afterEach, beforeAll } from 'vitest'
+import { resetAuthMockState } from '../mocks/handlers/auth'
+import { server } from '../mocks/server'
 
-afterEach(cleanup)
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'bypass' })
+})
+
+afterEach(() => {
+  cleanup()
+  server.resetHandlers()
+  resetAuthMockState()
+  localStorage.clear()
+})
+
+afterAll(() => {
+  server.close()
+})
