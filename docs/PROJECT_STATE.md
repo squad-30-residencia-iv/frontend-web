@@ -7,20 +7,20 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Componentes base e feedbacks sobre a stack React existente.
-- **Última atualização:** 2026-10-10.
+- **Foco:** Autenticação JWT, sessão e rotas protegidas.
+- **Última atualização:** 2026-11-05.
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
 - [ ] US-001 Login: o formulário já usa `Input`, `Button` e `FeedbackAlert`. A spec segue em `docs/specs/in-progress/` com checklist em aberto (stack, layout, testes da spec, verify/build e documentação).
-- [ ] US-011 Autenticação com JWT, MSW e rotas protegidas (branch `feat/01_autenticacao-login`): em andamento. Spec em `docs/specs/in-progress/US-011-autenticacao-msw-jwt.md`.
 - [ ] US-012 Home (Visão Geral) com Sidebar Global (branch `feat/03-pagina_home`): código e testes escritos; falta rodar `npm run verify`/`npm run build` e a revisão visual no navegador (não há frame da Home no Figma; visual segue as telas existentes). Spec em `docs/specs/in-progress/US-012-home-sidebar.md`; relatório em `docs/HOME.md`.
 ---
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-011: Autenticação com JWT, MSW, rotas protegidas e perfil na sessão (detalhes no bloco "Entrega 2026-11-05 — US-011" abaixo).
 - Configuração inicial do ecossistema de SDD (prompts, templates e governança).
 - US-002: Button, Input, Select, Modal, ConfirmationModal, Loading, EmptyState, FeedbackAlert e feedbacks via Toast oficial HeroUI 3.2.6.
 - Documentação dos componentes em `docs/UI_COMPONENTS.md`. A vitrine `/ui.html` foi removida.
@@ -38,6 +38,17 @@
 - `npm run verify` aprovado nesta sessão: typecheck e 16 testes.
 - Spec US-001 não foi concluída; permanece em `docs/specs/in-progress/`.
 - Alterações de tema prontas para commit, sem push. Sugestão: `feat(theme): padroniza a paleta do portal nos tokens da HeroUI`.
+
+## Entrega 2026-11-05 — US-011: Autenticação JWT com MSW e Rotas Protegidas
+- Autenticação conectada com JWT: login via `POST /api/v1/auth/login`, logout via `POST /api/v1/auth/logout` e me via `GET /api/v1/auth/me`.
+- Interceptores Axios no `src/services/api.ts` injetam `Authorization: Bearer <token>` em requisições autenticadas e interceptam 401 para expirar a sessão e redirecionar para `/login?from=...`.
+- `AuthContext` e `useAuth` fornecem estado de sessão autenticada (`user`, `isAuthenticated`, `isLoading`, `login`, `logout`), com restauração automática de sessão válida do `localStorage`.
+- `ProtectedRoute` protege páginas privadas e redireciona sem token para `/login?from=...`, com suporte a verificação de papéis (`allowedRoles`).
+- `PortalLayout` e `HomePage` exibem o usuário real autenticado na sessão (nome e perfil de analista/administrador) e botão "Sair" funcional, mantendo fallback gracioso para testes isolados.
+- MSW implementado em `src/mocks/` (`handlers`, `browser`, `server`, `jwtUtils`, `enableMocking`), com usuários demonstrativos `analista@portal.dev` e `admin@portal.dev`, validação de tokens e revogação em logout.
+- Suíte completa de testes criada: `src/mocks/handlers/auth.test.ts`, `src/contexts/AuthContext.test.tsx`, `src/services/tokenStorage.test.ts`, `src/services/loginValidation.test.ts`, `src/services/auth.test.ts`, `src/components/layout/PortalLayout.test.tsx`, `src/pages/LoginPage.test.tsx` e `src/App.test.tsx`.
+- Spec concluída e movida para `docs/specs/completed/US-011-autenticacao-msw-jwt.md`.
+
 
 ## Entrega 2026-10-13 — US-003
 - Gerenciamento de Campanhas em /campanhas, login preservado em /; sem roteador, backend ou dependências adicionais.
