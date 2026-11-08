@@ -10,6 +10,8 @@ import { LoginPage } from './pages/LoginPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
 import { VoucherHistoryPending, VoucherLookupPage } from './pages/VoucherLookupPage'
+import { useAuth } from './contexts/AuthContext'
+import { sessionCampaignRole } from './data/campaignWorkflow'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
 
@@ -30,6 +32,11 @@ function subscribeToPathname(onChange: () => void) {
 
 function getPathname() {
   return window.location.pathname.replace(/\/$/, '')
+}
+
+function CampaignDetailsRoute({ campaignId }: { campaignId: string }) {
+  const { user } = useAuth()
+  return <CampaignDetailsPage campaignId={campaignId} actorRole={user ? sessionCampaignRole(user.role) : undefined} />
 }
 
 export function App() {
@@ -107,9 +114,7 @@ export function App() {
   if (campaignDetailsMatch) {
     return (
       <ProtectedRoute>
-        <CampaignDetailsPage
-          campaignId={safeDecode(campaignDetailsMatch[1])}
-        />
+        <CampaignDetailsRoute campaignId={safeDecode(campaignDetailsMatch[1])} />
       </ProtectedRoute>
     )
   }

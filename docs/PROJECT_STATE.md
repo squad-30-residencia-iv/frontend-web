@@ -7,7 +7,7 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e abre o detalhe de um Guid na API. A próxima integração depende de rotas que o backend ainda não tem: submeter (US-01.6) e aprovar (US-01.11). Vouchers, relatórios, auditoria e mudança de status continuam locais.
+- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais. O escopo da campanha (lojas e canais) ainda não é gravado.
 - **Última atualização:** 2026-11-08.
 
 O que o portal faz hoje:
@@ -15,15 +15,15 @@ O que o portal faz hoje:
 - Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `networkId`). Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com`, `gestor@empresa.com`, `admin@empresa.com`). Os testes do MSW continuam com `analista@portal.dev`, `gestor@portal.dev` e `admin@portal.dev`.
 - Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
 - O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais escolhidos não são gravados.
-- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. Uso e vouchers recentes ficam vazios. Submeter, aprovar, pausar e encerrar não aparecem. Ids locais (`1`, `79`) continuam no repositório.
-- O ciclo de status, a consulta de vouchers, os relatórios e a auditoria continuam locais.
+- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Pausar e encerrar não aparecem. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
+- A consulta de vouchers, os relatórios e a auditoria continuam locais.
 - Não há tela de rede, região, loja ou catálogo. O histórico em `/vouchers/:id/historico` continua provisório.
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
-- [ ] Próxima integração, quando a API tiver as rotas: submeter o rascunho (US-01.6, `Draft` → `PendingApproval`) e aprovar (US-01.11). Os botões da US-016 continuam só nas campanhas locais.
+- [ ] Reabrir um rascunho já gravado (Editar ainda diz "em breve") e gravar lojas e canais quando a US-02.3 existir. Pausar e encerrar continuam só nas campanhas locais.
 - [ ] Escopo da campanha (lojas e canais) continua no navegador até a US-02.3. Vouchers, relatórios e auditoria seguem locais.
 - [ ] US-013 Relatórios: a tela está na `main`, com dados locais. A spec segue em `docs/specs/in-progress/US-013-relatorios-indicadores.md` porque `npm run verify` e `npm run build` não foram registrados nessa sessão. O checklist de casos de teste da spec também está desmarcado. Mover para `completed/` só depois do verify.
 - [ ] US-012 Home: código e testes escritos. Falta `npm run verify`, `npm run build` e a revisão visual. A spec `US-012-home-sidebar.md` ainda diz que `/auditoria` é placeholder; isso foi substituído pela US-014/US-015.
@@ -34,6 +34,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-020: no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O papel sai da sessão (`analista` / `gestor`), não do usuário fixo. Aprovar com início futuro mostra **Agendada**; reprovar mostra o motivo. Pausar e encerrar não aparecem. Ids locais seguem na matriz da US-016. Spec `completed/US-020-submeter-e-aprovar.md`. `npm run verify`: a suíte completa teve dois timeouts (descarte na criação e período na consulta de vouchers), que passaram isolados; os testes do detalhe passaram. No navegador, o analista submeteu "Rascunho do portal" e o gestor aprovou; a Home mostrou **Agendada**.
 - US-019: o assistente grava o rascunho na API e o detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. Seletores usam categorias, produtos e lojas da rede (lojas por região). Benefício extra e condições em "qualquer" bloqueiam o envio. Base de clientes, quantidade por concessão, faixas além da primeira e lojas e canais ficam só no navegador. Spec `completed/US-019-rascunho-na-api.md`. A suíte completa teve uma falha isolada em Relatórios ("Indicadores de vouchers"), que passou ao rodar de novo; os testes do rascunho passaram. No navegador, o analista criou "Rascunho do portal" com início em dezembro de 2026 e abriu o detalhe sem ações de status.
 - US-018: Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` da sessão. Quantidade é `totalVoucherLimit`, uso fica em zero, benefício da Home sai do primeiro item e o escopo da tabela é "Rede". Banco vazio mostra "Nenhuma campanha nesta rede". Administrador não chama a rota. Submeter, aprovar, pausar e encerrar saíram da listagem. Spec `completed/US-018-campanhas-da-rede.md`. `npm run verify` verde, com um timeout isolado da criação de campanha que passou ao rodar de novo. No navegador, com o mock desligado, o analista viu a lista vazia do Postgres (`200` em `:5026`).
 - US-017: o login traduz o corpo real (`token`, `expiresIn`, `message`, `profile`) e guarda `networkId`. Papéis `analista`, `gestor` e `administrador`. O `401` mostra "E-mail ou senha inválidos.". Sair só limpa o `localStorage`. Spec `completed/US-017-sessao-na-api.md`. Login conferido no navegador de `localhost:5173` para a API em `:5026`.
@@ -55,8 +56,8 @@ O que o portal faz hoje:
 - A listagem de lojas exige `regionId`. O portal pede as regiões da rede e, para cada uma, as lojas ativas. Não existe `GET /establishments?networkId=`.
 - O início padrão de outubro de 2026 já passou. A API responde `422` e a tela mostra a mensagem. No navegador, o início precisa estar no futuro.
 - O que a tela pede e a API não grava: benefício extra no mesmo alvo e condições em "qualquer" impedem o salvamento. Mais de uma faixa, base de clientes, quantidade por concessão e a escolha de lojas e canais seguem com aviso e ficam no navegador.
-- A listagem não muda status: um clique ali não pode gravar só na memória e parecer salvo no banco. O ciclo da US-016 permanece na tela de detalhes.
-- O ciclo da US-016 não chama o backend. Analista submete rascunho; gestor aprova ou reprova; os dois pausam e encerram. Não há retomada.
+- A listagem não muda status: um clique ali não pode gravar só na memória e parecer salvo no banco. Submeter, aprovar e reprovar ficam no detalhe e, para um Guid, chamam a API.
+- Ids locais seguem a matriz da US-016: analista submete, gestor aprova para ativa ou reprova, e os dois pausam e encerram. Não há retomada. Um Guid não oferece pausar nem encerrar.
 - A Home não usa `PageHeader`. O usuário da sessão vem do `AuthContext`, com fallback para os testes isolados.
 - A HeroUI segue a paleta do portal pelos tokens `--accent`, `--danger`, `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--success` e `--warning`.
 - Stack: React, TypeScript, Vite, Tailwind e HeroUI. Navegação própria em `App.tsx`, sem react-router.
@@ -254,3 +255,9 @@ O que o portal faz hoje:
 - O detalhe de um Guid lê a campanha gravada, sem vouchers inventados e sem submeter, aprovar, pausar ou encerrar. Ids locais continuam no repositório.
 - `npm run verify`: a suíte completa falhou uma vez em Relatórios ("Indicadores de vouchers"); o mesmo teste passou isolado. Os testes do rascunho e do detalhe passaram. No navegador, o analista criou "Rascunho do portal" (início em 2026-12-01) e abriu o detalhe.
 - Spec `completed/US-019-rascunho-na-api.md`. Sem rota nova no backend.
+
+## Entrega 2026-11-08 — US-020: submeter e aprovar no detalhe
+- No detalhe de um Guid, o papel da sessão escolhe a ação. O analista submete o rascunho; o gestor aprova ou reprova a pendente. A tela mostra o status devolvido.
+- Aprovar com início futuro mostra Agendada. Reprovar mostra o motivo. Pausar e encerrar não aparecem. Ids locais seguem a matriz antiga.
+- `npm run verify`: dois timeouts na suíte completa (descarte na criação e período na consulta de vouchers) passaram isolados. No navegador, o analista submeteu "Rascunho do portal" e o gestor aprovou; a Home mostrou Agendada.
+- Spec `completed/US-020-submeter-e-aprovar.md`.

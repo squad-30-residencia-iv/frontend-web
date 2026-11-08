@@ -25,9 +25,9 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Loading } from '../components/ui/Loading'
 import { useFeedback } from '../components/ui/useFeedback'
 import { getCampaignDetails, getCampaignMetrics, getCampaignTiming, type CampaignPhase } from '../data/campaignDetails'
-import { fetchCampaignDetails, isCampaignGuid } from '../services/campaigns'
+import { decideCampaign, fetchCampaignDetails, isCampaignGuid } from '../services/campaigns'
 import { navigate } from '../navigation/navigate'
-import { statusLabels, type CampaignStatus, type CampaignRole } from '../types/campaign'
+import { statusLabels, type CampaignAction, type CampaignStatus, type CampaignRole } from '../types/campaign'
 import {
   voucherStatusLabels,
   type CampaignDetails,
@@ -377,6 +377,12 @@ export interface CampaignDetailsPageProps {
 const campaignsPath = '/campanhas'
 const title = 'Detalhes da campanha'
 
+function apiDecisionActions(status: CampaignStatus, role: CampaignRole | null): CampaignAction[] {
+  if (status === 'draft' && role === 'analyst') return ['submit']
+  if (status === 'pending' && role === 'manager') return ['approve', 'reject']
+  return []
+}
+
 export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campaignRole ?? null }: CampaignDetailsPageProps) {
   const feedback = useFeedback()
   const fromApi = isCampaignGuid(campaignId)
@@ -448,7 +454,7 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
     </PortalLayout>
   }
 
-  const actions = fromApi ? [] : getCampaignActions(details.status, actorRole)
+  const actions = fromApi ? apiDecisionActions(details.status, actorRole) : getCampaignActions(details.status, actorRole)
 
   return <PortalLayout activeSection="campaigns">
     <PageHeader
@@ -485,6 +491,15 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
       <VoucherTable vouchers={details.recentVouchers} totalIssued={details.metrics.issued} illustrative={!fromApi} />
       <CampaignInfoSections sections={details.info} illustrative={!fromApi} />
     </div>
-    <CampaignActionDialog selected={selectedAction} role={actorRole} onClose={() => setSelectedAction(null)} />
+    <CampaignActionDialog
+      selected={selectedAction}
+      role={actorRole}
+      onClose={() => setSelectedAction(null)}
+      perform={fromApi ? async input => {
+        if (input.action !== 'submit' && input.action !== 'approve' && input.action !== 'reject') return
+        setRemoteDetails(await decideCampaign(input.campaignId, input.action, input.reason))
+      } : undefined}
+      descriptions={fromApi ? { approve: 'A aprovação registra a decisão. Com início futuro a campanha fica agendada; se a vigência já começou, fica ativa.' } : undefined}
+    />
   </PortalLayout>
 }

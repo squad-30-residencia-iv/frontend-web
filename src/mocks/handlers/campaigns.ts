@@ -28,9 +28,16 @@ interface StoredCampaign extends ApiCampaign {
 const createdCampaigns: StoredCampaign[] = []
 let createdSequence = 1
 
+const seedCampaign = networkCampaigns[0]
+const seedSnapshot = { status: seedCampaign.status, startsAt: seedCampaign.startsAt, endsAt: seedCampaign.endsAt }
+
 export function resetCreatedCampaigns() {
   createdCampaigns.length = 0
   createdSequence = 1
+  seedCampaign.status = seedSnapshot.status
+  seedCampaign.startsAt = seedSnapshot.startsAt
+  seedCampaign.endsAt = seedSnapshot.endsAt
+  seedCampaign.rejectionReason = null
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -53,6 +60,7 @@ function toResponse(campaign: ApiCampaign, networkId: string, extra: Partial<Sto
     maxUsesPerVoucher: extra.maxUsesPerVoucher ?? 1,
     conditions: [{ id: `${campaign.id}-condition`, type: 'PurchaseTotal', minAmount: 200, minQuantity: null, categoryId: null, productId: null }],
     allowUseInSamePurchase: false,
+    rejectionReason: campaign.rejectionReason ?? null,
     items: campaign.items.map((item, index) => ({
       id: `${campaign.id}-${index}`,
       targetType: 'All',
@@ -67,6 +75,34 @@ function findCampaign(id: string) {
   return createdCampaigns.find(campaign => campaign.id === id)
     ?? networkCampaigns.find(campaign => campaign.id === id)
     ?? null
+}
+
+function problem(status: number, detail: string, code: string) {
+  return HttpResponse.json({ status, detail, code }, { status })
+}
+
+function decide(id: string, action: 'submit' | 'approve' | 'reject', reason: string | null = null) {
+  const campaign = findCampaign(id)
+  if (!campaign) return problem(404, 'Campanha não encontrada.', 'NOT_FOUND')
+  if (action === 'submit') {
+    if (campaign.status !== 'Draft') return problem(422, 'Somente um rascunho pode ser submetido para aprovação.', 'CAMPAIGN_SUBMIT_NOT_DRAFT')
+    campaign.status = 'PendingApproval'
+    campaign.rejectionReason = null
+  } else if (campaign.status !== 'PendingApproval') {
+    return problem(422, 'Somente uma campanha em aprovação pode ser aprovada ou reprovada.', 'CAMPAIGN_DECISION_NOT_PENDING')
+  } else if (action === 'reject') {
+    campaign.status = 'Rejected'
+    campaign.rejectionReason = reason
+  } else {
+    const now = Date.now()
+    const end = Date.parse(campaign.endsAt)
+    const start = Date.parse(campaign.startsAt)
+    if (Number.isFinite(end) && now >= end) return problem(422, 'A vigência da campanha já terminou.', 'CAMPAIGN_APPROVE_PERIOD_ENDED')
+    campaign.status = now < start ? 'Scheduled' : 'Active'
+    campaign.rejectionReason = null
+  }
+  const stored = createdCampaigns.find(item => item.id === campaign.id)
+  return HttpResponse.json(toResponse(campaign, stored?.networkId ?? '0199e3a0-0000-7000-8000-000000000001', stored))
 }
 
 export const campaignHandlers = [
@@ -118,6 +154,13 @@ export const campaignHandlers = [
     }
     createdCampaigns.push(campaign)
     return HttpResponse.json(toResponse(campaign, campaign.networkId, campaign), { status: 201 })
+  }),
+  http.post('*/api/v1/campaigns/:id/submit', ({ params }) => decide(String(params.id), 'submit')),
+  http.post('*/api/v1/campaigns/:id/approve', ({ params }) => decide(String(params.id), 'approve')),
+  http.post('*/api/v1/campaigns/:id/reject', async ({ params, request }) => {
+    const body: unknown = await request.json().catch(() => null)
+    const reason = isRecord(body) && typeof body.reason === 'string' ? body.reason.trim() : ''
+    return decide(String(params.id), 'reject', reason || null)
   }),
   http.put('*/api/v1/campaigns/:id/items', () => HttpResponse.json({ id: 'ok' })),
   http.put('*/api/v1/campaigns/:id/quantities', async ({ params, request }) => {

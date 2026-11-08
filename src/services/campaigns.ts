@@ -21,6 +21,7 @@ export interface ApiCampaign {
   status: string
   totalVoucherLimit: number | null
   items: ApiCampaignItem[]
+  rejectionReason?: string | null
 }
 
 const statusByApiName: Record<string, CampaignStatus> = {
@@ -32,6 +33,7 @@ const statusByApiName: Record<string, CampaignStatus> = {
   Ended: 'ended',
   Cancelled: 'cancelled',
   SoldOut: 'soldOut',
+  Rejected: 'rejected',
 }
 
 const amountFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
@@ -304,6 +306,7 @@ interface ApiCampaignDetail extends ApiCampaign {
   maxUsesPerVoucher: number | null
   conditions: ApiCondition[]
   detailItems: ApiDetailItem[]
+  rejectionReason: string | null
 }
 
 function readNumber(value: unknown): number | null {
@@ -352,6 +355,7 @@ function readDetail(value: unknown): ApiCampaignDetail {
     maxUsesPerVoucher: readNumber(record.maxUsesPerVoucher),
     conditions,
     detailItems,
+    rejectionReason: typeof record.rejectionReason === 'string' && record.rejectionReason.trim() ? record.rejectionReason.trim() : null,
   }
 }
 
@@ -431,6 +435,25 @@ export function toCampaignDetails(value: unknown): CampaignDetails {
     lastUsedVoucher: null,
     recentVouchers: [],
     info: detailSections(campaign),
+    rejectionReason: campaign.rejectionReason ?? undefined,
+  }
+}
+
+const genericDecisionMessage = 'Não foi possível atualizar o status da campanha. Tente novamente.'
+
+function decisionError(error: unknown): Error {
+  if (!axios.isAxiosError(error)) return new Error(genericDecisionMessage)
+  const message = problemMessage(error.response?.data)
+  return new Error(message === genericSaveMessage ? genericDecisionMessage : message)
+}
+
+export async function decideCampaign(id: string, action: 'submit' | 'approve' | 'reject', reason?: string): Promise<CampaignDetails> {
+  try {
+    const body = action === 'reject' ? { reason: reason?.trim() ? reason.trim() : null } : undefined
+    const { data } = await api.post<unknown>(`/api/v1/campaigns/${id}/${action}`, body)
+    return toCampaignDetails(data)
+  } catch (error) {
+    throw decisionError(error)
   }
 }
 
