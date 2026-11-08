@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { campaignSchema, campaignBenefitsSchema, campaignInformationSchema } from '../schemas/campaignSchema'
 import { initialCampaignDraft, campaignDraftStorageKey } from './campaignDraft'
-import { activateCampaign, createdCampaignsStorageKey, loadCreatedCampaigns } from './campaignRepository'
+import { createCampaign, createdCampaignsStorageKey, loadCreatedCampaigns } from './campaignRepository'
 import type { CampaignDraft } from '../types/campaign'
 
 function validDraft(): CampaignDraft {
@@ -37,16 +37,16 @@ describe('Schemas de campanha', () => {
 })
 
 describe('Repositório mockado', () => {
-  it('persiste a ativação com configuração completa e limpa somente o rascunho', () => {
+  it('persiste o rascunho com configuração completa e limpa somente o rascunho', () => {
     const draft = validDraft()
     localStorage.setItem(campaignDraftStorageKey, JSON.stringify(draft))
     localStorage.setItem('outro-dado', 'preservar')
-    activateCampaign(draft)
-    expect(loadCreatedCampaigns()).toEqual([expect.objectContaining({ name: 'Campanha ativada', status: 'active', vouchers: 0 })])
+    createCampaign(draft)
+    expect(loadCreatedCampaigns()).toEqual([expect.objectContaining({ name: 'Campanha ativada', status: 'draft', vouchers: 0 })])
     expect(JSON.parse(localStorage.getItem(createdCampaignsStorageKey)!)[0].draft).toEqual(draft)
     expect(localStorage.getItem(campaignDraftStorageKey)).toBeNull()
     expect(localStorage.getItem('outro-dado')).toBe('preservar')
-    activateCampaign({ ...draft, information: { ...draft.information, name: 'Outra campanha' } })
+    createCampaign({ ...draft, information: { ...draft.information, name: 'Outra campanha' } })
     expect(loadCreatedCampaigns().map(campaign => campaign.name)).toEqual(['Outra campanha', 'Campanha ativada'])
   })
 
@@ -59,17 +59,17 @@ describe('Repositório mockado', () => {
       if (key === createdCampaignsStorageKey) throw new Error('Sem espaço')
       original.call(this, key, value)
     })
-    expect(() => activateCampaign(draft)).toThrow('Sem espaço')
+    expect(() => createCampaign(draft)).toThrow('Sem espaço')
     expect(localStorage.getItem(campaignDraftStorageKey)).toBe(serialized)
     expect(loadCreatedCampaigns()).toEqual([])
   })
 
   it('não altera os registros ou o rascunho ao rejeitar dados inválidos', () => {
     localStorage.setItem(campaignDraftStorageKey, 'rascunho preservado')
-    expect(() => activateCampaign(initialCampaignDraft)).toThrow()
+    expect(() => createCampaign(initialCampaignDraft)).toThrow()
     expect(localStorage.getItem(campaignDraftStorageKey)).toBe('rascunho preservado')
     localStorage.setItem(createdCampaignsStorageKey, 'conteúdo corrompido')
-    expect(() => activateCampaign(validDraft())).toThrow()
+    expect(() => createCampaign(validDraft())).toThrow()
     expect(localStorage.getItem(createdCampaignsStorageKey)).toBe('conteúdo corrompido')
   })
 })

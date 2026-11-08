@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
 import { referenceCampaignId } from '../data/campaignDetails'
@@ -13,6 +13,7 @@ beforeAll(() => {
 })
 afterAll(() => vi.unstubAllGlobals())
 afterEach(clearToasts)
+beforeEach(() => localStorage.clear())
 afterEach(() => window.history.replaceState(null, '', '/'))
 
 function setup(campaignId = referenceCampaignId) {
@@ -113,9 +114,9 @@ describe('Detalhes da campanha: campanha de referência', () => {
     expect(info).toHaveTextContent('Todas as condições e restrições — E')
   })
 
-  it('informa que Pausar e Editar ainda não estão disponíveis', async () => {
+  it('informa que Editar ainda não está disponível', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Pausar' }))
+    await user.click(screen.getByRole('button', { name: 'Editar campanha' }))
     expect(await screen.findByText('Ação em breve')).toBeVisible()
   })
 })
@@ -142,7 +143,7 @@ describe('Detalhes da campanha: campanhas da listagem', () => {
     const schedule = screen.getByRole('region', { name: 'Vigência da campanha' })
     expect(schedule).toHaveTextContent('Agendada')
     expect(schedule).toHaveTextContent('Campanha ainda não iniciada')
-    expect(screen.getByRole('button', { name: 'Pausar' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
   })
 
   it('campanha encerrada não oferece pausar nem retomar', () => {
@@ -156,12 +157,13 @@ describe('Detalhes da campanha: campanhas da listagem', () => {
     expect(screen.getByRole('button', { name: 'Editar campanha' })).toBeVisible()
   })
 
-  it('campanha pausada mostra Retomar e a emissão pausada', () => {
+  it('campanha pausada mostra emissão pausada sem oferecer retomada', () => {
     setup('4')
     const schedule = screen.getByRole('region', { name: 'Vigência da campanha' })
     expect(schedule).toHaveTextContent('Pausada')
     expect(schedule).toHaveTextContent('emissão de vouchers pausada')
-    expect(screen.getByRole('button', { name: 'Retomar' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Retomar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Encerrar' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
   })
 })

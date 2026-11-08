@@ -60,3 +60,8 @@ Resultado em 2026-10-10: todos os comandos aprovados, 16 testes passando (14 nov
 - Criados para documentação: este guia e docs/specs/completed/US-002-ui-feedbacks.md.
 - Modificados: src/main.tsx (provider) e docs/PROJECT_STATE.md (memória da entrega).
 - A vitrine isolada (`ui.html`, `src/ui-demo.tsx` e `src/pages/ComponentsDemoPage.tsx`) foi removida. O build volta a ter só `index.html`.
+
+## Atualização US-016 — ConfirmationModal
+- Actions suportadas: delete, activate, deactivate, approve, submit, reject, pause e end.
+- description e children opcionais permitem mensagens específicas e conteúdo como motivo de reprovação. Chamadas anteriores continuam compatíveis.
+- isPending desabilita confirmação, Cancelar e fechamento; a lógica da operação continua no consumidor.

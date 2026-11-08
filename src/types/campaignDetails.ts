@@ -42,6 +42,7 @@ export interface CampaignDetails {
   id: string
   category: string
   status: CampaignStatus
+  rejectionReason?: string
   name: string
   description: string
   /** Sem imagem, a tela mostra um bloco decorativo. */
