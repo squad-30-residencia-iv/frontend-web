@@ -1,43 +1,52 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado ao final de cada sessão de desenvolvimento.
+> Atualizado em 2026-11-08. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Autenticação JWT, sessão e rotas protegidas.
-- **Última atualização:** 2026-11-05.
+- **Foco:** Portal demonstrável com dados locais. Só o login conversa com a API. Campanhas, vouchers, relatórios e auditoria não emitem nem resgatam voucher.
+- **Última atualização:** 2026-11-08.
+
+O que o portal faz hoje:
+
+- Login com JWT (`POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `POST /api/v1/auth/logout`), sessão no `localStorage` e rotas protegidas. Usuários demonstrativos do MSW: `analista@portal.dev` e `admin@portal.dev`.
+- Home, campanhas (cinco etapas, listagem, detalhe e ciclo submeter/aprovar/reprovar/pausar/encerrar), consulta de vouchers, relatórios e auditoria (`/auditoria` e `/auditoria/:operationId`).
+- Não há tela de rede, região, loja ou catálogo. O histórico em `/vouchers/:id/historico` continua provisório.
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
-- [ ] US-001 Login: o formulário já usa `Input`, `Button` e `FeedbackAlert`. A spec segue em `docs/specs/in-progress/` com checklist em aberto (stack, layout, testes da spec, verify/build e documentação).
-- [ ] US-012 Home (Visão Geral) com Sidebar Global (branch `feat/03-pagina_home`): código e testes escritos; falta rodar `npm run verify`/`npm run build` e a revisão visual no navegador (não há frame da Home no Figma; visual segue as telas existentes). Spec em `docs/specs/in-progress/US-012-home-sidebar.md`; relatório em `docs/HOME.md`.
+- [ ] US-013 Relatórios: a tela está na `main`, com dados locais. A spec segue em `docs/specs/in-progress/US-013-relatorios-indicadores.md` porque `npm run verify` e `npm run build` não foram registrados nessa sessão. O checklist de casos de teste da spec também está desmarcado. Mover para `completed/` só depois do verify.
+- [ ] US-012 Home: código e testes escritos. Falta `npm run verify`, `npm run build` e a revisão visual. A spec `US-012-home-sidebar.md` ainda diz que `/auditoria` é placeholder; isso foi substituído pela US-014/US-015.
+- [ ] Specs desatualizadas, sem reabrir o trabalho: `in-progress/US-011-autenticacao-msw-jwt.md` é o rascunho anterior (cita `react-router` e checklist aberto). A spec válida é `completed/US-011-autenticacao-msw-jwt.md`. `in-progress/US-001-login.md` não descreve o login atual; a autenticação foi entregue na US-011. `completed/US-014-auditoria.md` ainda fala em modal; a US-015 trocou pelo detalhe em rota.
+- [ ] Há três specs com o id US-013 (consulta de vouchers, detalhes da campanha e relatórios) e duas com US-012 (PageHeader e Home). O id do arquivo distingue qual é qual.
+
 ---
 
 ## ✅ Últimas Entregas Concluídas
 
-- US-011: Autenticação com JWT, MSW, rotas protegidas e perfil na sessão (detalhes no bloco "Entrega 2026-11-05 — US-011" abaixo).
-- Configuração inicial do ecossistema de SDD (prompts, templates e governança).
-- US-002: Button, Input, Select, Modal, ConfirmationModal, Loading, EmptyState, FeedbackAlert e feedbacks via Toast oficial HeroUI 3.2.6.
-- Documentação dos componentes em `docs/UI_COMPONENTS.md`. A vitrine `/ui.html` foi removida.
-- Paleta do portal em `src/styles.css`: cores próprias no `@theme` e tokens da HeroUI apontando para a mesma paleta.
-- Validação: `npm run build`, `npm test -- --run` e `npm run verify` aprovados; 16 testes. Sem script de lint.
-- US-013: tela Detalhes da campanha em `/campanhas/:id` (detalhes no bloco "Entrega 2026-10-25 — US-013" abaixo).
+- US-016: ciclo de campanhas em mock (submeter, aprovar, reprovar, pausar e encerrar), sem HTTP. Spec `completed/US-016-ciclo-campanhas-mock.md`.
+- US-015: detalhe da operação em `/auditoria/:operationId`, no lugar do modal da US-014. Spec `completed/US-015-detalhes-operacao.md`.
+- US-014: tela `/auditoria` com filtros, cards e CSV local. Spec `completed/US-014-auditoria.md` (o trecho do modal foi superado pela US-015).
+- US-013 Relatórios: tela em `/relatorios` com filtros, indicadores e CSV local. Código na `main`; spec ainda em `in-progress/` até o verify.
+- US-011: autenticação JWT, MSW e rotas protegidas. Spec `completed/US-011-autenticacao-msw-jwt.md`.
+- US-013: detalhes da campanha em `/campanhas/:id` e consulta de vouchers em `/vouchers` (dois arquivos com o mesmo número).
+- US-012: PageHeader global (`completed/US-012-pageheader-global.md`). A Home com Sidebar é a outra US-012 e segue em andamento no verify.
+- US-002 a US-010: componentes base, criação de campanha em cinco etapas e conformidade do rascunho local.
+
 ---
 
 ## ⚠️ Bloqueios & Decisões Recentes
 
-- Stack React + TypeScript + Vite, Tailwind, HeroUI e Lucide já instalada ao iniciar esta task.
-- Preservados App, login, estilos globais e dependências. Novos componentes em `components/ui` conforme escopo solicitado, com exports nomeados e CSS semântico adjacente.
-- Toast usa fila/provider oficiais; nenhum Context adicional. O app tem uma única entrada, `index.html`, e abre o login.
-- A HeroUI segue a paleta do portal pelos tokens `--accent`, `--danger`, `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--success` e `--warning`. O login não força mais um vermelho local.
-- `npm run verify` aprovado nesta sessão: typecheck e 16 testes.
-- Spec US-001 não foi concluída; permanece em `docs/specs/in-progress/`.
-- Alterações de tema prontas para commit, sem push. Sugestão: `feat(theme): padroniza a paleta do portal nos tokens da HeroUI`.
+- Campanhas, vouchers, relatórios e auditoria usam repositório local. A fronteira para a API está nos carregadores (`fetchReport`, `getCampaignDetails`, `campaignRepository`), não nas páginas.
+- O ciclo da US-016 não chama o backend. Analista submete rascunho; gestor aprova ou reprova; os dois pausam e encerram. Não há retomada.
+- A Home não usa `PageHeader`. O usuário da sessão vem do `AuthContext`, com fallback para os testes isolados.
+- A HeroUI segue a paleta do portal pelos tokens `--accent`, `--danger`, `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--success` e `--warning`.
+- Stack: React, TypeScript, Vite, Tailwind e HeroUI. Navegação própria em `App.tsx`, sem react-router.
 
 ## Entrega 2026-11-05 — US-011: Autenticação JWT com MSW e Rotas Protegidas
 - Autenticação conectada com JWT: login via `POST /api/v1/auth/login`, logout via `POST /api/v1/auth/logout` e me via `GET /api/v1/auth/me`.
