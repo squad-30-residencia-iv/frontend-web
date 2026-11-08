@@ -4,7 +4,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { CampaignManagementPage } from './CampaignManagementPage'
 import { CampaignDetailsPage } from './CampaignDetailsPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
-import { App } from '../App'
 import { clearToasts } from '../test/clearToasts'
 import * as repository from '../data/campaignRepository'
 import type { Campaign, CampaignRole } from '../types/campaign'
@@ -29,18 +28,12 @@ async function confirm(label: string) {
 }
 
 describe('Workflow de campanhas na UI', () => {
-  it('analista vê Submeter no rascunho, confirma e atualiza lista/repositório', async () => {
-    render(<><CampaignManagementPage actorRole="analyst" /><FeedbackProvider /></>)
-    const user = userEvent.setup()
-    fireEvent.change(screen.getByRole('textbox', { name: 'Buscar campanha' }), { target: { value: 'rascunho' } })
-    await user.click(screen.getByRole('button', { name: 'Ações de Campanha em rascunho (demonstração)' }))
-    await user.click(await screen.findByRole('menuitem', { name: 'Submeter' }))
-    expect(repository.getCampaignById('79')?.status).toBe('draft')
-    await confirm('Submeter')
-    expect(await screen.findByText('Campanha enviada para aprovação.')).toBeVisible()
-    expect(screen.getByRole('table')).toHaveTextContent('Pendente de aprovação')
-    expect(repository.getCampaignById('79')?.status).toBe('pending')
-    expect(screen.queryByRole('alertdialog', { name: /^Submeter / })).not.toBeInTheDocument()
+  it('a listagem não oferece submeter, aprovar, pausar nem encerrar', () => {
+    render(<CampaignManagementPage campaigns={repository.getCampaigns()} />)
+    expect(screen.queryByRole('button', { name: 'Submeter' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Encerrar' })).not.toBeInTheDocument()
   })
 
   it('cancelar confirmação não altera o status', async () => {
@@ -97,17 +90,6 @@ describe('Workflow de campanhas na UI', () => {
     view.rerender(<CampaignDetailsPage campaignId="1" actorRole={null} />)
     expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Encerrar' })).not.toBeInTheDocument()
-  })
-
-  it('sincroniza status nos detalhes e na listagem sem recarregar', async () => {
-    const user = userEvent.setup()
-    render(<><App /><FeedbackProvider /></>)
-    await user.click(screen.getByRole('link', { name: 'Black Friday 2024' }))
-    await user.click(screen.getByRole('button', { name: 'Pausar' }))
-    await confirm('Pausar')
-    await screen.findByText('Campanha pausada.')
-    await user.click(within(screen.getByRole('navigation', { name: 'Caminho' })).getByRole('link', { name: 'Campanhas' }))
-    expect(screen.getByRole('rowheader', { name: 'Black Friday 2024' }).closest('tr')).toHaveTextContent('Pausada')
   })
 
   it('mantém status e modal abertos em falha, permitindo tentar novamente', async () => {

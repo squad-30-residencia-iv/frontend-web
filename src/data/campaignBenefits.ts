@@ -25,13 +25,21 @@ export function getBatchTotal(benefits: CampaignDraft['benefits']) {
   const total = (base?.customers ?? 0) * Number(benefits.quantityPerCustomer)
   return isPositiveInteger(benefits.quantityPerCustomer) && Number.isSafeInteger(total) ? total : 0
 }
-function collectCampaignBenefitsErrors(benefits: CampaignDraft['benefits']): CampaignBenefitsErrors {
+export interface BenefitCatalog {
+  categories: readonly { value: string; label: string }[]
+  products: readonly { value: string; label: string }[]
+}
+
+function collectCampaignBenefitsErrors(
+  benefits: CampaignDraft['benefits'],
+  catalog: BenefitCatalog = { categories: categoryOptions, products: productOptions },
+): CampaignBenefitsErrors {
   const errors: CampaignBenefitsErrors = {}
   const discountField = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
   if (!validateDiscount(benefits.discountType, benefits[discountField])) errors[discountField] = benefits.discountType === 'percentage' ? 'Informe um percentual entre 1% e 100%.' : 'Informe um valor em reais maior que zero, com até duas casas decimais.'
   if (benefits.addedBenefits.some(item => !validateDiscount(item.type, item.value))) errors.addedBenefits = 'Revise os benefícios adicionados.'
   if (benefits.application === 'specific') {
-    const options = benefits.targetType === 'category' ? categoryOptions : productOptions
+    const options = benefits.targetType === 'category' ? catalog.categories : catalog.products
     if (!benefits.targetIds.length || benefits.targetIds.some(id => !options.some(option => option.value === id))) errors.targetIds = 'Selecione ao menos um produto ou categoria.'
   }
   if (!isPositiveInteger(benefits.maxVouchers)) errors.maxVouchers = 'Informe uma quantidade máxima inteira maior que zero.'
@@ -61,6 +69,7 @@ export function newCampaignBenefits(): CampaignDraft['benefits'] {
 
 export const campaignBenefitsSchema = createFormSchema(isCampaignBenefits, collectCampaignBenefitsErrors)
 
-export function validateCampaignBenefits(value: CampaignDraft['benefits']): CampaignBenefitsErrors {
+export function validateCampaignBenefits(value: CampaignDraft['benefits'], catalog?: BenefitCatalog): CampaignBenefitsErrors {
+  if (catalog) return collectCampaignBenefitsErrors(value, catalog)
   return formErrors(campaignBenefitsSchema, value)
 }

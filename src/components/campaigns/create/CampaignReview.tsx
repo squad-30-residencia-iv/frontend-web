@@ -1,9 +1,14 @@
 import type { CampaignDraft } from '../../../types/campaign'
 import { getCampaignReviewSections } from '../../../data/campaignReview'
+import type { BenefitCatalog } from '../../../data/campaignBenefits'
+import type { CampaignStore } from '../../../data/campaignScope'
 import './CampaignReview.css'
 
-export function CampaignReview({ draft }: { draft: CampaignDraft }) {
-  const sections = getCampaignReviewSections(draft)
+export function CampaignReview({ draft, catalog }: {
+  draft: CampaignDraft
+  catalog?: { categories?: BenefitCatalog['categories']; products?: BenefitCatalog['products']; stores?: readonly CampaignStore[] }
+}) {
+  const sections = getCampaignReviewSections(draft, catalog)
 
   return (
     <section className="create-campaign-information campaign-review" aria-labelledby="campaign-review-title">

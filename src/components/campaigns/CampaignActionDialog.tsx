@@ -15,6 +15,8 @@ interface CampaignActionDialogProps {
   selected: SelectedCampaignAction | null
   role: CampaignRole | null
   onClose: () => void
+  perform?: (input: { campaignId: string; action: CampaignAction; reason: string }) => Promise<void>
+  descriptions?: Partial<Record<CampaignAction, string>>
 }
 
 const descriptions: Record<CampaignAction, string> = {
@@ -25,7 +27,7 @@ const descriptions: Record<CampaignAction, string> = {
   end: 'Esta operação encerra a campanha definitivamente e interrompe a emissão de novos vouchers. Não há ação de reativação neste fluxo.',
 }
 
-export function CampaignActionDialog({ selected, role, onClose }: CampaignActionDialogProps) {
+export function CampaignActionDialog({ selected, role, onClose, perform, descriptions: descriptionOverrides }: CampaignActionDialogProps) {
   const [reason, setReason] = useState('')
   const [pending, setPending] = useState(false)
   const busy = useRef(false)
@@ -37,7 +39,11 @@ export function CampaignActionDialog({ selected, role, onClose }: CampaignAction
     busy.current = true
     setPending(true)
     try {
-      await performCampaignAction({ campaignId: selected.campaign.id, action: selected.action, role, reason })
+      await (perform ?? (input => performCampaignAction({ campaignId: input.campaignId, action: input.action, role, reason: input.reason })))({
+        campaignId: selected.campaign.id,
+        action: selected.action,
+        reason,
+      })
       onClose()
       feedback.success({ title: campaignActionMessages[selected.action] })
     } catch (error) {
@@ -58,7 +64,7 @@ export function CampaignActionDialog({ selected, role, onClose }: CampaignAction
     onOpenChange={isOpen => { if (!isOpen && !busy.current) onClose() }}
     onConfirm={confirm}
     isPending={pending}
-    description={selected ? descriptions[selected.action] : undefined}
+    description={selected ? (descriptionOverrides?.[selected.action] ?? descriptions[selected.action]) : undefined}
   >
     {selected?.action === 'reject' && <Input
       label="Motivo da reprovação (opcional)"

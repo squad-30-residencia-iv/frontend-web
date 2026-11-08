@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 import {
   ArrowRight,
   CalendarClock,
@@ -22,10 +22,12 @@ import { campaignActionLabels, getCampaignActions } from '../data/campaignWorkfl
 import { formatNumber } from '../components/home/formatters'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
+import { Loading } from '../components/ui/Loading'
 import { useFeedback } from '../components/ui/useFeedback'
 import { getCampaignDetails, getCampaignMetrics, getCampaignTiming, type CampaignPhase } from '../data/campaignDetails'
+import { decideCampaign, fetchCampaignDetails, isCampaignGuid } from '../services/campaigns'
 import { navigate } from '../navigation/navigate'
-import { statusLabels, type CampaignStatus, type CampaignRole } from '../types/campaign'
+import { statusLabels, type CampaignAction, type CampaignStatus, type CampaignRole } from '../types/campaign'
 import {
   voucherStatusLabels,
   type CampaignDetails,
@@ -83,6 +85,8 @@ const campaignStatusTones: Record<CampaignStatus, StatusTone> = {
   scheduled: 'info',
   paused: 'warning',
   ended: 'neutral',
+  cancelled: 'neutral',
+  soldOut: 'neutral',
 }
 
 const voucherStatusTones: Record<VoucherStatus, StatusTone> = {
@@ -130,7 +134,7 @@ interface MetricCard {
   tone: 'brand' | 'info' | 'success' | 'warning'
 }
 
-function CampaignMetricCards({ details }: { details: CampaignDetails }) {
+function CampaignMetricCards({ details, illustrative = true }: { details: CampaignDetails; illustrative?: boolean }) {
   const metrics = getCampaignMetrics(details.metrics)
   const cards: MetricCard[] = [
     {
@@ -163,7 +167,7 @@ function CampaignMetricCards({ details }: { details: CampaignDetails }) {
   return <section className="details-metrics" aria-labelledby="details-metrics-title">
     <div className="details-metrics-heading">
       <h2 id="details-metrics-title">Desempenho da campanha</h2>
-      <p>Acumulado desde o início · Demonstração</p>
+      <p>{illustrative ? 'Acumulado desde o início · Demonstração' : 'Acumulado desde o início · emissão ainda não existe'}</p>
     </div>
     <div className="details-metrics-grid">
       {cards.map(({ title, value, caption, icon: Icon, tone }) => <article className="details-metric" key={title} aria-label={title}>
@@ -287,7 +291,7 @@ interface VoucherTableProps {
 const columns = ['Código', 'Cliente', 'Data de emissão', 'Validade', 'Usos', 'Status']
 const vouchersPath = '/vouchers'
 
-function VoucherTable({ vouchers, totalIssued }: VoucherTableProps) {
+function VoucherTable({ vouchers, totalIssued, illustrative = true }: VoucherTableProps & { illustrative?: boolean }) {
   function handleViewAll(event: MouseEvent<HTMLAnchorElement>) {
     // Ctrl/Cmd/Shift/Alt e botão do meio mantêm o comportamento nativo (nova aba/janela).
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return
@@ -299,7 +303,7 @@ function VoucherTable({ vouchers, totalIssued }: VoucherTableProps) {
     <div className="details-vouchers-head">
       <div>
         <h2 id="details-vouchers-title">Últimos vouchers emitidos</h2>
-        <p>Somente desta campanha · registros de demonstração</p>
+        <p>{illustrative ? 'Somente desta campanha · registros de demonstração' : 'Somente desta campanha'}</p>
       </div>
       <a className="details-vouchers-link" href={vouchersPath} onClick={handleViewAll}>
         Ver todos os vouchers
@@ -343,11 +347,11 @@ function VoucherTable({ vouchers, totalIssued }: VoucherTableProps) {
 
 // ---- Informações detalhadas ----
 
-function CampaignInfoSections({ sections }: { sections: readonly CampaignInfoSection[] }) {
+function CampaignInfoSections({ sections, illustrative = true }: { sections: readonly CampaignInfoSection[]; illustrative?: boolean }) {
   return <section className="details-info" aria-labelledby="details-info-title">
     <div className="details-info-head">
       <h2 id="details-info-title">Informações detalhadas</h2>
-      <p>Configuração ilustrativa baseada no fluxo de criação</p>
+      <p>{illustrative ? 'Configuração ilustrativa baseada no fluxo de criação' : 'Configuração gravada no rascunho'}</p>
     </div>
     <div className="details-info-grid">
       {sections.map(section => <div key={section.title}>
@@ -373,11 +377,36 @@ export interface CampaignDetailsPageProps {
 const campaignsPath = '/campanhas'
 const title = 'Detalhes da campanha'
 
+function apiDecisionActions(status: CampaignStatus, role: CampaignRole | null): CampaignAction[] {
+  if (status === 'draft' && role === 'analyst') return ['submit']
+  if (status === 'pending' && role === 'manager') return ['approve', 'reject']
+  return []
+}
+
 export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campaignRole ?? null }: CampaignDetailsPageProps) {
   const feedback = useFeedback()
+  const fromApi = isCampaignGuid(campaignId)
   const revision = useSyncExternalStore(subscribeCampaigns, getCampaignRevision)
-  const details = useMemo(() => getCampaignDetails(campaignId), [campaignId, revision])
+  const localDetails = useMemo(() => fromApi ? null : getCampaignDetails(campaignId), [campaignId, fromApi, revision])
+  const [remoteDetails, setRemoteDetails] = useState<CampaignDetails | null>(null)
+  const [remotePhase, setRemotePhase] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
+  const [attempt, setAttempt] = useState(0)
   const [selectedAction, setSelectedAction] = useState<SelectedCampaignAction | null>(null)
+  const details = fromApi ? remoteDetails : localDetails
+
+  useEffect(() => {
+    if (!fromApi) return
+    let cancelled = false
+    setRemotePhase('loading')
+    fetchCampaignDetails(campaignId)
+      .then(next => {
+        if (cancelled) return
+        setRemoteDetails(next)
+        setRemotePhase(next ? 'ready' : 'missing')
+      })
+      .catch(() => { if (!cancelled) setRemotePhase('error') })
+    return () => { cancelled = true }
+  }, [campaignId, fromApi, attempt])
 
   function handleComingSoon() {
     feedback.info({
@@ -396,6 +425,24 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
     { label: title },
   ]
 
+  if (fromApi && remotePhase === 'loading') {
+    return <PortalLayout activeSection="campaigns">
+      <PageHeader title={title} breadcrumbs={breadcrumbs} />
+      <Loading message="Carregando campanha…" />
+    </PortalLayout>
+  }
+
+  if (fromApi && remotePhase === 'error') {
+    return <PortalLayout activeSection="campaigns">
+      <PageHeader title={title} breadcrumbs={breadcrumbs} />
+      <EmptyState
+        title="Não foi possível carregar a campanha"
+        description="Verifique sua conexão e tente novamente."
+        action={<Button variant="secondary" onPress={() => setAttempt(current => current + 1)}>Tentar novamente</Button>}
+      />
+    </PortalLayout>
+  }
+
   if (!details) {
     return <PortalLayout activeSection="campaigns">
       <PageHeader title={title} breadcrumbs={breadcrumbs} />
@@ -407,7 +454,7 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
     </PortalLayout>
   }
 
-  const actions = getCampaignActions(details.status, actorRole)
+  const actions = fromApi ? apiDecisionActions(details.status, actorRole) : getCampaignActions(details.status, actorRole)
 
   return <PortalLayout activeSection="campaigns">
     <PageHeader
@@ -426,21 +473,33 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
           startIcon={SquarePen}
           onPress={handleComingSoon}
         >Editar campanha</Button>
-        <CampaignActionsMenu campaign={details} role={actorRole} onAction={action => setSelectedAction({ campaign: details, action })} />
+        {!fromApi && <CampaignActionsMenu campaign={details} role={actorRole} onAction={action => setSelectedAction({ campaign: details, action })} />}
       </div>}
     />
     <div className="details-page">
       <CampaignSummaryCard details={details} />
       {details.status === 'rejected' && details.rejectionReason && <FeedbackAlert type="info" title="Motivo da reprovação" description={details.rejectionReason} />}
-      <p className="details-notice">
+      {fromApi ? <p className="details-notice">
+        <Info size={14} aria-hidden="true" />
+        Vouchers e desempenho ainda não vêm da API. A configuração abaixo é a gravada no rascunho.
+      </p> : <p className="details-notice">
         <Info size={14} aria-hidden="true" />
         Dados de demonstração: desempenho, vouchers e configuração ilustrativos. Referência temporal: {formatDateTime(details.referenceAt, ', ')}.
-      </p>
-      <CampaignMetricCards details={details} />
+      </p>}
+      <CampaignMetricCards details={details} illustrative={!fromApi} />
       <CampaignSchedulePanels details={details} />
-      <VoucherTable vouchers={details.recentVouchers} totalIssued={details.metrics.issued} />
-      <CampaignInfoSections sections={details.info} />
+      <VoucherTable vouchers={details.recentVouchers} totalIssued={details.metrics.issued} illustrative={!fromApi} />
+      <CampaignInfoSections sections={details.info} illustrative={!fromApi} />
     </div>
-    <CampaignActionDialog selected={selectedAction} role={actorRole} onClose={() => setSelectedAction(null)} />
+    <CampaignActionDialog
+      selected={selectedAction}
+      role={actorRole}
+      onClose={() => setSelectedAction(null)}
+      perform={fromApi ? async input => {
+        if (input.action !== 'submit' && input.action !== 'approve' && input.action !== 'reject') return
+        setRemoteDetails(await decideCampaign(input.campaignId, input.action, input.reason))
+      } : undefined}
+      descriptions={fromApi ? { approve: 'A aprovação registra a decisão. Com início futuro a campanha fica agendada; se a vigência já começou, fica ativa.' } : undefined}
+    />
   </PortalLayout>
 }

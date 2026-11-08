@@ -25,7 +25,7 @@ export function generateMockJwt(user: AuthUser, expiresInSeconds: number = 3600)
     name: user.name,
     email: user.email,
     role: user.role,
-    organizationId: user.organizationId,
+    networkId: user.networkId,
   }
   const payloadBase64 = toBase64(JSON.stringify(payload))
   const signature = toBase64('mock-signature')

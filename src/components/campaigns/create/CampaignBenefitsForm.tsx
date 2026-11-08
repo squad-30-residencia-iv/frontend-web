@@ -17,6 +17,8 @@ type Benefits = CampaignDraft['benefits']
 interface CampaignBenefitsFormProps {
   value: Benefits
   errors: CampaignBenefitsErrors
+  categories?: readonly { value: string; label: string }[]
+  products?: readonly { value: string; label: string }[]
   onChange: (value: Benefits) => void
   onAddBenefit: () => void
 }
@@ -24,7 +26,14 @@ const integerInputProps = { min: 1, step: 1 }
 const formatNumber = new Intl.NumberFormat('pt-BR')
 const formatMoney = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
-export function CampaignBenefitsForm({ value, errors, onChange, onAddBenefit }: CampaignBenefitsFormProps) {
+export function CampaignBenefitsForm({
+  value,
+  errors,
+  categories = categoryOptions,
+  products = productOptions,
+  onChange,
+  onAddBenefit,
+}: CampaignBenefitsFormProps) {
 
   function update<Key extends keyof Benefits>(key: Key, fieldValue: Benefits[Key]) {
     onChange({ ...value, [key]: fieldValue })
@@ -136,7 +145,7 @@ export function CampaignBenefitsForm({ value, errors, onChange, onAddBenefit }: 
         selectionMode="multiple"
         label="Produtos ou categoria"
         name="targetIds"
-        options={value.targetType === 'category' ? categoryOptions : productOptions}
+        options={value.targetType === 'category' ? categories : products}
         value={value.targetIds}
         onChange={next => update('targetIds', next.map(String))}
         placeholder="Selecione uma ou mais opções"

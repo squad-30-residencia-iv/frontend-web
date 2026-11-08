@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { App } from '../App'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
 import { referenceCampaignId } from '../data/campaignDetails'
+import { networkCampaigns } from '../mocks/handlers/campaigns'
 import { clearToasts } from '../test/clearToasts'
 import { CampaignDetailsPage } from './CampaignDetailsPage'
 
@@ -188,5 +189,76 @@ describe('Detalhes da campanha: rota e erros', () => {
     window.history.replaceState(null, '', '/campanhas/%E0%A4%A')
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Campanha não encontrada' })).toBeVisible()
+  })
+
+  it('um Guid da API mostra a campanha gravada sem ações de status', async () => {
+    setup('0199e3a0-0000-7000-8000-000000000111')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Volta às Aulas' })).toBeVisible()
+    expect(screen.getAllByText('10% OFF').length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: 'Nenhum voucher emitido' })).toBeVisible()
+    expect(screen.getByText('Vouchers e desempenho ainda não vêm da API. A configuração abaixo é a gravada no rascunho.')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Submeter' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Encerrar' })).not.toBeInTheDocument()
+  })
+})
+
+describe('Detalhes da campanha: decisão na API', () => {
+  const apiId = '0199e3a0-0000-7000-8000-000000000111'
+
+  function renderDecision(role: 'analyst' | 'manager') {
+    const view = render(<><CampaignDetailsPage campaignId={apiId} actorRole={role} /><FeedbackProvider /></>)
+    return { user: userEvent.setup(), ...view }
+  }
+
+  async function confirm(user: ReturnType<typeof userEvent.setup>, label: string) {
+    const modal = await screen.findByRole('alertdialog', { name: new RegExp(`^${label} `) })
+    await user.click(within(modal).getByRole('button', { name: label }))
+  }
+
+  it('analista submete o rascunho e o botão some', async () => {
+    const { user } = renderDecision('analyst')
+    await user.click(await screen.findByRole('button', { name: 'Submeter' }))
+    await confirm(user, 'Submeter')
+    expect((await screen.findAllByText('Pendente de aprovação')).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Submeter' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+  })
+
+  it('gestor não submete um rascunho', async () => {
+    renderDecision('manager')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Volta às Aulas' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Submeter' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+  })
+
+  it('gestor aprova uma campanha com início futuro e ela fica agendada', async () => {
+    networkCampaigns[0].startsAt = '2026-12-01T08:00:00-03:00'
+    networkCampaigns[0].endsAt = '2026-12-31T23:59:00-03:00'
+    const { user, rerender } = renderDecision('analyst')
+    await user.click(await screen.findByRole('button', { name: 'Submeter' }))
+    await confirm(user, 'Submeter')
+    await screen.findAllByText('Pendente de aprovação')
+    rerender(<><CampaignDetailsPage campaignId={apiId} actorRole="manager" /><FeedbackProvider /></>)
+    await user.click(await screen.findByRole('button', { name: 'Aprovar' }))
+    await confirm(user, 'Aprovar')
+    expect((await screen.findAllByText('Agendada')).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+  })
+
+  it('gestor reprova e o motivo aparece', async () => {
+    const { user, rerender } = renderDecision('analyst')
+    await user.click(await screen.findByRole('button', { name: 'Submeter' }))
+    await confirm(user, 'Submeter')
+    await screen.findAllByText('Pendente de aprovação')
+    rerender(<><CampaignDetailsPage campaignId={apiId} actorRole="manager" /><FeedbackProvider /></>)
+    await user.click(await screen.findByRole('button', { name: 'Reprovar' }))
+    const modal = await screen.findByRole('alertdialog', { name: /^Reprovar / })
+    await user.type(within(modal).getByLabelText('Motivo da reprovação (opcional)'), 'Fora do calendário')
+    await user.click(within(modal).getByRole('button', { name: 'Reprovar' }))
+    expect(await screen.findByText('Fora do calendário')).toBeVisible()
+    expect((await screen.findAllByText('Reprovada')).length).toBeGreaterThan(0)
   })
 })

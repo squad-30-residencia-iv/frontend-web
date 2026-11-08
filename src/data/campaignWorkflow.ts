@@ -27,6 +27,12 @@ export const campaignTransitions: Record<CampaignAction, Transition> = {
   end: { from: ['active', 'paused'], to: 'ended', roles: ['analyst', 'manager'] },
 }
 
+export function sessionCampaignRole(role: string): CampaignRole | null {
+  if (role === 'analista') return 'analyst'
+  if (role === 'gestor') return 'manager'
+  return null
+}
+
 export function getCampaignActions(status: CampaignStatus, role: CampaignRole | null): CampaignAction[] {
   if (!role) return []
   return (Object.keys(campaignTransitions) as CampaignAction[]).filter(action => {

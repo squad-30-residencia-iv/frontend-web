@@ -1,6 +1,6 @@
 import type { CampaignChannel, CampaignDraft } from '../types/campaign'
-import { categoryOptions, productOptions, customerBases, getBatchTotal, parseDiscount } from './campaignBenefits'
-import { campaignStores } from './campaignScope'
+import { categoryOptions, productOptions, customerBases, getBatchTotal, parseDiscount, type BenefitCatalog } from './campaignBenefits'
+import { campaignStores, type CampaignStore } from './campaignScope'
 
 export interface CampaignReviewField {
   label: string
@@ -36,15 +36,21 @@ function formatDiscount(type: 'percentage' | 'fixed', value: string) {
   return Number.isFinite(amount) ? `${numberFormat.format(amount)}%` : 'Não informado'
 }
 
-export function getCampaignReviewSections(draft: CampaignDraft): CampaignReviewSection[] {
+export function getCampaignReviewSections(
+  draft: CampaignDraft,
+  catalog: { categories?: BenefitCatalog['categories']; products?: BenefitCatalog['products']; stores?: readonly CampaignStore[] } = {},
+): CampaignReviewSection[] {
   const { information, benefits, rules, scope } = draft
+  const categories = catalog.categories ?? categoryOptions
+  const products = catalog.products ?? productOptions
+  const stores = catalog.stores ?? campaignStores
   const isNetwork = scope.mode === 'network'
   const channels = isNetwork ? scope.networkChannels : scope.storeChannels
   const storeNames = scope.storeIds.map(id => {
-    const store = campaignStores.find(item => item.id === id)
+    const store = stores.find(item => item.id === id)
     return store ? `${store.code} — ${store.name}` : 'Loja indisponível'
   })
-  const targetOptions = benefits.targetType === 'category' ? categoryOptions : productOptions
+  const targetOptions = benefits.targetType === 'category' ? categories : products
   const targetNames = benefits.targetIds.map(id => targetOptions.find(option => option.value === id)?.label ?? 'Item indisponível')
   const isSpecific = benefits.application === 'specific'
   const isAutomatic = benefits.generationMode === 'automatic'

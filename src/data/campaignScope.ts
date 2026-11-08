@@ -25,7 +25,10 @@ export function newCampaignScope(): CampaignDraft['scope'] {
 
 export type CampaignScopeErrors = Partial<Record<'stores' | 'networkChannels' | 'storeChannels', string>>
 
-function collectCampaignScopeErrors(scope: CampaignDraft['scope']): CampaignScopeErrors {
+function collectCampaignScopeErrors(
+  scope: CampaignDraft['scope'],
+  stores: readonly CampaignStore[] = campaignStores,
+): CampaignScopeErrors {
   const errors: CampaignScopeErrors = {}
 
   if (scope.mode === 'network') {
@@ -36,7 +39,7 @@ function collectCampaignScopeErrors(scope: CampaignDraft['scope']): CampaignScop
   }
 
   const hasValidStores = scope.storeIds.length > 0
-    && scope.storeIds.every(id => campaignStores.some(store => store.id === id))
+    && scope.storeIds.every(id => stores.some(store => store.id === id))
 
   if (!hasValidStores) {
     errors.stores = 'Adicione ao menos uma loja específica.'
@@ -68,6 +71,7 @@ export function isCampaignScope(value: unknown): value is CampaignDraft['scope']
 
 export const campaignScopeSchema = createFormSchema(isCampaignScope, collectCampaignScopeErrors)
 
-export function validateCampaignScope(value: CampaignDraft['scope']): CampaignScopeErrors {
+export function validateCampaignScope(value: CampaignDraft['scope'], stores?: readonly CampaignStore[]): CampaignScopeErrors {
+  if (stores) return collectCampaignScopeErrors(value, stores)
   return formErrors(campaignScopeSchema, value)
 }

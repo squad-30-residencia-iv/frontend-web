@@ -1,8 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CampaignManagementPage } from './CampaignManagementPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
+import { getCampaigns } from '../data/campaignRepository'
 import { clearToasts } from '../test/clearToasts'
 
 beforeAll(() => {
@@ -12,7 +13,10 @@ beforeAll(() => {
 afterAll(() => vi.unstubAllGlobals())
 afterEach(clearToasts)
 beforeEach(() => localStorage.clear())
-function setup() { render(<><CampaignManagementPage /><FeedbackProvider /></>); return userEvent.setup() }
+function setup() {
+  render(<><CampaignManagementPage campaigns={getCampaigns()} /><FeedbackProvider /></>)
+  return userEvent.setup()
+}
 describe('Gerenciamento de Campanhas', () => {
   it('mostra referência, indicadores e sete campanhas na primeira página', () => {
     setup()
@@ -56,29 +60,12 @@ describe('Gerenciamento de Campanhas', () => {
     await user.click(screen.getByRole('button', { name: 'Página anterior' }))
     expect(screen.getByRole('button', { name: 'Página 11' })).toHaveAttribute('aria-current', 'page')
   })
-  it('abre menu por teclado e fecha com Escape', async () => {
-    const user = setup()
-    const trigger = screen.getByRole('button', { name: 'Ações de Black Friday 2024' })
-    trigger.focus()
-    await user.keyboard('{Enter}')
-    expect(await screen.findByRole('menu')).toBeVisible()
-    expect(screen.getByRole('menuitem', { name: 'Pausar' })).not.toHaveAttribute('aria-disabled', 'true')
-    await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
-    await waitFor(() => expect(trigger).toHaveFocus())
-  })
-  it('cancela e confirma aprovação com feedback', async () => {
-    const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Aprovar' }))
-    let dialog = await screen.findByRole('alertdialog')
-    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
-    expect(screen.getByText('Nova campanha criada')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Aprovar' }))
-    dialog = await screen.findByRole('alertdialog')
-    await user.click(within(dialog).getByRole('button', { name: 'Aprovar' }))
-    expect(await screen.findByText('Campanha aprovada.')).toBeVisible()
-    expect(screen.queryByText('Nova campanha criada')).not.toBeInTheDocument()
+  it('não oferece ações de status', () => {
+    setup()
+    expect(screen.queryByRole('button', { name: /Ações de/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Submeter' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Ações' })).not.toBeInTheDocument()
   })
   it('abre os detalhes pelo nome da campanha', async () => {
     const user = setup()
@@ -99,6 +86,7 @@ describe('Gerenciamento de Campanhas', () => {
   })
   it('mostra estado vazio quando não há registros', () => {
     render(<CampaignManagementPage campaigns={[]} />)
-    expect(screen.getByRole('heading', { name: 'Nenhuma campanha encontrada' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Nenhuma campanha nesta rede' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument()
   })
 })

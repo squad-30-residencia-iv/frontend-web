@@ -8,10 +8,13 @@ import { FeedbackAlert } from '../components/ui/FeedbackAlert'
 import { useFeedback } from '../components/ui/useFeedback'
 import {
   campaignDraftStorageKey,
+  clearSavedCampaignId,
   loadCampaignDraft,
+  readSavedCampaignId,
   validateCampaignInformation,
   validateCampaignDraft,
   type CampaignInformationErrors,
+  type DraftCatalog,
 } from '../data/campaignDraft'
 import { navigate } from '../navigation/navigate'
 import type { CampaignDraft } from '../types/campaign'
@@ -25,15 +28,21 @@ import { CampaignRulesForm } from '../components/campaigns/create/CampaignRulesF
 import { validateCampaignRules, type CampaignRulesErrors } from '../data/campaignRules'
 import { CampaignInformationForm } from '../components/campaigns/create/CampaignInformationForm'
 import { CampaignScopeForm } from '../components/campaigns/create/CampaignScopeForm'
-import type { CampaignScopeErrors } from '../data/campaignScope'
+import { campaignStores, type CampaignScopeErrors } from '../data/campaignScope'
 import { CampaignReview } from '../components/campaigns/create/CampaignReview'
+import { categoryOptions, productOptions } from '../data/campaignBenefits'
 import { createCampaign } from '../data/campaignRepository'
+import { useAuth } from '../contexts/AuthContext'
+import { loadPortalCatalog, type PortalCatalog } from '../services/catalog'
+import { campaignPersistBlocker, campaignPersistNotices, saveCampaignDraft } from '../services/campaigns'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
 
 export function CreateCampaignPage() {
   const feedback = useFeedback()
+  const { user } = useAuth()
+  const networkId = user?.networkId ?? null
   const [draft, setDraft] = useState(loadCampaignDraft)
   const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(draft))
   const [errors, setErrors] = useState<CampaignInformationErrors>({})
@@ -44,6 +53,8 @@ export function CreateCampaignPage() {
   const [rulesErrors, setRulesErrors] = useState<CampaignRulesErrors>({})
   const [visitedScope, setVisitedScope] = useState(false)
   const [scopeErrors, setScopeErrors] = useState<CampaignScopeErrors>({})
+  const [catalog, setCatalog] = useState<PortalCatalog | null>(null)
+  const [saving, setSaving] = useState(false)
   const pendingFocusRef = useRef<string | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [leavePath, setLeavePath] = useState('/campanhas')
@@ -73,6 +84,30 @@ export function CreateCampaignPage() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [dirty])
+
+  useEffect(() => {
+    if (!networkId) return
+    let cancelled = false
+    loadPortalCatalog(networkId)
+      .then(next => { if (!cancelled) setCatalog(next) })
+      .catch(() => {
+        if (cancelled) return
+        setCatalog({ categories: [], products: [], stores: [] })
+        feedback.error({
+          title: 'Não foi possível carregar categorias, produtos e lojas.',
+          description: 'Você ainda pode gravar uma campanha para toda a compra. Tente de novo mais tarde para escolher alvos e lojas.',
+        })
+      })
+    return () => { cancelled = true }
+  }, [networkId, feedback])
+
+  const draftCatalog: DraftCatalog | undefined = networkId
+    ? { categories: catalog?.categories ?? [], products: catalog?.products ?? [], stores: catalog?.stores ?? [] }
+    : undefined
+  const benefitChoices = draftCatalog
+    ? { categories: draftCatalog.categories ?? [], products: draftCatalog.products ?? [] }
+    : { categories: categoryOptions, products: productOptions }
+  const storeChoices = draftCatalog?.stores ?? campaignStores
 
   function updateField<Key extends keyof CampaignDraft['information']>(key: Key, value: CampaignDraft['information'][Key]) {
     setDraft(current => ({ ...current, information: { ...current.information, [key]: value } }))
@@ -173,7 +208,7 @@ export function CreateCampaignPage() {
       return
     }
     if (step === 2) {
-      const validationErrors = validateCampaignBenefits(draft.benefits)
+      const validationErrors = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined)
       setBenefitsErrors(validationErrors)
       const firstInvalidField = Object.keys(validationErrors)[0]
       if (firstInvalidField) {
@@ -197,7 +232,7 @@ export function CreateCampaignPage() {
       return
     }
 
-    const validation = validateCampaignDraft(draft)
+    const validation = validateCampaignDraft(draft, draftCatalog)
     setErrors(validation.information)
     setBenefitsErrors(validation.benefits)
     setRulesErrors(validation.rules)
@@ -215,11 +250,53 @@ export function CreateCampaignPage() {
     }
 
     if (step === 4) {
+      if (networkId && !catalog) {
+        feedback.error({
+          title: 'Aguarde o carregamento das lojas.',
+          description: 'As lojas da rede ainda estão chegando.',
+        })
+        return
+      }
       setStep(5)
       return
     }
 
-    // O repositório mockado valida novamente antes de salvar o rascunho.
+    if (saving) return
+
+    if (user && !networkId) {
+      feedback.error({
+        title: 'Esta conta não cria campanha.',
+        description: 'O administrador da plataforma não tem uma rede.',
+      })
+      return
+    }
+
+    if (networkId) {
+      const blocker = campaignPersistBlocker(draft)
+      if (blocker) {
+        feedback.error({ title: 'Esta campanha não pode ser gravada assim.', description: blocker })
+        return
+      }
+      setSaving(true)
+      saveCampaignDraft(networkId, draft, readSavedCampaignId())
+        .then(({ notices }) => {
+          localStorage.removeItem(campaignDraftStorageKey)
+          clearSavedCampaignId()
+          setSavedDraft(JSON.stringify(draft))
+          feedback.success({ title: 'Campanha salva como rascunho.', description: notices.join(' ') })
+          navigate('/campanhas')
+        })
+        .catch((error: unknown) => {
+          feedback.error({
+            title: 'Não foi possível concluir o salvamento.',
+            description: error instanceof Error ? error.message : 'Não foi possível registrar a campanha. Seus dados continuam nesta tela; tente novamente.',
+          })
+        })
+        .finally(() => setSaving(false))
+      return
+    }
+
+    // Sem sessão, os testes continuam gravando só neste navegador.
     try {
       createCampaign(draft)
     } catch {
@@ -233,7 +310,7 @@ export function CreateCampaignPage() {
     feedback.success({ title: 'Campanha salva como rascunho.' })
     navigate('/campanhas')
   }
-  const benefitValidation = validateCampaignBenefits(draft.benefits)
+  const benefitValidation = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined)
   const benefitsComplete =
     visitedBenefits
     && !benefitValidation.percentage
@@ -254,7 +331,7 @@ export function CreateCampaignPage() {
     { label: 'Quantidade de vouchers', complete: quantityComplete },
     { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all' },
     { label: 'Escopo organizacional', complete: visitedScope },
-    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft).firstInvalid === null },
+    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog).firstInvalid === null },
   ]
   return (
     <PortalLayout activeSection="campaigns" onNavigate={handleNavigate}>
@@ -299,6 +376,8 @@ export function CreateCampaignPage() {
           {step === 2 && <CampaignBenefitsForm
             value={draft.benefits}
             errors={benefitsErrors}
+            categories={benefitChoices.categories}
+            products={benefitChoices.products}
             onChange={handleBenefitsChange}
             onAddBenefit={handleAddBenefit}
           />}
@@ -310,9 +389,17 @@ export function CreateCampaignPage() {
           {step === 4 && <CampaignScopeForm
             value={draft.scope}
             errors={scopeErrors}
+            stores={storeChoices}
             onChange={handleScopeChange}
           />}
-          {step === 5 && <CampaignReview draft={draft} />}
+          {step === 5 && <>
+            <CampaignReview draft={draft} catalog={draftCatalog} />
+            {networkId && <FeedbackAlert
+              type="warning"
+              title="O que fica só neste navegador"
+              description={campaignPersistNotices(draft).join(' ')}
+            />}
+          </>}
           <aside className="create-campaign-summary" aria-labelledby="campaign-summary-title">
             <h2 id="campaign-summary-title">Resumo da configuração</h2>
             <p className="create-campaign-summary-label">Status</p>
@@ -353,7 +440,7 @@ export function CreateCampaignPage() {
               variant="secondary"
               onPress={handleSaveDraft}
             >Salvar rascunho</Button>
-            <Button type="submit" endIcon={ArrowRight}>{step === 5 ? 'Salvar campanha' : 'Continuar'}</Button>
+            <Button type="submit" endIcon={ArrowRight}>{saving ? 'Salvando…' : step === 5 ? 'Salvar campanha' : 'Continuar'}</Button>
           </footer>
         </form>
         <Modal

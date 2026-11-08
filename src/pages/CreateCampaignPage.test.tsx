@@ -2,9 +2,14 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
+import { AuthProvider } from '../contexts/AuthContext'
 import { CreateCampaignPage } from './CreateCampaignPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
 import { campaignDraftStorageKey, initialCampaignDraft } from '../data/campaignDraft'
+import { generateMockJwt } from '../mocks/jwtUtils'
+import { mockUsers } from '../mocks/handlers/auth'
+import { api } from '../services/api'
+import { TOKEN_KEY, USER_KEY } from '../services/tokenStorage'
 import { clearToasts } from '../test/clearToasts'
 
 beforeAll(() => {
@@ -730,4 +735,54 @@ it('revalida ao salvar e retorna à etapa apontada sem descartar o rascunho', as
   expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
   expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
   expect(screen.queryByText('Campanha salva como rascunho.')).not.toBeInTheDocument()
+})
+
+function rememberDraft(name: string) {
+  const draft = {
+    ...initialCampaignDraft,
+    information: { ...initialCampaignDraft.information, name },
+    scope: { mode: 'network' as const, networkChannels: ['physical' as const], storeIds: [], storeChannels: [] },
+  }
+  localStorage.setItem(campaignDraftStorageKey, JSON.stringify(draft))
+}
+
+async function continueToReview(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  await screen.findByRole('heading', { name: 'Escopo Organizacional' })
+  await user.type(screen.getByRole('textbox', { name: 'Buscar lojas' }), 'Centro')
+  await screen.findByRole('button', { name: /Loja Centro/ })
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+  expect(await screen.findByRole('heading', { name: 'Revisão' })).toBeVisible()
+}
+
+describe('Rascunho na API', () => {
+  it('analista grava a campanha e a vê na listagem', async () => {
+    const analyst = mockUsers['analista@portal.dev'].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(analyst, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(analyst))
+    rememberDraft('Campanha da API')
+    const user = userEvent.setup()
+    render(<AuthProvider><App /><FeedbackProvider /></AuthProvider>)
+    await continueToReview(user)
+    expect(screen.getByText(/ficam só neste navegador/)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByRole('link', { name: 'Campanha da API' })).toBeVisible()
+  })
+
+  it('administrador não chama a API', async () => {
+    const admin = mockUsers['admin@portal.dev'].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(admin, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(admin))
+    rememberDraft('Campanha do administrador')
+    const post = vi.spyOn(api, 'post')
+    const user = userEvent.setup()
+    render(<AuthProvider><App /><FeedbackProvider /></AuthProvider>)
+    await continueToReview(user)
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByText('Esta conta não cria campanha.')).toBeVisible()
+    expect(post).not.toHaveBeenCalled()
+    post.mockRestore()
+  })
 })

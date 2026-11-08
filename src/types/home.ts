@@ -26,7 +26,7 @@ export interface HomeCampaign
 }
 
 export interface HomeOverview {
-  featured: FeaturedCampaign
+  featured: FeaturedCampaign | null
   categories: HomeCategory[]
   campaigns: HomeCampaign[]
 }

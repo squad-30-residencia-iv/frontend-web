@@ -10,8 +10,9 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Loading } from '../components/ui/Loading'
 import { useAuth } from '../contexts/AuthContext'
 import { currentUser } from '../data/currentUser'
-import { fetchHomeOverview } from '../data/homeOverview'
+import { loadHomeFromSession } from '../services/campaigns'
 import { navigate } from '../navigation/navigate'
+import { formatPortalRole } from '../services/auth.types'
 import type { FeaturedCampaign, HomeOverview } from '../types/home'
 import './HomePage.css'
 
@@ -22,25 +23,26 @@ type LoadState =
 
 export interface HomePageProps {
   /** Mantenha a referência estável (função de módulo ou useCallback): ela dispara o carregamento. */
-  loadOverview?: () => Promise<HomeOverview>
+  loadOverview?: (networkId: string | null) => Promise<HomeOverview>
 }
 
-export function HomePage({ loadOverview = fetchHomeOverview }: HomePageProps) {
+export function HomePage({ loadOverview = loadHomeFromSession }: HomePageProps) {
   const { user } = useAuth()
+  const networkId = user?.networkId ?? null
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
   const activeUser = user
     ? {
         name: user.name,
-        role: user.role === 'admin' ? 'Administrador' : 'Analista de Campanhas',
+        role: formatPortalRole(user.role),
         avatarUrl: undefined,
       }
     : currentUser
 
   useEffect(() => {
     let cancelled = false
-    loadOverview()
+    loadOverview(networkId)
       .then(overview => {
         if (!cancelled) setState({ status: 'success', overview })
       })
@@ -48,7 +50,7 @@ export function HomePage({ loadOverview = fetchHomeOverview }: HomePageProps) {
         if (!cancelled) setState({ status: 'error' })
       })
     return () => { cancelled = true }
-  }, [loadOverview, attempt])
+  }, [loadOverview, networkId, attempt])
 
   function handleRetry() {
     setState({ status: 'loading' })
@@ -86,25 +88,30 @@ function HomeContent({ overview }: { overview: HomeOverview }) {
   }
 
   return <>
-    <FeaturedBanner campaign={overview.featured} onOpen={handleOpenFeatured} />
+    {overview.featured && <FeaturedBanner campaign={overview.featured} onOpen={handleOpenFeatured} />}
     <section className="home-campaigns" aria-labelledby="home-campaigns-title">
       <h2 className="home-campaigns-title" id="home-campaigns-title">Campanhas</h2>
-      <CategoryFilter
-        categories={overview.categories}
-        selectedId={categoryId}
-        onChange={setCategoryId}
-      />
-      {visibleCampaigns.length === 0 ? <EmptyState
-        title="Nenhuma campanha nesta categoria"
-        description="Escolha outra categoria para ver mais campanhas."
-        action={<Button variant="secondary" onPress={handleShowAll}>Ver todas as campanhas</Button>}
-      /> : <div className="home-grid">
-        {visibleCampaigns.map(campaign => <HomeCampaignCard
-          key={campaign.id}
-          campaign={campaign}
-          categoryLabel={categoryLabels.get(campaign.categoryId) ?? 'Sem categoria'}
-        />)}
-      </div>}
+      {overview.campaigns.length === 0 ? <EmptyState
+        title="Nenhuma campanha nesta rede"
+        description="As campanhas cadastradas para a sua rede aparecem aqui."
+      /> : <>
+        {overview.categories.length > 0 && <CategoryFilter
+          categories={overview.categories}
+          selectedId={categoryId}
+          onChange={setCategoryId}
+        />}
+        {visibleCampaigns.length === 0 ? <EmptyState
+          title="Nenhuma campanha nesta categoria"
+          description="Escolha outra categoria para ver mais campanhas."
+          action={<Button variant="secondary" onPress={handleShowAll}>Ver todas as campanhas</Button>}
+        /> : <div className="home-grid">
+          {visibleCampaigns.map(campaign => <HomeCampaignCard
+            key={campaign.id}
+            campaign={campaign}
+            categoryLabel={categoryLabels.get(campaign.categoryId) ?? 'Sem categoria'}
+          />)}
+        </div>}
+      </>}
     </section>
   </>
 }

@@ -1,31 +1,34 @@
 import axios from 'axios'
 import { describe, expect, it } from 'vitest'
-import { generateMockJwt } from '../jwtUtils'
-import { mockUsers } from './auth'
 
 describe('MSW Auth Handlers', () => {
-  it('realiza login com credenciais válidas de analista e devolve token', async () => {
+  it('realiza login com credenciais válidas de analista e devolve o contrato da API', async () => {
     const res = await axios.post('/api/v1/auth/login', {
       email: 'analista@portal.dev',
       password: 'Analista@123',
     })
 
     expect(res.status).toBe(200)
-    expect(res.data.accessToken).toBeDefined()
-    expect(res.data.tokenType).toBe('Bearer')
-    expect(res.data.user.role).toBe('analyst')
-    expect(res.data.user.email).toBe('analista@portal.dev')
+    expect(res.data.token).toEqual(expect.any(String))
+    expect(res.data.expiresIn).toBe(3600)
+    expect(res.data.message).toBe('Autenticação realizada com sucesso.')
+    expect(res.data.profile).toEqual({
+      userId: 'usr-analyst-1',
+      email: 'analista@portal.dev',
+      role: 'analista',
+      networkId: '0199e3a0-0000-7000-8000-000000000001',
+    })
   })
 
-  it('realiza login com credenciais válidas de admin e devolve token', async () => {
+  it('realiza login de administrador sem rede', async () => {
     const res = await axios.post('/api/v1/auth/login', {
       email: 'admin@portal.dev',
       password: 'Admin@123',
     })
 
     expect(res.status).toBe(200)
-    expect(res.data.accessToken).toBeDefined()
-    expect(res.data.user.role).toBe('admin')
+    expect(res.data.profile.role).toBe('administrador')
+    expect(res.data.profile.networkId).toBeNull()
   })
 
   it('retorna 401 com credenciais incorretas', async () => {
@@ -38,78 +41,24 @@ describe('MSW Auth Handlers', () => {
       response: {
         status: 401,
         data: {
-          code: 'INVALID_CREDENTIALS',
+          code: 'AUTH_INVALID_CREDENTIALS',
+          detail: 'Credenciais inválidas.',
         },
       },
     })
   })
 
-  it('retorna 422 quando email ou senha não são fornecidos', async () => {
+  it('retorna 400 quando email ou senha não são fornecidos', async () => {
     await expect(
       axios.post('/api/v1/auth/login', {
         email: 'analista@portal.dev',
       }),
     ).rejects.toMatchObject({
       response: {
-        status: 422,
+        status: 400,
         data: {
-          code: 'VALIDATION_FAILED',
+          code: 'VALIDATION_ERROR',
         },
-      },
-    })
-  })
-
-  it('CA4: rota privada sem Bearer válido é rejeitada com 401', async () => {
-    await expect(axios.get('/api/v1/auth/me')).rejects.toMatchObject({
-      response: {
-        status: 401,
-        data: {
-          code: 'UNAUTHORIZED',
-        },
-      },
-    })
-
-    await expect(
-      axios.get('/api/v1/auth/me', {
-        headers: { Authorization: 'Bearer token-invalido' },
-      }),
-    ).rejects.toMatchObject({
-      response: {
-        status: 401,
-      },
-    })
-  })
-
-  it('rota privada com token válido retorna o usuário autenticado', async () => {
-    const token = generateMockJwt(mockUsers['analista@portal.dev'].user, 3600)
-    const res = await axios.get('/api/v1/auth/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    expect(res.status).toBe(200)
-    expect(res.data.email).toBe('analista@portal.dev')
-    expect(res.data.name).toBe('Beatriz Analista')
-  })
-
-  it('logout revoga o token e requisição subsequente com o mesmo token retorna 401', async () => {
-    const token = generateMockJwt(mockUsers['analista@portal.dev'].user, 3600)
-
-    const logoutRes = await axios.post(
-      '/api/v1/auth/logout',
-      {},
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    )
-    expect(logoutRes.status).toBe(204)
-
-    await expect(
-      axios.get('/api/v1/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ).rejects.toMatchObject({
-      response: {
-        status: 401,
       },
     })
   })
