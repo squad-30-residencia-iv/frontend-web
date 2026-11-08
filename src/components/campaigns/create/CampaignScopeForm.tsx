@@ -12,6 +12,7 @@ type Scope = CampaignDraft['scope']
 interface CampaignScopeFormProps {
   value: Scope
   errors: CampaignScopeErrors
+  stores?: readonly { id: string; code: string; name: string }[]
   onChange: (value: Scope) => void
 }
 
@@ -70,10 +71,10 @@ function normalizeSearch(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 }
 
-export function CampaignScopeForm({ value, errors, onChange }: CampaignScopeFormProps) {
+export function CampaignScopeForm({ value, errors, stores = campaignStores, onChange }: CampaignScopeFormProps) {
   const [search, setSearch] = useState('')
   const query = normalizeSearch(search)
-  const matchingStores = campaignStores.filter(store => {
+  const matchingStores = stores.filter(store => {
     const matchesQuery = normalizeSearch(`${store.code} ${store.name}`).includes(query)
     return matchesQuery && !value.storeIds.includes(store.id)
   })
@@ -148,7 +149,7 @@ export function CampaignScopeForm({ value, errors, onChange }: CampaignScopeForm
         {value.storeIds.length > 0 && (
           <ul className="campaign-scope-selected" aria-label="Lojas selecionadas">
             {value.storeIds.map(id => {
-              const store = campaignStores.find(item => item.id === id)
+              const store = stores.find(item => item.id === id)
               const label = store ? `${store.code} — ${store.name}` : 'Loja indisponível'
 
               return (

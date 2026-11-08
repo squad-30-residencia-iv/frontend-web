@@ -189,4 +189,16 @@ describe('Detalhes da campanha: rota e erros', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Campanha não encontrada' })).toBeVisible()
   })
+
+  it('um Guid da API mostra a campanha gravada sem ações de status', async () => {
+    setup('0199e3a0-0000-7000-8000-000000000111')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Volta às Aulas' })).toBeVisible()
+    expect(screen.getAllByText('10% OFF').length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: 'Nenhum voucher emitido' })).toBeVisible()
+    expect(screen.getByText('Vouchers e desempenho ainda não vêm da API. A configuração abaixo é a gravada no rascunho.')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Submeter' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Encerrar' })).not.toBeInTheDocument()
+  })
 })

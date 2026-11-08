@@ -1,10 +1,28 @@
 import { createFormSchema, formErrors } from '../schemas/validation'
 import type { CampaignDraft } from '../types/campaign'
-import { isCampaignBenefits, newCampaignBenefits, validateCampaignBenefits } from './campaignBenefits'
+import { isCampaignBenefits, newCampaignBenefits, validateCampaignBenefits, type BenefitCatalog } from './campaignBenefits'
 import { isCampaignRules, newCampaignRules, validateCampaignRules } from './campaignRules'
-import { isCampaignScope, newCampaignScope, validateCampaignScope } from './campaignScope'
+import { isCampaignScope, newCampaignScope, validateCampaignScope, type CampaignStore } from './campaignScope'
 
 export const campaignDraftStorageKey = 'portal-campaigns:creation-draft:v1'
+export const savedCampaignIdKey = 'portal-campaigns:creation-api-id:v1'
+
+export function readSavedCampaignId(): string | null {
+  try {
+    const value = localStorage.getItem(savedCampaignIdKey)
+    return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+export function writeSavedCampaignId(id: string) {
+  localStorage.setItem(savedCampaignIdKey, id)
+}
+
+export function clearSavedCampaignId() {
+  localStorage.removeItem(savedCampaignIdKey)
+}
 export const initialCampaignDraft: CampaignDraft = {
   information: {
     name: '',
@@ -70,11 +88,19 @@ function collectCampaignInformationErrors({ information }: Pick<CampaignDraft, '
   return errors
 }
 
-export function validateCampaignDraft(draft: CampaignDraft) {
+export interface DraftCatalog {
+  categories?: BenefitCatalog['categories']
+  products?: BenefitCatalog['products']
+  stores?: readonly CampaignStore[]
+}
+
+export function validateCampaignDraft(draft: CampaignDraft, catalog: DraftCatalog = {}) {
   const information = validateCampaignInformation(draft)
-  const benefits = validateCampaignBenefits(draft.benefits)
+  const benefits = catalog.categories && catalog.products
+    ? validateCampaignBenefits(draft.benefits, { categories: catalog.categories, products: catalog.products })
+    : validateCampaignBenefits(draft.benefits)
   const rules = validateCampaignRules(draft.rules)
-  const scope = validateCampaignScope(draft.scope)
+  const scope = catalog.stores ? validateCampaignScope(draft.scope, catalog.stores) : validateCampaignScope(draft.scope)
   const stages = [
     { step: 1 as const, errors: information },
     { step: 2 as const, errors: benefits },
