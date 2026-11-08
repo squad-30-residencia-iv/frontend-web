@@ -7,19 +7,22 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Portal demonstrável com dados locais. Só o login conversa com a API. Campanhas, vouchers, relatórios e auditoria não emitem nem resgatam voucher.
+- **Foco:** Login e a lista de campanhas já leem a API quando `VITE_USE_MOCK=false`. A próxima integração grava o rascunho e troca os seletores de categoria, produto e loja. Vouchers, relatórios, auditoria e mudança de status continuam locais.
 - **Última atualização:** 2026-11-08.
 
 O que o portal faz hoje:
 
-- Login com JWT (`POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `POST /api/v1/auth/logout`), sessão no `localStorage` e rotas protegidas. Usuários demonstrativos do MSW: `analista@portal.dev` e `admin@portal.dev`.
-- Home, campanhas (cinco etapas, listagem, detalhe e ciclo submeter/aprovar/reprovar/pausar/encerrar), consulta de vouchers, relatórios e auditoria (`/auditoria` e `/auditoria/:operationId`).
+- Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `networkId`). Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com`, `gestor@empresa.com`, `admin@empresa.com`). Os testes do MSW continuam com `analista@portal.dev`, `gestor@portal.dev` e `admin@portal.dev`.
+- Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
+- O assistente de criação, o detalhe, o ciclo de status, a consulta de vouchers, os relatórios e a auditoria continuam locais.
 - Não há tela de rede, região, loja ou catálogo. O histórico em `/vouchers/:id/historico` continua provisório.
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
+- [ ] Próxima integração: gravar o rascunho com `POST /api/v1/campaigns` e os `PUT` de nome e vigência, itens, quantidades, público, validade, restrições e condições. Os seletores passam a usar `GET /categories`, `/products` e `/establishments?networkId=`. Lojas e canais da campanha continuam locais (a API ainda não grava escopo).
+- [ ] O detalhe pode passar a ler `GET /api/v1/campaigns/{id}` para nome, vigência, status, limites e itens. Métricas, vouchers da campanha e os botões de status continuam locais.
 - [ ] US-013 Relatórios: a tela está na `main`, com dados locais. A spec segue em `docs/specs/in-progress/US-013-relatorios-indicadores.md` porque `npm run verify` e `npm run build` não foram registrados nessa sessão. O checklist de casos de teste da spec também está desmarcado. Mover para `completed/` só depois do verify.
 - [ ] US-012 Home: código e testes escritos. Falta `npm run verify`, `npm run build` e a revisão visual. A spec `US-012-home-sidebar.md` ainda diz que `/auditoria` é placeholder; isso foi substituído pela US-014/US-015.
 - [ ] Specs desatualizadas, sem reabrir o trabalho: `in-progress/US-011-autenticacao-msw-jwt.md` é o rascunho anterior (cita `react-router` e checklist aberto). A spec válida é `completed/US-011-autenticacao-msw-jwt.md`. `in-progress/US-001-login.md` não descreve o login atual; a autenticação foi entregue na US-011. `completed/US-014-auditoria.md` ainda fala em modal; a US-015 trocou pelo detalhe em rota.
@@ -29,6 +32,8 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-018: Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` da sessão. Quantidade é `totalVoucherLimit`, uso fica em zero, benefício da Home sai do primeiro item e o escopo da tabela é "Rede". Banco vazio mostra "Nenhuma campanha nesta rede". Administrador não chama a rota. Submeter, aprovar, pausar e encerrar saíram da listagem. Spec `completed/US-018-campanhas-da-rede.md`. `npm run verify` verde, com um timeout isolado da criação de campanha que passou ao rodar de novo. No navegador, com o mock desligado, o analista viu a lista vazia do Postgres (`200` em `:5026`).
+- US-017: o login traduz o corpo real (`token`, `expiresIn`, `message`, `profile`) e guarda `networkId`. Papéis `analista`, `gestor` e `administrador`. O `401` mostra "E-mail ou senha inválidos.". Sair só limpa o `localStorage`. Spec `completed/US-017-sessao-na-api.md`. Login conferido no navegador de `localhost:5173` para a API em `:5026`.
 - US-016: ciclo de campanhas em mock (submeter, aprovar, reprovar, pausar e encerrar), sem HTTP. Spec `completed/US-016-ciclo-campanhas-mock.md`.
 - US-015: detalhe da operação em `/auditoria/:operationId`, no lugar do modal da US-014. Spec `completed/US-015-detalhes-operacao.md`.
 - US-014: tela `/auditoria` com filtros, cards e CSV local. Spec `completed/US-014-auditoria.md` (o trecho do modal foi superado pela US-015).
@@ -42,7 +47,9 @@ O que o portal faz hoje:
 
 ## ⚠️ Bloqueios & Decisões Recentes
 
-- Campanhas, vouchers, relatórios e auditoria usam repositório local. A fronteira para a API está nos carregadores (`fetchReport`, `getCampaignDetails`, `campaignRepository`), não nas páginas.
+- Com `VITE_USE_MOCK=false` e `VITE_API_BASE_URL`, o navegador chama a API direto. O CORS libera a origem do portal, não cada usuário. `http://127.0.0.1:5173` não é a mesma origem de `http://localhost:5173`.
+- Home e gerenciamento leem a API. O assistente, o detalhe, o ciclo de status, vouchers, relatórios e auditoria continuam no repositório local. A fronteira restante está em `createCampaign`, `getCampaignDetails`, `loadVouchers` e `fetchReport`.
+- A listagem não muda status: um clique ali não pode gravar só na memória e parecer salvo no banco. O ciclo da US-016 permanece na tela de detalhes.
 - O ciclo da US-016 não chama o backend. Analista submete rascunho; gestor aprova ou reprova; os dois pausam e encerram. Não há retomada.
 - A Home não usa `PageHeader`. O usuário da sessão vem do `AuthContext`, com fallback para os testes isolados.
 - A HeroUI segue a paleta do portal pelos tokens `--accent`, `--danger`, `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--success` e `--warning`.

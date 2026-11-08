@@ -1,8 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
+import { http, HttpResponse } from 'msw'
 import { generateMockJwt } from '../mocks/jwtUtils'
 import { mockUsers } from '../mocks/handlers/auth'
+import { server } from '../mocks/server'
 import { api } from '../services/api'
 import { TOKEN_KEY, USER_KEY } from '../services/tokenStorage'
 import { AuthProvider, useAuth } from './AuthContext'
@@ -85,10 +87,16 @@ describe('AuthContext', () => {
 
     // Simulando 401 disparado pelo Axios
     await act(async () => {
+      server.use(
+        http.get('*/api/v1/system/status', () =>
+          HttpResponse.json(
+            { status: 401, detail: 'Autenticação necessária.', code: 'AUTH_UNAUTHENTICATED' },
+            { status: 401 },
+          ),
+        ),
+      )
       try {
-        await api.get('/api/v1/auth/me', {
-          headers: { Authorization: 'Bearer token-invalido' },
-        })
+        await api.get('/api/v1/system/status')
       } catch {
         // Ignora o erro da resposta
       }

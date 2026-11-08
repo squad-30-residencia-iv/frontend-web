@@ -8,12 +8,11 @@ import {
   type ReactNode,
 } from 'react'
 import { setUnauthorizedHandler } from '../services/api'
-import { loginRequest, logoutRequest } from '../services/auth'
+import { loginRequest } from '../services/auth'
 import type { AuthUser, LoginCredentials } from '../services/auth.types'
 import {
   clearSession,
   getStoredUser,
-  getToken,
   getValidToken,
   saveSession,
 } from '../services/tokenStorage'
@@ -73,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true)
     try {
       const response = await loginRequest(credentials)
-      saveSession(response.accessToken, response.user)
+      saveSession(response.token, response.user)
       setUser(response.user)
 
       const searchParams = new URLSearchParams(window.location.search)
@@ -85,18 +84,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const logout = useCallback(async () => {
-    const currentToken = getToken()
     clearSession()
     setUser(null)
-
-    if (currentToken) {
-      try {
-        await logoutRequest(currentToken)
-      } catch {
-        // Falha do servidor no logout não bloqueia a saída do usuário
-      }
-    }
-
     replaceRoute('/login')
   }, [])
 

@@ -2,7 +2,12 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
+import { AuthProvider } from '../contexts/AuthContext'
 import { homeOverview } from '../data/homeOverview'
+import { generateMockJwt } from '../mocks/jwtUtils'
+import { mockUsers } from '../mocks/handlers/auth'
+import { networkCampaigns } from '../mocks/handlers/campaigns'
+import { TOKEN_KEY, USER_KEY } from '../services/tokenStorage'
 import type { HomeOverview } from '../types/home'
 import { HomePage } from './HomePage'
 
@@ -106,19 +111,30 @@ describe('Home', () => {
     expect(loadOverview).toHaveBeenCalledTimes(2)
   })
 
-  it('leva o botão do banner para /campanhas', async () => {
+  it('leva o botão do banner para a campanha da rede', async () => {
+    const analyst = mockUsers['analista@portal.dev'].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(analyst, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(analyst))
     const user = userEvent.setup()
-    render(<App />)
+    render(<AuthProvider><App /></AuthProvider>)
     await screen.findByText('DESTAQUE DA SEMANA')
     await user.click(screen.getByRole('button', { name: 'Ver campanha' }))
-    expect(window.location.pathname).toBe('/campanhas')
-    expect(screen.getByRole('heading', { name: 'Gerenciamento de Campanhas' })).toBeVisible()
+    expect(window.location.pathname).toBe(`/campanhas/${networkCampaigns[0].id}`)
+  })
+
+  it('administrador vê a Home sem campanhas', async () => {
+    const admin = mockUsers['admin@portal.dev'].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(admin, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(admin))
+    render(<AuthProvider><HomePage /></AuthProvider>)
+    expect(await screen.findByRole('heading', { name: 'Nenhuma campanha nesta rede' })).toBeVisible()
+    expect(screen.queryByText('DESTAQUE DA SEMANA')).not.toBeInTheDocument()
   })
 
   it('atualiza a URL ao clicar em Auditoria na Sidebar', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await screen.findByText('DESTAQUE DA SEMANA')
+    await screen.findByRole('heading', { level: 1, name: 'Olá, Lucas!' })
     await user.click(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Auditoria' }))
     await waitFor(() => expect(window.location.pathname).toBe('/auditoria'))
     expect(screen.getByRole('heading', { level: 1, name: 'Auditoria' })).toBeVisible()

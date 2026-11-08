@@ -83,6 +83,8 @@ const campaignStatusTones: Record<CampaignStatus, StatusTone> = {
   scheduled: 'info',
   paused: 'warning',
   ended: 'neutral',
+  cancelled: 'neutral',
+  soldOut: 'neutral',
 }
 
 const voucherStatusTones: Record<VoucherStatus, StatusTone> = {

@@ -44,6 +44,24 @@ describe('PortalLayout', () => {
     expect(screen.getByRole('button', { name: 'Sair' })).toBeVisible()
   })
 
+  it('sessão de gestor mostra o rótulo Gestor', () => {
+    const gestor = mockUsers['gestor@portal.dev'].user
+    const token = generateMockJwt(gestor, 3600)
+    localStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(USER_KEY, JSON.stringify(gestor))
+
+    render(
+      <AuthProvider>
+        <PortalLayout>
+          <div>Conteúdo autenticado</div>
+        </PortalLayout>
+      </AuthProvider>,
+    )
+
+    expect(screen.getByText('gestor@portal.dev')).toBeVisible()
+    expect(screen.getByText('Gestor')).toBeVisible()
+  })
+
   it('clicar em Sair encerra a sessão e remove o token', async () => {
     const user = userEvent.setup()
     const token = generateMockJwt(analyst, 3600)

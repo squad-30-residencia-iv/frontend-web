@@ -1,5 +1,5 @@
 import { PageHeader } from '../components/shared/PageHeader'
-import { useMemo, useState, useSyncExternalStore, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import {
   CalendarDays,
   CheckSquare,
@@ -9,7 +9,6 @@ import {
   Play,
   Plus,
   Search,
-  ShieldAlert,
 } from 'lucide-react'
 import { PortalLayout } from '../components/layout/PortalLayout'
 import { Button } from '../components/ui/Button'
@@ -17,11 +16,8 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loading } from '../components/ui/Loading'
 import { EmptyState } from '../components/ui/EmptyState'
-import { CampaignActionDialog, type SelectedCampaignAction } from '../components/campaigns/CampaignActionDialog'
-import { currentUser } from '../data/currentUser'
-import { CampaignActionsMenu } from '../components/campaigns/CampaignActionsMenu'
-import type { CampaignRole } from '../types/campaign'
-import { applyCampaignStatusChanges, getCampaigns, getCampaignRevision, subscribeCampaigns } from '../data/campaignRepository'
+import { useAuth } from '../contexts/AuthContext'
+import { fetchNetworkCampaigns, toListCampaign } from '../services/campaigns'
 import { statusLabels, type Campaign } from '../types/campaign'
 import { navigate } from '../navigation/navigate'
 import './CampaignManagementPage.css'
@@ -38,17 +34,48 @@ const statusOptions = [{ value: 'all', label: 'Todos os status' }, ...Object.ent
 const periodOptions = [{ value: 'all', label: 'Todos os períodos' }, { value: '30', label: 'Últimos 30 dias' }, { value: '90', label: 'Últimos 90 dias' }]
 const pageSize = 7
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-export interface CampaignManagementPageProps { campaigns?: readonly Campaign[]; isLoading?: boolean; actorRole?: CampaignRole | null }
+export interface CampaignManagementPageProps { campaigns?: readonly Campaign[]; isLoading?: boolean }
 
-export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading = false, actorRole = currentUser.campaignRole ?? null }: CampaignManagementPageProps) {
-  const revision = useSyncExternalStore(subscribeCampaigns, getCampaignRevision)
-  const campaigns = useMemo(() => providedCampaigns ? applyCampaignStatusChanges(providedCampaigns) : getCampaigns(), [providedCampaigns, revision])
+export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading = false }: CampaignManagementPageProps) {
+  const { user } = useAuth()
+  const networkId = user?.networkId ?? null
+  const [rows, setRows] = useState<readonly Campaign[]>(providedCampaigns ?? [])
+  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>(providedCampaigns === undefined ? 'loading' : 'ready')
+  const [attempt, setAttempt] = useState(0)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [period, setPeriod] = useState('all')
   const [page, setPage] = useState(1)
-  const [selectedAction, setSelectedAction] = useState<SelectedCampaignAction | null>(null)
-  const awaitingApproval = actorRole === 'manager' ? campaigns.find(campaign => campaign.status === 'pending') : undefined
+
+  useEffect(() => {
+    if (providedCampaigns !== undefined) {
+      setRows(providedCampaigns)
+      setPhase('ready')
+      return
+    }
+
+    if (!networkId) {
+      setRows([])
+      setPhase('ready')
+      return
+    }
+
+    let cancelled = false
+    setPhase('loading')
+    fetchNetworkCampaigns(networkId)
+      .then(items => {
+        if (!cancelled) {
+          setRows(items.map(toListCampaign))
+          setPhase('ready')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPhase('error')
+      })
+    return () => { cancelled = true }
+  }, [providedCampaigns, networkId, attempt])
+
+  const campaigns = rows
   const filtered = campaigns.filter(campaign => {
     const matchesSearch = normalize(campaign.name).includes(normalize(search))
     const matchesStatus = status === 'all' || campaign.status === status
@@ -104,16 +131,6 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
         onPress={handleCreateCampaign}
       >Nova campanha</Button>}
     />
-    {awaitingApproval && <section className="campaign-notice" aria-label="Campanha aguardando aprovação">
-      <span className="campaign-notice-icon">
-        <ShieldAlert size={17} />
-      </span>
-      <div>
-        <strong>Nova campanha criada</strong>
-        <p>A campanha {awaitingApproval.name} aguarda sua aprovação.</p>
-      </div>
-      <Button className="campaign-approve" onPress={() => setSelectedAction({ campaign: awaitingApproval, action: 'approve' })}>Aprovar</Button>
-    </section>}
     <section className="campaign-metrics" aria-label="Resumo de campanhas">
       {metrics.map(({ label, change, icon: Icon, tone }) => <article className="campaign-metric" key={label}>
         <div>
@@ -162,9 +179,16 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
     <section
       className="campaign-list"
       aria-label="Campanhas cadastradas"
-      aria-busy={isLoading}
+      aria-busy={isLoading || phase === 'loading'}
     >
-      {isLoading ? <Loading message="Carregando campanhas…" /> : visible.length === 0 ? <EmptyState
+      {phase === 'error' ? <EmptyState
+        title="Não foi possível carregar as campanhas"
+        description="Verifique sua conexão e tente novamente."
+        action={<Button variant="secondary" onPress={() => setAttempt(current => current + 1)}>Tentar novamente</Button>}
+      /> : isLoading || phase === 'loading' ? <Loading message="Carregando campanhas…" /> : campaigns.length === 0 ? <EmptyState
+        title="Nenhuma campanha nesta rede"
+        description="As campanhas cadastradas para a sua rede aparecem aqui."
+      /> : visible.length === 0 ? <EmptyState
         title="Nenhuma campanha encontrada"
         description="Tente outro nome, status ou período."
         action={<Button variant="secondary" onPress={handleClearFilters}>Limpar filtros</Button>}
@@ -174,7 +198,7 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
             <caption className="campaign-sr-only">Listagem de campanhas</caption>
             <thead>
               <tr>
-                {['Nome da campanha', 'Vigência', 'Escopo organizacional', 'Vouchers emitidos', 'Taxa de utilização', 'Status', 'Ações'].map(label => <th key={label} scope="col">
+                {['Nome da campanha', 'Vigência', 'Escopo organizacional', 'Limite de vouchers', 'Taxa de utilização', 'Status'].map(label => <th key={label} scope="col">
                   {label}
                 </th>)}
               </tr>
@@ -214,9 +238,6 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
                   <span className={`campaign-status campaign-tone-${campaign.status}`}>
                     {statusLabels[campaign.status]}
                   </span>
-                </td>
-                <td>
-                  <CampaignActionsMenu campaign={campaign} role={actorRole} onAction={action => setSelectedAction({ campaign, action })} />
                 </td>
               </tr>)}
             </tbody>
@@ -263,6 +284,5 @@ export function CampaignManagementPage({ campaigns: providedCampaigns, isLoading
         </footer>
       </>}
     </section>
-    <CampaignActionDialog selected={selectedAction} role={actorRole} onClose={() => setSelectedAction(null)} />
   </PortalLayout>
 }

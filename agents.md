@@ -72,5 +72,7 @@ Qualquer assistente que iniciar uma sessão deve seguir este fluxo:
 - Os itens e rotas da Sidebar vivem em `components/layout/navigation.ts`. Novas seções entram ali; rotas ainda sem tela usam `SectionPlaceholderPage`.
 - A Sidebar navega com `navigate()`. Telas com alterações não salvas passam `onNavigate(path)` ao `PortalLayout` para confirmar antes de sair.
 - A Home tem cabeçalho próprio (`HomeGreeting`) e não usa o `PageHeader` das páginas internas.
-- O usuário exibido vem de `data/currentUser.ts` (mock) até a autenticação entrar em `main`; o avatar é o `UserAvatar` de `components/shared/`.
+- O usuário exibido vem da sessão (`AuthContext`). Sem sessão, os testes isolados usam `data/currentUser.ts`. O avatar é o `UserAvatar` de `components/shared/`. O rótulo do papel sai de `formatPortalRole`: analista, gestor e administrador.
+- Com `VITE_USE_MOCK=false`, o cliente chama `VITE_API_BASE_URL` direto (origens separadas; o CORS da API libera a origem do portal). O token vai no `Authorization`. Login: `POST /api/v1/auth/login`. Sair só limpa o `localStorage`.
+- Home e gerenciamento pedem `GET /api/v1/campaigns?networkId=` com o `networkId` da sessão (`services/campaigns.ts`). Sem rede, a lista fica vazia e a rota não é chamada. Quantidade é `totalVoucherLimit`; uso fica em zero. O assistente, o detalhe, vouchers, relatórios e auditoria continuam locais. Os testes usam o MSW, que devolve o mesmo `GET`.
 - Rotas com parâmetro (ex.: `/campanhas/:id`) são resolvidas em `App.tsx` por regex no pathname e recebem o id por prop. Links internos usam `href` e `onClick` com `navigate()`, preservando Ctrl/Cmd/Shift/Alt.

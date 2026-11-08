@@ -2,7 +2,7 @@ import axios from 'axios'
 import { clearSession, getValidToken } from './tokenStorage'
 
 export const api = axios.create({
-  // Vazio = mesma origem. Com VITE_USE_MOCK=false, aponte para o backend real.
+  // Vazio = mesma origem. Com VITE_USE_MOCK=false, use o endereço absoluto da API.
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
 })
 

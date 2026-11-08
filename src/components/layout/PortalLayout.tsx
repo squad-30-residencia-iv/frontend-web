@@ -2,6 +2,7 @@ import { type MouseEvent, type ReactNode } from 'react'
 import { LogOut, Ticket } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { currentUser } from '../../data/currentUser'
+import { formatPortalRole } from '../../services/auth.types'
 import { navigate } from '../../navigation/navigate'
 import { UserAvatar } from '../shared/UserAvatar'
 import {
@@ -23,12 +24,6 @@ interface PortalLayoutProps {
   onNavigate?: (path: string) => void
 }
 
-function formatRole(role: string): string {
-  if (role === 'admin') return 'Administrador'
-  if (role === 'analyst') return 'Analista de Campanhas'
-  return role
-}
-
 export function PortalLayout({ children, activeSection, onNavigate }: PortalLayoutProps) {
   const current = activeSection ?? resolveActiveSection(window.location.pathname)
   const { user, isAuthenticated, logout } = useAuth()
@@ -42,7 +37,7 @@ export function PortalLayout({ children, activeSection, onNavigate }: PortalLayo
   }
 
   const displayName = user?.name ?? currentUser.name
-  const displayRole = user ? formatRole(user.role) : currentUser.role
+  const displayRole = user ? formatPortalRole(user.role) : currentUser.role
   const avatarUrl = user ? undefined : currentUser.avatarUrl
 
   function handleLogout() {
