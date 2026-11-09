@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { ApiCampaign } from '../../services/campaigns'
+import type { ApiCampaign, ApiCampaignScope } from '../../services/campaigns'
 
 export const networkCampaigns: ApiCampaign[] = [
   {
@@ -23,21 +23,36 @@ interface StoredCampaign extends ApiCampaign {
   minPurchaseAmount: number | null
   maxPurchaseAmount: number | null
   maxUsesPerVoucher: number | null
+  scopes: ApiCampaignScope[]
+}
+
+/** Lojas que o mock de establishments devolve, com os canais, para conferir o escopo (PR-11). */
+const mockStores: Record<string, { code: string; name: string; channels: string[] }> = {
+  '0199e3a0-0000-7000-8000-000000000321': { code: '001', name: 'Loja Centro', channels: ['Physical'] },
 }
 
 const createdCampaigns: StoredCampaign[] = []
 let createdSequence = 1
 
 const seedCampaign = networkCampaigns[0]
-const seedSnapshot = { status: seedCampaign.status, startsAt: seedCampaign.startsAt, endsAt: seedCampaign.endsAt }
+const seedSnapshot = {
+  name: seedCampaign.name,
+  description: seedCampaign.description,
+  status: seedCampaign.status,
+  startsAt: seedCampaign.startsAt,
+  endsAt: seedCampaign.endsAt,
+}
 
 export function resetCreatedCampaigns() {
   createdCampaigns.length = 0
   createdSequence = 1
+  seedCampaign.name = seedSnapshot.name
+  seedCampaign.description = seedSnapshot.description
   seedCampaign.status = seedSnapshot.status
   seedCampaign.startsAt = seedSnapshot.startsAt
   seedCampaign.endsAt = seedSnapshot.endsAt
   seedCampaign.rejectionReason = null
+  seedCampaign.scopes = []
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -61,6 +76,7 @@ function toResponse(campaign: ApiCampaign, networkId: string, extra: Partial<Sto
     conditions: [{ id: `${campaign.id}-condition`, type: 'PurchaseTotal', minAmount: 200, minQuantity: null, categoryId: null, productId: null }],
     allowUseInSamePurchase: false,
     rejectionReason: campaign.rejectionReason ?? null,
+    scopes: extra.scopes ?? campaign.scopes ?? [],
     items: campaign.items.map((item, index) => ({
       id: `${campaign.id}-${index}`,
       targetType: 'All',
@@ -151,9 +167,78 @@ export const campaignHandlers = [
       maxPurchaseAmount: null,
       maxUsesPerVoucher: null,
       items: [],
+      scopes: [],
     }
     createdCampaigns.push(campaign)
     return HttpResponse.json(toResponse(campaign, campaign.networkId, campaign), { status: 201 })
+  }),
+  http.put('*/api/v1/campaigns/:id', async ({ params, request }) => {
+    const campaign = findCampaign(String(params.id))
+    if (!campaign) return problem(404, 'Campanha não encontrada.', 'NOT_FOUND')
+    if (campaign.status !== 'Draft') return problem(422, 'A campanha não está em rascunho.', 'CAMPAIGN_NOT_DRAFT')
+    const body: unknown = await request.json()
+    if (!isRecord(body) || typeof body.name !== 'string' || typeof body.startsAt !== 'string' || typeof body.endsAt !== 'string') {
+      return problem(400, 'Dados inválidos.', 'VALIDATION_ERROR')
+    }
+    campaign.name = body.name
+    campaign.description = typeof body.description === 'string' ? body.description : null
+    campaign.startsAt = `${body.startsAt}:00-03:00`
+    campaign.endsAt = `${body.endsAt}:00-03:00`
+    const stored = createdCampaigns.find(item => item.id === campaign.id)
+    return HttpResponse.json(toResponse(campaign, stored?.networkId ?? '0199e3a0-0000-7000-8000-000000000001', stored))
+  }),
+  http.put('*/api/v1/campaigns/:id/scopes', async ({ params, request }) => {
+    const campaign = findCampaign(String(params.id))
+    if (!campaign) return problem(404, 'Campanha não encontrada.', 'NOT_FOUND')
+    const body: unknown = await request.json()
+    if (!isRecord(body) || !Array.isArray(body.scopes) || body.scopes.length === 0) {
+      return problem(400, 'Informe ao menos um local do escopo.', 'VALIDATION_ERROR')
+    }
+    const scopes: ApiCampaignScope[] = []
+    for (const entry of body.scopes) {
+      if (!isRecord(entry) || !Array.isArray(entry.channels)) return problem(400, 'Dados inválidos.', 'VALIDATION_ERROR')
+      const channels = entry.channels.filter((channel): channel is string => typeof channel === 'string')
+      const storeId = typeof entry.establishmentId === 'string' ? entry.establishmentId : null
+      const store = storeId ? mockStores[storeId] : undefined
+      if (storeId && !store) return problem(422, 'Loja informada não encontrada', 'CAMPAIGN_SCOPE_ESTABLISHMENT_NOT_FOUND')
+      const missing = store ? channels.find(channel => !store.channels.includes(channel)) : undefined
+      if (store && missing) {
+        return problem(422, `A loja ${store.code} não opera o canal ${missing === 'Virtual' ? 'virtual' : 'físico'}.`, 'CAMPAIGN_SCOPE_CHANNEL_NOT_ENABLED')
+      }
+      scopes.push({ regionId: null, establishmentId: storeId, name: store?.name ?? null, code: store?.code ?? null, channels })
+    }
+    campaign.scopes = scopes
+    const stored = createdCampaigns.find(item => item.id === campaign.id)
+    if (stored) stored.scopes = scopes
+    return HttpResponse.json(toResponse(campaign, stored?.networkId ?? '0199e3a0-0000-7000-8000-000000000001', stored))
+  }),
+  http.post('*/api/v1/campaigns/:id/duplicate', async ({ params, request }) => {
+    const source = findCampaign(String(params.id))
+    if (!source) return problem(404, 'Campanha não encontrada.', 'NOT_FOUND')
+    const body: unknown = await request.json().catch(() => null)
+    const record = isRecord(body) ? body : {}
+    const id = `0199e3a0-0000-7000-8000-0000000003${String(createdSequence).padStart(2, '0')}`
+    createdSequence += 1
+    const sourceStored = createdCampaigns.find(item => item.id === source.id)
+    const copy: StoredCampaign = {
+      ...source,
+      id,
+      networkId: sourceStored?.networkId ?? '0199e3a0-0000-7000-8000-000000000001',
+      name: typeof record.name === 'string' && record.name.trim() ? record.name.trim() : `Cópia de ${source.name}`,
+      startsAt: typeof record.startsAt === 'string' ? `${record.startsAt}:00-03:00` : source.startsAt,
+      endsAt: typeof record.endsAt === 'string' ? `${record.endsAt}:00-03:00` : source.endsAt,
+      status: 'Draft',
+      rejectionReason: null,
+      perCustomerVoucherLimit: sourceStored?.perCustomerVoucherLimit ?? null,
+      audienceType: sourceStored?.audienceType ?? 'AllCustomers',
+      minPurchaseAmount: sourceStored?.minPurchaseAmount ?? null,
+      maxPurchaseAmount: sourceStored?.maxPurchaseAmount ?? null,
+      maxUsesPerVoucher: sourceStored?.maxUsesPerVoucher ?? 1,
+      items: source.items.map(item => ({ ...item })),
+      scopes: (sourceStored?.scopes ?? source.scopes ?? []).map(scope => ({ ...scope })),
+    }
+    createdCampaigns.push(copy)
+    return HttpResponse.json(toResponse(copy, copy.networkId, copy), { status: 201 })
   }),
   http.post('*/api/v1/campaigns/:id/submit', ({ params }) => decide(String(params.id), 'submit')),
   http.post('*/api/v1/campaigns/:id/approve', ({ params }) => decide(String(params.id), 'approve')),

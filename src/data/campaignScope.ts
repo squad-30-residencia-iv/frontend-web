@@ -5,6 +5,14 @@ export interface CampaignStore {
   id: string
   code: string
   name: string
+  /** Canais que a loja opera (PR-11). Ausente no catálogo local de demonstração. */
+  channels?: CampaignChannel[]
+}
+
+/** Canais que a loja recebe: os escolhidos que ela opera. Sem a lista da loja, todos os escolhidos. */
+export function storeScopeChannels(store: CampaignStore | undefined, selected: readonly CampaignChannel[]): CampaignChannel[] {
+  if (!store?.channels) return [...selected]
+  return selected.filter(channel => store.channels?.includes(channel))
 }
 
 // Catálogo local demonstrativo; substituir pelo serviço de lojas na integração.
@@ -46,6 +54,14 @@ function collectCampaignScopeErrors(
   }
   if (!scope.storeChannels.length) {
     errors.storeChannels = 'Selecione ao menos um canal para as lojas específicas.'
+  } else if (!errors.stores) {
+    // A API recusa canal que a loja não opera; cada loja vai com os escolhidos que opera.
+    const withoutChannel = scope.storeIds
+      .map(id => stores.find(store => store.id === id))
+      .find(store => store && storeScopeChannels(store, scope.storeChannels).length === 0)
+    if (withoutChannel) {
+      errors.stores = `A loja ${withoutChannel.code} — ${withoutChannel.name} não opera nenhum dos canais escolhidos.`
+    }
   }
 
   return errors

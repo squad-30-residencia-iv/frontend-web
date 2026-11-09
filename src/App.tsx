@@ -14,6 +14,7 @@ import { useAuth } from './contexts/AuthContext'
 import { sessionCampaignRole } from './data/campaignWorkflow'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
+const campaignEditPattern = /^\/campanhas\/([^/]+)\/editar$/
 
 function safeDecode(value: string) {
   try {
@@ -106,6 +107,15 @@ export function App() {
     return (
       <ProtectedRoute>
         <CampaignManagementPage />
+      </ProtectedRoute>
+    )
+  }
+
+  const campaignEditMatch = campaignEditPattern.exec(pathname)
+  if (campaignEditMatch) {
+    return (
+      <ProtectedRoute>
+        <CreateCampaignPage key={campaignEditMatch[1]} campaignId={safeDecode(campaignEditMatch[1])} />
       </ProtectedRoute>
     )
   }

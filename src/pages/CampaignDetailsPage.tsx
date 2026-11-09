@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type MouseEvent, ty
 import {
   ArrowRight,
   CalendarClock,
+  Copy,
   ChartNoAxesColumn,
   CircleCheck,
   Clock,
@@ -15,6 +16,7 @@ import { PageHeader } from '../components/shared/PageHeader'
 import { PortalLayout } from '../components/layout/PortalLayout'
 import { CampaignActionsMenu } from '../components/campaigns/CampaignActionsMenu'
 import { CampaignActionDialog, type SelectedCampaignAction } from '../components/campaigns/CampaignActionDialog'
+import { DuplicateCampaignDialog } from '../components/campaigns/DuplicateCampaignDialog'
 import { FeedbackAlert } from '../components/ui/FeedbackAlert'
 import { currentUser } from '../data/currentUser'
 import { getCampaignRevision, subscribeCampaigns } from '../data/campaignRepository'
@@ -392,6 +394,7 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
   const [remotePhase, setRemotePhase] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
   const [selectedAction, setSelectedAction] = useState<SelectedCampaignAction | null>(null)
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
   const details = fromApi ? remoteDetails : localDetails
 
   useEffect(() => {
@@ -455,6 +458,9 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
   }
 
   const actions = fromApi ? apiDecisionActions(details.status, actorRole) : getCampaignActions(details.status, actorRole)
+  // Analista e gestor editam o rascunho; fora dele a mecânica congela e mudar exige outra campanha (D6).
+  const canChange = fromApi && actorRole !== null
+  const isDraft = details.status === 'draft'
 
   return <PortalLayout activeSection="campaigns">
     <PageHeader
@@ -467,18 +473,35 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
           variant="secondary"
           onPress={() => setSelectedAction({ campaign: details, action })}
         >{campaignActionLabels[action]}</Button>)}
-        <Button
+        {canChange && isDraft && <Button
+          className="details-action"
+          variant="secondary"
+          startIcon={SquarePen}
+          onPress={() => navigate(`/campanhas/${details.id}/editar`)}
+        >Editar rascunho</Button>}
+        {canChange && !isDraft && <Button
+          className="details-action"
+          variant="secondary"
+          startIcon={Copy}
+          onPress={() => setDuplicateOpen(true)}
+        >Duplicar</Button>}
+        {!fromApi && <Button
           className="details-action"
           variant="secondary"
           startIcon={SquarePen}
           onPress={handleComingSoon}
-        >Editar campanha</Button>
+        >Editar campanha</Button>}
         {!fromApi && <CampaignActionsMenu campaign={details} role={actorRole} onAction={action => setSelectedAction({ campaign: details, action })} />}
       </div>}
     />
     <div className="details-page">
       <CampaignSummaryCard details={details} />
       {details.status === 'rejected' && details.rejectionReason && <FeedbackAlert type="info" title="Motivo da reprovação" description={details.rejectionReason} />}
+      {canChange && !isDraft && <FeedbackAlert
+        type="info"
+        title="Configuração congelada"
+        description="Fora de rascunho a campanha não se edita. Para mudar alvos, quantidades, regras ou escopo, duplique-a: a cópia nasce em rascunho."
+      />}
       {fromApi ? <p className="details-notice">
         <Info size={14} aria-hidden="true" />
         Vouchers e desempenho ainda não vêm da API. A configuração abaixo é a gravada no rascunho.
@@ -501,5 +524,6 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
       } : undefined}
       descriptions={fromApi ? { approve: 'A aprovação registra a decisão. Com início futuro a campanha fica agendada; se a vigência já começou, fica ativa.' } : undefined}
     />
+    <DuplicateCampaignDialog campaign={duplicateOpen ? details : null} onClose={() => setDuplicateOpen(false)} />
   </PortalLayout>
 }

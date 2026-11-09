@@ -7,15 +7,15 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais. O escopo da campanha (lojas e canais) ainda não é gravado.
-- **Última atualização:** 2026-11-08.
+- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). Pausar, encerrar, vouchers, relatórios e auditoria continuam locais.
+- **Última atualização:** 2026-11-09.
 
 O que o portal faz hoje:
 
 - Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `networkId`). Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com`, `gestor@empresa.com`, `admin@empresa.com`). Os testes do MSW continuam com `analista@portal.dev`, `gestor@portal.dev` e `admin@portal.dev`.
 - Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
-- O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais escolhidos não são gravados.
-- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Pausar e encerrar não aparecem. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
+- O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais vão no `PUT /scopes`: a rede com os canais dela, ou cada loja com os canais escolhidos que ela opera.
+- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Pausar e encerrar não aparecem (frontend-web#43). O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
 - A consulta de vouchers, os relatórios e a auditoria continuam locais.
 - Não há tela de rede, região, loja ou catálogo. O histórico em `/vouchers/:id/historico` continua provisório.
 
@@ -23,6 +23,8 @@ O que o portal faz hoje:
 
 ## 🚧 Tarefas em Andamento
 
+- [ ] Depende do backend-api#51 na `staging`: `PUT /scopes`, `PUT /campaigns/{id}` e `POST /duplicate`. Sem ele, salvar o assistente falha no `PUT /scopes`.
+- [ ] Edição de campanhas fora do que a tela representa (região no escopo, condição de categoria, produto ou quantidade, validade por data fixa ou em horas, teto, benefícios diferentes por alvo): a tela avisa e substitui ao salvar (US-021, D-2).
 - [ ] Reabrir um rascunho já gravado (Editar ainda diz "em breve") e gravar lojas e canais quando a US-02.3 existir. Pausar e encerrar continuam só nas campanhas locais.
 - [ ] Escopo da campanha (lojas e canais) continua no navegador até a US-02.3. Vouchers, relatórios e auditoria seguem locais.
 - [ ] US-013 Relatórios: a tela está na `main`, com dados locais. A spec segue em `docs/specs/in-progress/US-013-relatorios-indicadores.md` porque `npm run verify` e `npm run build` não foram registrados nessa sessão. O checklist de casos de teste da spec também está desmarcado. Mover para `completed/` só depois do verify.
@@ -34,6 +36,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-021 (frontend-web#38): o assistente grava o escopo (`PUT /api/v1/campaigns/{id}/scopes`). "Toda a rede" vai como um local sem região nem loja; "Lojas específicas" manda cada loja com os canais escolhidos que ela opera (PR-11), e a etapa acusa a loja que não opera nenhum. O rascunho da API reabre em `/campanhas/{id}/editar`, preenchido pelo `GET`, e salvar grava nome e vigência no `PUT /campaigns/{id}` sem novo `POST`; a edição avisa o que a tela não representa. Fora de rascunho a rota explica que a mecânica congela na aprovação (D6), e o detalhe oferece **Duplicar** (nome e vigência editáveis), que abre a edição da cópia. O motivo da reprovação continua opcional. Detalhe e listagem mostram o escopo gravado. Spec `completed/US-021-escopo-e-ciclo-da-campanha.md`. `npm run verify`: 29 arquivos, 291 testes. `npm run build` ok. Os corpos enviados pelo portal foram repetidos contra a API real do backend-api#51 (6 cenários).
 - US-020: no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O papel sai da sessão (`analista` / `gestor`), não do usuário fixo. Aprovar com início futuro mostra **Agendada**; reprovar mostra o motivo. Pausar e encerrar não aparecem. Ids locais seguem na matriz da US-016. Spec `completed/US-020-submeter-e-aprovar.md`. `npm run verify`: a suíte completa teve dois timeouts (descarte na criação e período na consulta de vouchers), que passaram isolados; os testes do detalhe passaram. No navegador, o analista submeteu "Rascunho do portal" e o gestor aprovou; a Home mostrou **Agendada**.
 - US-019: o assistente grava o rascunho na API e o detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. Seletores usam categorias, produtos e lojas da rede (lojas por região). Benefício extra e condições em "qualquer" bloqueiam o envio. Base de clientes, quantidade por concessão, faixas além da primeira e lojas e canais ficam só no navegador. Spec `completed/US-019-rascunho-na-api.md`. A suíte completa teve uma falha isolada em Relatórios ("Indicadores de vouchers"), que passou ao rodar de novo; os testes do rascunho passaram. No navegador, o analista criou "Rascunho do portal" com início em dezembro de 2026 e abriu o detalhe sem ações de status.
 - US-018: Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` da sessão. Quantidade é `totalVoucherLimit`, uso fica em zero, benefício da Home sai do primeiro item e o escopo da tabela é "Rede". Banco vazio mostra "Nenhuma campanha nesta rede". Administrador não chama a rota. Submeter, aprovar, pausar e encerrar saíram da listagem. Spec `completed/US-018-campanhas-da-rede.md`. `npm run verify` verde, com um timeout isolado da criação de campanha que passou ao rodar de novo. No navegador, com o mock desligado, o analista viu a lista vazia do Postgres (`200` em `:5026`).
