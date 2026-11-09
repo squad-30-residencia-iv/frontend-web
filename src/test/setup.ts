@@ -3,6 +3,7 @@ import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { resetAuthMockState } from '../mocks/handlers/auth'
 import { resetCreatedCampaigns } from '../mocks/handlers/campaigns'
+import { resetRegistryState } from '../mocks/handlers/registry'
 import { server } from '../mocks/server'
 
 beforeAll(() => {
@@ -14,6 +15,7 @@ afterEach(() => {
   server.resetHandlers()
   resetAuthMockState()
   resetCreatedCampaigns()
+  resetRegistryState()
   localStorage.clear()
 })
 

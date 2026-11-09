@@ -7,11 +7,13 @@ import { CampaignManagementPage } from './pages/CampaignManagementPage'
 import { CreateCampaignPage } from './pages/CreateCampaignPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { RegistryPage } from './pages/RegistryPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
 import { VoucherHistoryPending, VoucherLookupPage } from './pages/VoucherLookupPage'
 import { useAuth } from './contexts/AuthContext'
 import { sessionCampaignRole } from './data/campaignWorkflow'
+import { registryPath } from './components/layout/navigation'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
 const campaignEditPattern = /^\/campanhas\/([^/]+)\/editar$/
@@ -91,6 +93,15 @@ export function App() {
     return (
       <ProtectedRoute>
         <ReportsPage />
+      </ProtectedRoute>
+    )
+  }
+
+  // A tela mostra "Acesso restrito" a quem não é administrador, dentro do layout do portal.
+  if (pathname === registryPath) {
+    return (
+      <ProtectedRoute>
+        <RegistryPage />
       </ProtectedRoute>
     )
   }

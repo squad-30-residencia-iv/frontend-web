@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AuthProvider } from '../../contexts/AuthContext'
@@ -60,6 +60,28 @@ describe('PortalLayout', () => {
 
     expect(screen.getByText('gestor@portal.dev')).toBeVisible()
     expect(screen.getByText('Gestor')).toBeVisible()
+  })
+
+  it.each([
+    ['admin@portal.dev', true],
+    ['analista@portal.dev', false],
+    ['gestor@portal.dev', false],
+  ] as const)('a sessão de %s vê Cadastros na Sidebar: %s', (email, visible) => {
+    const sessionUser = mockUsers[email].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(sessionUser, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(sessionUser))
+
+    render(
+      <AuthProvider>
+        <PortalLayout>
+          <div>Conteúdo</div>
+        </PortalLayout>
+      </AuthProvider>,
+    )
+
+    const links = within(screen.getByRole('navigation', { name: 'Principal' })).getAllByRole('link').map(link => link.textContent)
+    const expected = ['Visão geral', 'Campanhas', 'Vouchers', 'Relatórios', 'Auditoria']
+    expect(links).toEqual(visible ? [...expected, 'Cadastros'] : expected)
   })
 
   it('clicar em Sair encerra a sessão e remove o token', async () => {
