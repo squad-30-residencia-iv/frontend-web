@@ -58,3 +58,6 @@ Cada condição agora tem Excluir condição, conforme novo pedido. Valores pree
 
 ## Atualização US-008
 Continuar da terceira etapa agora abre Escopo e canais após validação. Voltar preserva todas as seções. Conforme escolha explícita do usuário, Revisão permanece pendente após validar a quarta etapa; não há conclusão simulada ainda. Detalhes em [CAMPAIGN_SCOPE.md](CAMPAIGN_SCOPE.md).
+
+## Atualização US-019 — Excluir todas as restrições
+A ação aparece apenas quando existem restrições e reutiliza ConfirmationModal. Cancelar mantém os itens; confirmar limpa a coleção, preserva condições e combinações e exibe feedback. A coleção vazia pode ser salva e novas restrições podem ser adicionadas.

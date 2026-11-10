@@ -77,6 +77,8 @@ function MoneyField({ placeholder, ...props }: MoneyFieldProps) {
 export function CampaignRulesForm({ value, errors, onChange }: CampaignRulesFormProps) {
   const feedback = useFeedback()
   const [conditionToDelete, setConditionToDelete] = useState<string | null>(null)
+  const [deleteAllRestrictionsOpen, setDeleteAllRestrictionsOpen] = useState(false)
+  const addRestrictionRef = useRef<HTMLButtonElement>(null)
   const addConditionRef = useRef<HTMLButtonElement>(null)
   const previousCount = useRef(value.conditions.length)
 
@@ -214,11 +216,31 @@ export function CampaignRulesForm({ value, errors, onChange }: CampaignRulesForm
           </div>
       </fieldset></Fragment>)}
       <Button
+        ref={addRestrictionRef}
         type="button"
         variant="secondary"
         onPress={() => onChange({ ...value, restrictions: [...value.restrictions, { id: crypto.randomUUID(), type: 'purchase-value', minimum: '', maximum: '' }] })}
       >Adicionar restrição +</Button>
+      {value.restrictions.length > 0 && <Button
+        className="campaign-rules-delete-all"
+        type="button"
+        variant="ghost"
+        startIcon={Trash2}
+        onPress={() => setDeleteAllRestrictionsOpen(true)}
+      >Excluir todas as restrições</Button>}
     </section>
+    <ConfirmationModal
+      action="delete"
+      itemName="todas as restrições"
+      isOpen={deleteAllRestrictionsOpen}
+      onOpenChange={setDeleteAllRestrictionsOpen}
+      onConfirm={() => {
+        onChange({ ...value, restrictions: [] })
+        setDeleteAllRestrictionsOpen(false)
+        addRestrictionRef.current?.focus()
+        feedback.success({ title: 'Todas as restrições foram excluídas do rascunho.' })
+      }}
+    />
     <ConfirmationModal
       action="delete"
       itemName={`condição ${deleteIndex + 1}`}

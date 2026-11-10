@@ -224,3 +224,9 @@
   width: 14px;
   height: 14px;
 }
+
+.campaign-rules-panel .campaign-rules-delete-all {
+  color: var(--danger);
+  background: transparent;
+  margin: 8px 0 0 8px;
+}

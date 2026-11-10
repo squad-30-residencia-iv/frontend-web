@@ -216,3 +216,10 @@
 - Documentação: docs/CAMPAIGN_RULES.md e spec US-018-ux-regras.md.
 - npm run verify aprovado (194 testes em 17 arquivos); build aprovado com avisos existentes de bundle/Zod. Validação complementar aprovada: 50 testes da criação, incluindo o novo caso de grupos vazios/restrições.
 - Sem commit ou push. Sugestão: feat(campaigns): esclarece combinação de condições e restrições
+
+## Entrega 2026-11-10 — US-019
+- Excluir todas as restrições com confirmação e feedback na etapa Regras e público, preservando as condições.
+- Testes de cancelamento, exclusão, salvamento vazio e adição posterior. npm run verify aprovado: 196 testes em 17 arquivos.
+- Spec: docs/specs/completed/US-019-excluir-restricoes.md; funcionalidade em docs/CAMPAIGN_RULES.md. Sem commit/push.
+- Sugestão de commit: feat(campaigns): permite excluir todas as restrições
+- npm run build aprovado; avisos existentes de bundle e anotações Zod.
