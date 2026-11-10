@@ -1,6 +1,6 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado em 2026-11-08. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
+> Atualizado em 2026-11-10. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
@@ -8,11 +8,11 @@
 
 - **Sprint:** Sprint 1
 - **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais. O escopo da campanha (lojas e canais) ainda não é gravado.
-- **Última atualização:** 2026-11-08.
+- **Última atualização:** 2026-11-10.
 
 O que o portal faz hoje:
 
-- Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `networkId`). Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com`, `gestor@empresa.com`, `admin@empresa.com`). Os testes do MSW continuam com `analista@portal.dev`, `gestor@portal.dev` e `admin@portal.dev`.
+- Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `name` e `networkId`). O nome exibido é `profile.name`: a Home usa a primeira palavra e a Sidebar o nome inteiro. Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com` Ana Lima, `gestor@empresa.com` Bruno Costa, `admin@empresa.com` Admin Plataforma). Os testes do MSW continuam com `analista@portal.dev` (Beatriz Analista), `gestor@portal.dev` (Bruno Costa) e `admin@portal.dev` (Carlos Administrador). Uma sessão antiga guarda o e-mail no lugar do nome até um novo login.
 - Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
 - O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais escolhidos não são gravados.
 - O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Pausar e encerrar não aparecem. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
@@ -23,6 +23,7 @@ O que o portal faz hoje:
 
 ## 🚧 Tarefas em Andamento
 
+- [ ] US-017 nome na sessão: o código e o `npm run verify` passaram. A spec `in-progress/US-017-nome-na-sessao.md` fica aberta até o caso do guard (login sem `profile.name`) ter teste. Só então mover para `completed/`.
 - [ ] Reabrir um rascunho já gravado (Editar ainda diz "em breve") e gravar lojas e canais quando a US-02.3 existir. Pausar e encerrar continuam só nas campanhas locais.
 - [ ] Escopo da campanha (lojas e canais) continua no navegador até a US-02.3. Vouchers, relatórios e auditoria seguem locais.
 - [ ] US-013 Relatórios: a tela está na `main`, com dados locais. A spec segue em `docs/specs/in-progress/US-013-relatorios-indicadores.md` porque `npm run verify` e `npm run build` não foram registrados nessa sessão. O checklist de casos de teste da spec também está desmarcado. Mover para `completed/` só depois do verify.
@@ -34,6 +35,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.
 - US-020: no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O papel sai da sessão (`analista` / `gestor`), não do usuário fixo. Aprovar com início futuro mostra **Agendada**; reprovar mostra o motivo. Pausar e encerrar não aparecem. Ids locais seguem na matriz da US-016. Spec `completed/US-020-submeter-e-aprovar.md`. `npm run verify`: a suíte completa teve dois timeouts (descarte na criação e período na consulta de vouchers), que passaram isolados; os testes do detalhe passaram. No navegador, o analista submeteu "Rascunho do portal" e o gestor aprovou; a Home mostrou **Agendada**.
 - US-019: o assistente grava o rascunho na API e o detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. Seletores usam categorias, produtos e lojas da rede (lojas por região). Benefício extra e condições em "qualquer" bloqueiam o envio. Base de clientes, quantidade por concessão, faixas além da primeira e lojas e canais ficam só no navegador. Spec `completed/US-019-rascunho-na-api.md`. A suíte completa teve uma falha isolada em Relatórios ("Indicadores de vouchers"), que passou ao rodar de novo; os testes do rascunho passaram. No navegador, o analista criou "Rascunho do portal" com início em dezembro de 2026 e abriu o detalhe sem ações de status.
 - US-018: Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` da sessão. Quantidade é `totalVoucherLimit`, uso fica em zero, benefício da Home sai do primeiro item e o escopo da tabela é "Rede". Banco vazio mostra "Nenhuma campanha nesta rede". Administrador não chama a rota. Submeter, aprovar, pausar e encerrar saíram da listagem. Spec `completed/US-018-campanhas-da-rede.md`. `npm run verify` verde, com um timeout isolado da criação de campanha que passou ao rodar de novo. No navegador, com o mock desligado, o analista viu a lista vazia do Postgres (`200` em `:5026`).
@@ -261,3 +263,8 @@ O que o portal faz hoje:
 - Aprovar com início futuro mostra Agendada. Reprovar mostra o motivo. Pausar e encerrar não aparecem. Ids locais seguem a matriz antiga.
 - `npm run verify`: dois timeouts na suíte completa (descarte na criação e período na consulta de vouchers) passaram isolados. No navegador, o analista submeteu "Rascunho do portal" e o gestor aprovou; a Home mostrou Agendada.
 - Spec `completed/US-020-submeter-e-aprovar.md`.
+
+## Entrega 2026-11-10 — US-017: nome na sessão
+- `toAuthUser` grava `profile.name`. O handler MSW devolve o mesmo campo. O gestor de mock deixa de usar o e-mail como nome.
+- Home e Sidebar não mudaram de layout. Quem já estava logado precisa entrar de novo.
+- `npm run verify` passou. Spec `in-progress/US-017-nome-na-sessao.md`, com o caso do guard sem `profile.name` ainda sem teste dedicado.

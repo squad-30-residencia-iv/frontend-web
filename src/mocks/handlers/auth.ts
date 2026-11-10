@@ -18,7 +18,7 @@ export const mockUsers: Record<string, { user: AuthUser; password: string }> = {
     password: 'Gestor@123',
     user: {
       id: 'usr-manager-1',
-      name: 'gestor@portal.dev',
+      name: 'Bruno Costa',
       email: 'gestor@portal.dev',
       role: 'gestor',
       networkId: '0199e3a0-0000-7000-8000-000000000001',
@@ -76,6 +76,7 @@ export const authHandlers = [
       profile: {
         userId: entry.user.id,
         email: entry.user.email,
+        name: entry.user.name,
         role: entry.user.role,
         networkId: entry.user.networkId,
       },
