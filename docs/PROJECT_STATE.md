@@ -201,3 +201,11 @@
 - Build aprovado com avisos existentes de bundle/Zod; sem revisão visual manual em navegador nesta sessão. Sem commit/push.
 - Relatório docs/AUDIT_OPERATION_DETAILS.md; spec completed/US-015-detalhes-operacao.md; docs/AUDIT.md atualizado.
 - Sugestão de commit: feat(audit): adiciona detalhes da operação por ID e exportação do evento.
+
+## Entrega 2026-11-10 — US-017
+- Branch feat/10_UX-ajustes: seletor único de tipo de desconto na etapa Alvos e benefícios.
+- Percentual exibe percentual e teto opcional em reais; valor fixo exibe somente reais. Teto vazio significa sem limite.
+- Teto preservado no rascunho, benefícios adicionados e revisão, com compatibilidade para dados anteriores sem esse campo.
+- Documentação: docs/CAMPAIGN_BENEFITS.md e spec US-017-selecao-desconto.md.
+- npm run verify aprovado: TypeScript e 194 testes em 17 arquivos. npm run build aprovado (avisos de bundle e anotações Zod). Sem commit ou push.
+- Sugestão de commit: feat(campaigns): simplifica seleção de desconto e adiciona teto percentual

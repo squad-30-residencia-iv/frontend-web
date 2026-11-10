@@ -33,50 +33,47 @@ export function CampaignBenefitsForm({ value, errors, onChange, onAddBenefit }: 
   const batch = value.generationMode === 'batch'
   return <section className="create-campaign-information campaign-benefits" aria-labelledby="campaign-benefits-title">
     <h2 id="campaign-benefits-title" tabIndex={-1}>Alvos e benefícios</h2>
-    <fieldset className="campaign-benefits-choice">
-      <legend>Tipo de benefício</legend>
-      <p>Use dois cards selecionáveis:</p>
-      <label>
-        <input
-          type="radio"
-          name="discountType"
-          value="percentage"
-          checked={value.discountType === 'percentage'}
-          onChange={() => update('discountType', 'percentage')}
-        />Desconto percentual (%)
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="discountType"
-          value="fixed"
-          checked={value.discountType === 'fixed'}
-          onChange={() => update('discountType', 'fixed')}
-        />Desconto com valor fixo (R$)
-      </label>
-    </fieldset>
+    <Select
+      className="campaign-benefits-type"
+      label="Tipo de benefício"
+      name="discountType"
+      options={[{ value: 'percentage', label: 'Desconto percentual (%)' }, { value: 'fixed', label: 'Desconto com valor fixo (R$)' }]}
+      value={value.discountType}
+      onChange={next => update('discountType', next === 'fixed' ? 'fixed' : 'percentage')}
+    />
     <div className="campaign-benefits-panel campaign-benefits-discount">
-      <Input
-        label="Valor do desconto (%)"
-        name="percentage"
-        value={value.percentage}
-        onChange={next => update('percentage', next)}
-        isRequired={value.discountType === 'percentage'}
-        validationBehavior="aria"
-        errorMessage={errors.percentage}
-        inputProps={{ inputMode: 'decimal' }}
-      />
-      <span className="campaign-benefits-or">OU</span>
-      <Input
-        label="Valor do desconto (R$)"
-        name="fixedAmount"
-        value={value.fixedAmount}
-        onChange={next => update('fixedAmount', next)}
-        isRequired={value.discountType === 'fixed'}
-        validationBehavior="aria"
-        errorMessage={errors.fixedAmount}
-        inputProps={{ inputMode: 'decimal' }}
-      />
+      {value.discountType === 'percentage' ? <>
+        <Input
+          label="Valor do desconto (%)"
+          name="percentage"
+          value={value.percentage}
+          onChange={next => update('percentage', next)}
+          isRequired={value.discountType === 'percentage'}
+          validationBehavior="aria"
+          errorMessage={errors.percentage}
+          inputProps={{ inputMode: 'decimal' }}
+        />
+        <Input
+          label="Valor máximo de desconto (R$)"
+          name="maximumDiscount"
+          value={value.maximumDiscount ?? ''}
+          onChange={next => update('maximumDiscount', next)}
+          placeholder="Sem limite"
+          errorMessage={errors.maximumDiscount}
+          inputProps={{ inputMode: 'decimal' }}
+        />
+      </> :
+        <Input
+          label="Valor do desconto (R$)"
+          name="fixedAmount"
+          value={value.fixedAmount}
+          onChange={next => update('fixedAmount', next)}
+          isRequired={value.discountType === 'fixed'}
+          validationBehavior="aria"
+          errorMessage={errors.fixedAmount}
+          inputProps={{ inputMode: 'decimal' }}
+        />
+      }
       <Button
         type="button"
         variant="secondary"
@@ -88,6 +85,7 @@ export function CampaignBenefitsForm({ value, errors, onChange, onAddBenefit }: 
       {value.addedBenefits.map((benefit, index) => <li key={`${index}-${benefit.type}-${benefit.value}`}>
         <span>
           {benefit.type === 'percentage' ? `${formatNumber.format(parseDiscount(benefit.value))}%` : formatMoney.format(parseDiscount(benefit.value))}
+          {benefit.type === 'percentage' && benefit.maximumDiscount && ` (máximo ${formatMoney.format(parseDiscount(benefit.maximumDiscount))})`}
         </span>
         <Button
           type="button"

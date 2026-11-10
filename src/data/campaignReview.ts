@@ -63,8 +63,11 @@ export function getCampaignReviewSections(draft: CampaignDraft): CampaignReviewS
     { label: 'Forma de geração', value: isAutomatic ? 'Automática' : 'Em lote' },
   ]
 
+  if (benefits.discountType === 'percentage') {
+    benefitFields.push({ label: 'Valor máximo de desconto', value: benefits.maximumDiscount?.trim() ? formatDiscount('fixed', benefits.maximumDiscount) : 'Sem limite' })
+  }
   if (benefits.addedBenefits.length) {
-    benefitFields.push({ label: 'Benefícios adicionados', value: benefits.addedBenefits.map(item => formatDiscount(item.type, item.value)).join('; ') })
+    benefitFields.push({ label: 'Benefícios adicionados', value: benefits.addedBenefits.map(item => formatDiscount(item.type, item.value) + (item.type === 'percentage' && item.maximumDiscount?.trim() ? ` (máximo ${formatDiscount('fixed', item.maximumDiscount)})` : '')).join('; ') })
   }
   if (isAutomatic) {
     benefitFields.push({ label: 'Quantidade por concessão', value: formatQuantity(benefits.quantityPerGrant) })

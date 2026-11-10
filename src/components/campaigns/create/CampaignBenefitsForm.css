@@ -71,12 +71,7 @@ painéis acompanham seus campos. */
 }
 
 .campaign-benefits-discount {
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
-}
-
-.campaign-benefits-or {
-  font-size: 11px;
-  padding-top: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 .campaign-benefits-panel .button {
@@ -195,7 +190,7 @@ painéis acompanham seus campos. */
 
 @media (max-width: 1100px) {
   .campaign-benefits-discount {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .campaign-benefits-discount .button {
@@ -216,13 +211,11 @@ painéis acompanham seus campos. */
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .campaign-benefits-or {
-    padding-top: 0;
-  }
-
   .campaign-benefits-choice, .campaign-benefits-targets, .campaign-benefits-panel {
     max-width: none;
   }
 
 
 }
+
+.campaign-benefits-type { max-width: 290px; margin-bottom: 16px; }

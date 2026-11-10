@@ -144,15 +144,16 @@ export function CreateCampaignPage() {
   function handleAddBenefit() {
     const benefits = draft.benefits
     const key = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
-    if (!validateDiscount(benefits.discountType, benefits[key])) {
-      setBenefitsErrors({ [key]: validateCampaignBenefits(benefits)[key] })
-      focusInvalidField(key)
+    const errors = validateCampaignBenefits(benefits)
+    if (!validateDiscount(benefits.discountType, benefits[key]) || errors.maximumDiscount) {
+      setBenefitsErrors({ [key]: errors[key], maximumDiscount: errors.maximumDiscount })
+      focusInvalidField(errors[key] ? key : 'maximumDiscount')
       return
     }
     setDraft(current => ({
       ...current, benefits: {
         ...current.benefits,
-        addedBenefits: [...current.benefits.addedBenefits, { type: benefits.discountType, value: benefits[key] }],
+        addedBenefits: [...current.benefits.addedBenefits, { type: benefits.discountType, value: benefits[key], ...(benefits.discountType === 'percentage' ? { maximumDiscount: benefits.maximumDiscount } : {}) }],
       }
     }))
     feedback.success({ title: 'Benefício adicionado ao rascunho.' })
@@ -237,6 +238,7 @@ export function CreateCampaignPage() {
   const benefitsComplete =
     visitedBenefits
     && !benefitValidation.percentage
+    && !benefitValidation.maximumDiscount
     && !benefitValidation.fixedAmount
     && !benefitValidation.addedBenefits
     && !benefitValidation.targetIds
