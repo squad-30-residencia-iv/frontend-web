@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
@@ -14,6 +14,38 @@ import { useFeedback } from '../../ui/useFeedback'
 import './CampaignRulesForm.css'
 
 type Rules = CampaignDraft['rules']
+interface MatchModeProps {
+  kind: 'conditions' | 'restrictions'
+  value: 'all' | 'any'
+  count: number
+  onChange: (value: 'all' | 'any') => void
+}
+
+function MatchMode({ kind, value, count, onChange }: MatchModeProps) {
+  const conditions = kind === 'conditions'
+  const noun = conditions ? 'condições' : 'restrições'
+  return <>
+    <fieldset className="campaign-rules-choice">
+      <legend>Como combinar as {noun}?</legend>
+      <label>
+        <input type="radio" name={conditions ? 'conditionMatch' : 'restrictionMatch'} value="all"
+          checked={value === 'all'} onChange={() => onChange('all')} />
+        <span><strong>Exigir todas</strong><small>Todas as {noun} precisam ser atendidas (E).</small></span>
+      </label>
+      <label>
+        <input type="radio" name={conditions ? 'conditionMatch' : 'restrictionMatch'} value="any"
+          checked={value === 'any'} onChange={() => onChange('any')} />
+        <span><strong>Basta uma</strong><small>Atender pelo menos uma das {noun} é suficiente (OU).</small></span>
+      </label>
+    </fieldset>
+    <p className="campaign-rules-match-help" role="status">
+      {count === 0 ? `Nenhuma ${conditions ? 'condição' : 'restrição'} cadastrada neste grupo.`
+        : count === 1 ? 'Com apenas uma regra, as duas opções têm o mesmo resultado. A combinação será usada ao adicionar outras.'
+          : value === 'all' ? `Todas as ${count} ${noun} deste grupo devem ser atendidas.`
+            : `Basta atender uma das ${count} ${noun} deste grupo.`}
+    </p>
+  </>
+}
 interface CampaignRulesFormProps {
   value: Rules
   errors: CampaignRulesErrors
@@ -84,74 +116,56 @@ export function CampaignRulesForm({ value, errors, onChange }: CampaignRulesForm
       validationBehavior="aria"
       errorMessage={errors.audience}
     />
-    <p className="campaign-rules-description">Condições para geração do voucher</p>
-    <fieldset className="campaign-rules-choice">
-      <legend>O cliente deverá atender:</legend>
-      <label>
-        <input
-          type="radio"
-          name="conditionMatch"
-          value="all"
-          checked={value.conditionMatch === 'all'}
-          onChange={() => onChange({ ...value, conditionMatch: 'all' })}
-        />Todas as condições - E
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="conditionMatch"
-          value="any"
-          checked={value.conditionMatch === 'any'}
-          onChange={() => onChange({ ...value, conditionMatch: 'any' })}
-        />Pelo menos uma condição - OU
-      </label>
-    </fieldset>
     <section className="campaign-rules-panel" aria-labelledby="campaign-conditions-title">
       <h3 id="campaign-conditions-title">Condições</h3>
-      <p>Adicione um card para cada condição</p>
-      {value.conditions.map((condition, index) => <fieldset className="campaign-rules-item" key={condition.id}>
-        <legend>Condição {' '}
-          {index + 1}:
-        </legend>
-        <div className="campaign-rules-fields">
-          <Select
-            label="Tipo de condição"
-            name={conditionFieldName(condition.id, 'type')}
-            options={[{ value: 'purchase-total', label: 'Valor total da compra' }]}
-            value={condition.type || null}
-            onChange={next => updateCondition(condition.id, { type: next === 'purchase-total' ? 'purchase-total' : '' })}
-            isRequired
-            validationBehavior="aria"
-            errorMessage={errors[conditionFieldName(condition.id, 'type')]}
-          />
-          <Select
-            label="Operador"
-            name={conditionFieldName(condition.id, 'operator')}
-            options={[{ value: 'gte', label: 'Maior ou igual a' }]}
-            value={condition.operator || null}
-            onChange={next => updateCondition(condition.id, { operator: next === 'gte' ? 'gte' : '' })}
-            isRequired
-            validationBehavior="aria"
-            errorMessage={errors[conditionFieldName(condition.id, 'operator')]}
-          />
-          <MoneyField
-            label="Valor"
-            name={conditionFieldName(condition.id, 'value')}
-            value={condition.value}
-            onChange={next => updateCondition(condition.id, { value: next })}
-            isRequired
-            errorMessage={errors[conditionFieldName(condition.id, 'value')]}
-          />
-        </div>
-        <Button
-          className="campaign-rules-delete"
-          type="button"
-          variant="ghost"
-          startIcon={Trash2}
-          aria-label={`Excluir condição ${index + 1}`}
-          onPress={() => requestDeleteCondition(condition)}
-        >Excluir condição</Button>
-      </fieldset>)}
+      <p>Defina o que o cliente precisa atender para gerar o voucher.</p>
+      <MatchMode kind="conditions" value={value.conditionMatch} count={value.conditions.length}
+        onChange={conditionMatch => onChange({ ...value, conditionMatch })} />
+      {value.conditions.map((condition, index) => <Fragment key={condition.id}>
+        {index > 0 && <div className="campaign-rules-connector" aria-label="Combinação entre condições">{value.conditionMatch === 'all' ? 'E' : 'OU'}</div>}
+        <fieldset className="campaign-rules-item">
+          <legend>Condição {' '}
+            {index + 1}:
+          </legend>
+          <div className="campaign-rules-fields">
+            <Select
+              label="Tipo de condição"
+              name={conditionFieldName(condition.id, 'type')}
+              options={[{ value: 'purchase-total', label: 'Valor total da compra' }]}
+              value={condition.type || null}
+              onChange={next => updateCondition(condition.id, { type: next === 'purchase-total' ? 'purchase-total' : '' })}
+              isRequired
+              validationBehavior="aria"
+              errorMessage={errors[conditionFieldName(condition.id, 'type')]}
+            />
+            <Select
+              label="Operador"
+              name={conditionFieldName(condition.id, 'operator')}
+              options={[{ value: 'gte', label: 'Maior ou igual a' }]}
+              value={condition.operator || null}
+              onChange={next => updateCondition(condition.id, { operator: next === 'gte' ? 'gte' : '' })}
+              isRequired
+              validationBehavior="aria"
+              errorMessage={errors[conditionFieldName(condition.id, 'operator')]}
+            />
+            <MoneyField
+              label="Valor"
+              name={conditionFieldName(condition.id, 'value')}
+              value={condition.value}
+              onChange={next => updateCondition(condition.id, { value: next })}
+              isRequired
+              errorMessage={errors[conditionFieldName(condition.id, 'value')]}
+            />
+          </div>
+          <Button
+            className="campaign-rules-delete"
+            type="button"
+            variant="ghost"
+            startIcon={Trash2}
+            aria-label={`Excluir condição ${index + 1}`}
+            onPress={() => requestDeleteCondition(condition)}
+          >Excluir condição</Button>
+      </fieldset></Fragment>)}
       <Button
         ref={addConditionRef}
         type="button"
@@ -159,63 +173,46 @@ export function CampaignRulesForm({ value, errors, onChange }: CampaignRulesForm
         onPress={() => onChange({ ...value, conditions: [...value.conditions, { id: crypto.randomUUID(), type: 'purchase-total', operator: 'gte', value: '' }] })}
       >Adicionar condição +</Button>
     </section>
-    <fieldset className="campaign-rules-choice">
-      <legend>A compra deverá atender:</legend>
-      <label>
-        <input
-          type="radio"
-          name="restrictionMatch"
-          value="all"
-          checked={value.restrictionMatch === 'all'}
-          onChange={() => onChange({ ...value, restrictionMatch: 'all' })}
-        />Todas as restrições — E
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="restrictionMatch"
-          value="any"
-          checked={value.restrictionMatch === 'any'}
-          onChange={() => onChange({ ...value, restrictionMatch: 'any' })}
-        />Pelo menos uma restrição — OU
-      </label>
-    </fieldset>
     <section className="campaign-rules-panel" aria-labelledby="campaign-restrictions-title">
       <h3 id="campaign-restrictions-title">Restrições</h3>
-      <p>Adicione um card para cada restrição</p>
-      {value.restrictions.map((restriction, index) => <fieldset className="campaign-rules-item" key={restriction.id}>
-        <legend>Restrição {' '}
-          {index + 1}:
-        </legend>
-        <div className="campaign-rules-fields">
-          <Select
-            label="Tipo de restrição"
-            name={restrictionFieldName(restriction.id, 'type')}
-            options={[{ value: 'purchase-value', label: 'Valor da compra' }]}
-            value={restriction.type || null}
-            onChange={next => updateRestriction(restriction.id, { type: next === 'purchase-value' ? 'purchase-value' : '' })}
-            isRequired
-            validationBehavior="aria"
-            errorMessage={errors[restrictionFieldName(restriction.id, 'type')]}
-          />
-          <MoneyField
-            label="Mínimo"
-            name={restrictionFieldName(restriction.id, 'minimum')}
-            value={restriction.minimum}
-            onChange={next => updateRestriction(restriction.id, { minimum: next })}
-            isRequired
-            errorMessage={errors[restrictionFieldName(restriction.id, 'minimum')]}
-          />
-          <MoneyField
-            label="Máximo"
-            name={restrictionFieldName(restriction.id, 'maximum')}
-            placeholder="Sem limite"
-            value={restriction.maximum}
-            onChange={next => updateRestriction(restriction.id, { maximum: next })}
-            errorMessage={errors[restrictionFieldName(restriction.id, 'maximum')]}
-          />
-        </div>
-      </fieldset>)}
+      <p>Defina os limites da compra e como eles devem ser combinados.</p>
+      <MatchMode kind="restrictions" value={value.restrictionMatch} count={value.restrictions.length}
+        onChange={restrictionMatch => onChange({ ...value, restrictionMatch })} />
+      {value.restrictions.map((restriction, index) => <Fragment key={restriction.id}>
+        {index > 0 && <div className="campaign-rules-connector" aria-label="Combinação entre restrições">{value.restrictionMatch === 'all' ? 'E' : 'OU'}</div>}
+        <fieldset className="campaign-rules-item">
+          <legend>Restrição {' '}
+            {index + 1}:
+          </legend>
+          <div className="campaign-rules-fields">
+            <Select
+              label="Tipo de restrição"
+              name={restrictionFieldName(restriction.id, 'type')}
+              options={[{ value: 'purchase-value', label: 'Valor da compra' }]}
+              value={restriction.type || null}
+              onChange={next => updateRestriction(restriction.id, { type: next === 'purchase-value' ? 'purchase-value' : '' })}
+              isRequired
+              validationBehavior="aria"
+              errorMessage={errors[restrictionFieldName(restriction.id, 'type')]}
+            />
+            <MoneyField
+              label="Mínimo"
+              name={restrictionFieldName(restriction.id, 'minimum')}
+              value={restriction.minimum}
+              onChange={next => updateRestriction(restriction.id, { minimum: next })}
+              isRequired
+              errorMessage={errors[restrictionFieldName(restriction.id, 'minimum')]}
+            />
+            <MoneyField
+              label="Máximo"
+              name={restrictionFieldName(restriction.id, 'maximum')}
+              placeholder="Sem limite"
+              value={restriction.maximum}
+              onChange={next => updateRestriction(restriction.id, { maximum: next })}
+              errorMessage={errors[restrictionFieldName(restriction.id, 'maximum')]}
+            />
+          </div>
+      </fieldset></Fragment>)}
       <Button
         type="button"
         variant="secondary"

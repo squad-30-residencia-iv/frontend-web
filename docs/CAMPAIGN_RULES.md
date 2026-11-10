@@ -1,5 +1,11 @@
 # US-006 — Terceira etapa: Regras e público
 
+## Atualização US-018 — Combinação de regras
+- Cada grupo reúne suas regras e sua própria escolha: **Exigir todas** (`all`, E) ou **Basta uma** (`any`, OU), com explicação junto ao controle.
+- Conectores entre cards acompanham a escolha; grupos vazios ou com um item recebem orientação contextual. A escolha é mantida mesmo com um único item para valer ao adicionar os demais.
+- Condições e restrições continuam independentes. Tipos, validação, edição, exclusão de condições, persistência e revisão permanecem com os mesmos contratos; nenhuma regra comercial foi acrescentada.
+- Controles nativos de rádio preservam interação por teclado; opções selecionadas têm destaque e foco visível. Em telas estreitas ficam empilhadas.
+
 ## Integração e navegação
 CreateCampaignPage continua sendo o único formulário, com o único CampaignDraft. A propriedade rules foi acrescentada ao contrato central, junto de information e benefits. Estado step agora aceita 1, 2 ou 3, reaproveitando layout, sidebar, cabeçalho, indicador e resumo.
 Continuar valida a etapa 2 e abre a 3. Voltar da etapa 3 retorna à 2, e desta à 1, preservando todos os dados e itens. O indicador marca etapas anteriores concluídas e a atual com aria-current=step; não permite saltar validações. Foco acompanha o título da etapa.

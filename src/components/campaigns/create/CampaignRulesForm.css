@@ -10,7 +10,7 @@
   padding: 0;
   display: grid;
   gap: 7px;
-  max-width: 300px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
 }
 
@@ -32,6 +32,48 @@
   cursor: pointer;
 }
 
+.campaign-rules-choice label:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+.campaign-rules-choice label:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.campaign-rules-choice strong, .campaign-rules-choice small {
+  display: block;
+}
+
+.campaign-rules-choice strong {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.campaign-rules-choice small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.campaign-rules-connector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
+  margin: 8px 0 16px;
+}
+
+.campaign-rules-connector::before, .campaign-rules-connector::after {
+  content: '';
+  height: 1px;
+  background: var(--border);
+  flex: 1;
+}
+
 .campaign-rules-choice input[type="radio"] {
   appearance: auto;
   accent-color: var(--color-ink);
@@ -51,6 +93,10 @@
   margin-bottom: 16px;
 }
 
+.campaign-rules > .select + .campaign-rules-panel {
+  margin-top: 16px;
+}
+
 .campaign-rules-panel:last-child {
   margin-bottom: 0;
 }
@@ -68,8 +114,10 @@
 }
 
 .campaign-rules-item {
-  border: 0;
-  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 12px;
   margin: 0 0 12px;
   min-width: 0;
 }
@@ -155,7 +203,7 @@
   }
 
   .campaign-rules-choice {
-    max-width: none;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .campaign-rules-currency {

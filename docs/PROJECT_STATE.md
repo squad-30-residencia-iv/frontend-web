@@ -209,3 +209,10 @@
 - Documentação: docs/CAMPAIGN_BENEFITS.md e spec US-017-selecao-desconto.md.
 - npm run verify aprovado: TypeScript e 194 testes em 17 arquivos. npm run build aprovado (avisos de bundle e anotações Zod). Sem commit ou push.
 - Sugestão de commit: feat(campaigns): simplifica seleção de desconto e adiciona teto percentual
+
+## Entrega 2026-11-10 — US-018
+- Branch feat/10_UX-ajustes: escolhas Exigir todas / Basta uma dentro dos grupos de condições e restrições, com explicações e conectores E/OU entre os cards.
+- Orientação contextual para zero, uma ou várias regras. Seleções independentes; mesmos contratos all/any, validação e persistência.
+- Documentação: docs/CAMPAIGN_RULES.md e spec US-018-ux-regras.md.
+- npm run verify aprovado (194 testes em 17 arquivos); build aprovado com avisos existentes de bundle/Zod. Validação complementar aprovada: 50 testes da criação, incluindo o novo caso de grupos vazios/restrições.
+- Sem commit ou push. Sugestão: feat(campaigns): esclarece combinação de condições e restrições
