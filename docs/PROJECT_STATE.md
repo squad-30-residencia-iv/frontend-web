@@ -26,7 +26,7 @@ O que o portal faz hoje:
 - [ ] Depende do backend-api#51 na `staging`: `PUT /scopes`, `PUT /campaigns/{id}` e `POST /duplicate`. Sem ele, salvar o assistente falha no `PUT /scopes`.
 - [ ] Edição de campanhas fora do que a tela representa (região no escopo, condição de categoria, produto ou quantidade, validade por data fixa ou em horas, teto, benefícios diferentes por alvo): a tela avisa e substitui ao salvar (US-021, D-2).
 - [ ] Pausar e encerrar no detalhe de um Guid (frontend-web#43); hoje continuam só nas campanhas locais.
-- [ ] Escopo da campanha (lojas e canais) continua no navegador até a US-02.3. Vouchers, relatórios e auditoria seguem locais.
+- [ ] Vouchers, relatórios e auditoria seguem locais.
 - [ ] US-013 Relatórios: a tela está na `main`, com dados locais. A spec segue em `docs/specs/in-progress/US-013-relatorios-indicadores.md` porque `npm run verify` e `npm run build` não foram registrados nessa sessão. O checklist de casos de teste da spec também está desmarcado. Mover para `completed/` só depois do verify.
 - [ ] US-012 Home: código e testes escritos. Falta `npm run verify`, `npm run build` e a revisão visual. A spec `US-012-home-sidebar.md` ainda diz que `/auditoria` é placeholder; isso foi substituído pela US-014/US-015.
 - [ ] Specs desatualizadas, sem reabrir o trabalho: `in-progress/US-011-autenticacao-msw-jwt.md` é o rascunho anterior (cita `react-router` e checklist aberto). A spec válida é `completed/US-011-autenticacao-msw-jwt.md`. `in-progress/US-001-login.md` não descreve o login atual; a autenticação foi entregue na US-011. `completed/US-014-auditoria.md` ainda fala em modal; a US-015 trocou pelo detalhe em rota.
