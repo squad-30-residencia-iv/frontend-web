@@ -7,8 +7,8 @@ import { navigate } from '../../navigation/navigate'
 import { UserAvatar } from '../shared/UserAvatar'
 import {
   homePath,
-  portalNavigation,
   resolveActiveSection,
+  visibleNavigation,
   type PortalSection,
 } from './navigation'
 import './PortalLayout.css'
@@ -39,6 +39,7 @@ export function PortalLayout({ children, activeSection, onNavigate }: PortalLayo
   const displayName = user?.name ?? currentUser.name
   const displayRole = user ? formatPortalRole(user.role) : currentUser.role
   const avatarUrl = user ? undefined : currentUser.avatarUrl
+  const navigationItems = visibleNavigation(user?.role ?? null)
 
   function handleLogout() {
     logout()
@@ -61,7 +62,7 @@ export function PortalLayout({ children, activeSection, onNavigate }: PortalLayo
           </span>
         </a>
         <nav aria-label="Principal">
-          {portalNavigation.map(({ id, label, path, icon: Icon }) => (
+          {navigationItems.map(({ id, label, path, icon: Icon }) => (
             <a
               key={id}
               href={path}

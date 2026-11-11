@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { api } from './api'
+import { problemMessage, toProblemError } from './problemDetails'
 import { newCampaignBenefits, parseDiscount } from '../data/campaignBenefits'
 import { writeSavedCampaignId } from '../data/campaignDraft'
 import { newCampaignRules } from '../data/campaignRules'
@@ -214,22 +215,6 @@ export function campaignPersistNotices(draft: CampaignDraft): string[] {
   return notices
 }
 
-function problemMessage(data: unknown): string {
-  if (!isRecord(data)) return genericSaveMessage
-  if (typeof data.detail === 'string' && data.detail.trim()) return data.detail
-  if (!isRecord(data.errors)) return genericSaveMessage
-  for (const value of Object.values(data.errors)) {
-    if (Array.isArray(value) && typeof value[0] === 'string' && value[0].trim()) return value[0]
-  }
-  return genericSaveMessage
-}
-
-function asSaveError(error: unknown): Error {
-  if (axios.isAxiosError(error)) return new Error(problemMessage(error.response?.data))
-  if (error instanceof Error) return error
-  return new Error(genericSaveMessage)
-}
-
 function benefitAmount(draft: CampaignDraft) {
   const raw = draft.benefits.discountType === 'percentage' ? draft.benefits.percentage : draft.benefits.fixedAmount
   return parseDiscount(raw)
@@ -347,7 +332,7 @@ export async function saveCampaignDraft(
     })
     await api.put(`/api/v1/campaigns/${id}/scopes`, { scopes: scopeBody(draft.scope, context.stores) })
   } catch (error) {
-    throw asSaveError(error)
+    throw toProblemError(error, genericSaveMessage)
   }
 
   return { id, notices: campaignPersistNotices(draft) }
@@ -530,8 +515,7 @@ const genericDecisionMessage = 'Não foi possível atualizar o status da campanh
 
 function decisionError(error: unknown): Error {
   if (!axios.isAxiosError(error)) return new Error(genericDecisionMessage)
-  const message = problemMessage(error.response?.data)
-  return new Error(message === genericSaveMessage ? genericDecisionMessage : message)
+  return new Error(problemMessage(error.response?.data, genericDecisionMessage))
 }
 
 export async function decideCampaign(id: string, action: 'submit' | 'approve' | 'reject', reason?: string): Promise<CampaignDetails> {
@@ -716,7 +700,6 @@ export async function duplicateCampaign(id: string, input: DuplicateCampaignInpu
     return readApiCampaign(data).id
   } catch (error) {
     if (!axios.isAxiosError(error)) throw new Error(genericDuplicateMessage)
-    const message = problemMessage(error.response?.data)
-    throw new Error(message === genericSaveMessage ? genericDuplicateMessage : message)
+    throw new Error(problemMessage(error.response?.data, genericDuplicateMessage))
   }
 }

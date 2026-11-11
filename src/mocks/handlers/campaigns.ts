@@ -261,28 +261,4 @@ export const campaignHandlers = [
   http.put('*/api/v1/campaigns/:id/voucher-validity', () => HttpResponse.json({ id: 'ok' })),
   http.put('*/api/v1/campaigns/:id/usage-restrictions', () => HttpResponse.json({ id: 'ok' })),
   http.put('*/api/v1/campaigns/:id/conditions', () => HttpResponse.json({ id: 'ok' })),
-  http.get('*/api/v1/categories', () => HttpResponse.json([
-    { id: '0199e3a0-0000-7000-8000-000000000301', name: 'Papelaria', isActive: true, createdAt: '2026-09-01T12:00:00Z' },
-  ])),
-  http.get('*/api/v1/products', () => HttpResponse.json([
-    { id: '0199e3a0-0000-7000-8000-000000000302', categoryId: '0199e3a0-0000-7000-8000-000000000301', code: 'CAD-1', name: 'Caderno', isActive: true, createdAt: '2026-09-01T12:00:00Z' },
-  ])),
-  http.get('*/api/v1/regions', ({ request }) => {
-    const networkId = new URL(request.url).searchParams.get('networkId')
-    if (!networkId) {
-      return HttpResponse.json({ status: 400, detail: 'Informe a rede.', code: 'VALIDATION_ERROR' }, { status: 400 })
-    }
-    return HttpResponse.json([
-      { id: '0199e3a0-0000-7000-8000-000000000311', networkId, name: 'Sudeste', isActive: true, createdAt: '2026-09-01T12:00:00Z' },
-    ])
-  }),
-  http.get('*/api/v1/establishments', ({ request }) => {
-    const regionId = new URL(request.url).searchParams.get('regionId')
-    if (!regionId) {
-      return HttpResponse.json({ status: 400, detail: 'Informe a região do estabelecimento.', code: 'VALIDATION_ERROR' }, { status: 400 })
-    }
-    return HttpResponse.json([
-      { id: '0199e3a0-0000-7000-8000-000000000321', regionId, code: '001', name: 'Loja Centro', channels: ['Physical'], isActive: true, createdAt: '2026-09-01T12:00:00Z' },
-    ])
-  }),
 ]
