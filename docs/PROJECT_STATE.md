@@ -7,8 +7,8 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros`. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais.
-- **Última atualização:** 2026-11-09.
+- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e abre `/aplicacoes` para as aplicações satélite. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais.
+- **Última atualização:** 2026-11-11.
 
 O que o portal faz hoje:
 
@@ -18,12 +18,14 @@ O que o portal faz hoje:
 - O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Pausar e encerrar não aparecem (frontend-web#43). O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
 - A consulta de vouchers, os relatórios e a auditoria continuam locais.
 - Em `/cadastros`, só o administrador cria, edita, reativa e inativa rede, região, loja (com os canais Físico/Virtual), categoria e produto. Inativar pede confirmação e avisa a cascata. Analista e gestor não veem o item na Sidebar e, pela URL, veem "Acesso restrito". O histórico em `/vouchers/:id/historico` continua provisório.
+- Em `/aplicacoes`, só o administrador lista, cria, inativa e rotaciona o segredo das aplicações satélite. O papel da sessão é `administrador`. A tela usa o MSW (`mocks/handlers/satellite.ts`).
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
 - [ ] Depende do backend-api#51 na `staging`: `PUT /scopes`, `PUT /campaigns/{id}` e `POST /duplicate`. Sem ele, salvar o assistente falha no `PUT /scopes`.
+- [ ] US-016 Aplicações: conferir `/aplicacoes` com o mock desligado. As rotas de cadastro de aplicação ainda não existem na API; a tela fala com o MSW.
 - [ ] Edição de campanhas fora do que a tela representa (região no escopo, condição de categoria, produto ou quantidade, validade por data fixa ou em horas, teto, benefícios diferentes por alvo): a tela avisa e substitui ao salvar (US-021, D-2).
 - [ ] US-022 Cadastros: conferir `/cadastros` com o mock desligado, contra a API real. A escrita de categoria e produto pelo administrador já está no backend-api#52, na `staging`.
 - [ ] Pausar e encerrar no detalhe de um Guid (frontend-web#43); hoje continuam só nas campanhas locais.
@@ -37,6 +39,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-016: tela `/aplicacoes`, só do administrador (`allowedRoles` e item da Sidebar com `roles: ['administrador']`). Lista, cria, inativa e rotaciona o segredo das aplicações satélite da rede escolhida. O segredo aparece uma vez. Spec `completed/US-016-aplicacoes-satelite.md`. A listagem ainda é do MSW.
 - US-022: tela `/cadastros`, só do administrador. Abas Hierarquia (rede → regiões → lojas) e Catálogo (categorias → produtos), com ativos e inativos e o status visível. Criar e editar em modal; loja exige ao menos um canal; rede leva o fuso IANA. Inativar é o `DELETE` com confirmação da cascata; inativo mostra "Reativar" (`PUT` com `isActive: true`). Recusa da API mostra `detail` ou a primeira mensagem de `errors`. Item "Cadastros" da Sidebar filtrado por papel (`roles` em `navigation.ts`). MSW com estado em `mocks/handlers/registry.ts`, que também passou a atender os seletores da campanha. Spec `completed/US-022-cadastros-no-portal.md`. `npm run verify` (junto da US-021): 30 arquivos, 304 testes, verde. `npm run build` verde, com os avisos de sempre (bundle e Zod). No navegador com o MSW, o administrador criou loja, inativou a rede e viu a cascata.
 - US-021 (frontend-web#38): o assistente grava o escopo (`PUT /api/v1/campaigns/{id}/scopes`). "Toda a rede" vai como um local sem região nem loja; "Lojas específicas" manda cada loja com os canais escolhidos que ela opera (PR-11), e a etapa acusa a loja que não opera nenhum. O rascunho da API reabre em `/campanhas/{id}/editar`, preenchido pelo `GET`, e salvar grava nome e vigência no `PUT /campaigns/{id}` sem novo `POST`; a edição avisa o que a tela não representa. Fora de rascunho a rota explica que a mecânica congela na aprovação (D6), e o detalhe oferece **Duplicar** (nome e vigência editáveis), que abre a edição da cópia. O motivo da reprovação continua opcional. Detalhe e listagem mostram o escopo gravado. Spec `completed/US-021-escopo-e-ciclo-da-campanha.md`. `npm run verify`: 29 arquivos, 291 testes. `npm run build` ok. Os corpos enviados pelo portal foram repetidos contra a API real do backend-api#51 (6 cenários).
 - US-020: no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O papel sai da sessão (`analista` / `gestor`), não do usuário fixo. Aprovar com início futuro mostra **Agendada**; reprovar mostra o motivo. Pausar e encerrar não aparecem. Ids locais seguem na matriz da US-016. Spec `completed/US-020-submeter-e-aprovar.md`. `npm run verify`: a suíte completa teve dois timeouts (descarte na criação e período na consulta de vouchers), que passaram isolados; os testes do detalhe passaram. No navegador, o analista submeteu "Rascunho do portal" e o gestor aprovou; a Home mostrou **Agendada**.
@@ -68,6 +71,27 @@ O que o portal faz hoje:
 - Stack: React, TypeScript, Vite, Tailwind e HeroUI. Navegação própria em `App.tsx`, sem react-router.
 - Cadastros: o `PUT` nunca envia `isActive: false`. Inativar tem um caminho só, o `DELETE` com confirmação. Reativar o pai não reativa os filhos; com o pai inativo, criar filho fica desabilitado e reativar filho volta `422` com a mensagem na tela.
 - Itens da Sidebar com `roles` aparecem só para esses papéis. A página também confere o papel: esconder o link não protege a URL.
+
+## Entrega 2026-11-05 — US-011: Autenticação JWT com MSW e Rotas Protegidas
+- Autenticação conectada com JWT: login via `POST /api/v1/auth/login`, logout via `POST /api/v1/auth/logout` e me via `GET /api/v1/auth/me`.
+- Interceptores Axios no `src/services/api.ts` injetam `Authorization: Bearer <token>` em requisições autenticadas e interceptam 401 para expirar a sessão e redirecionar para `/login?from=...`.
+- `AuthContext` e `useAuth` fornecem estado de sessão autenticada (`user`, `isAuthenticated`, `isLoading`, `login`, `logout`), com restauração automática de sessão válida do `localStorage`.
+- `ProtectedRoute` protege páginas privadas e redireciona sem token para `/login?from=...`, com suporte a verificação de papéis (`allowedRoles`).
+- `PortalLayout` e `HomePage` exibem o usuário real autenticado na sessão (nome e perfil de analista/administrador) e botão "Sair" funcional, mantendo fallback gracioso para testes isolados.
+- MSW implementado em `src/mocks/` (`handlers`, `browser`, `server`, `jwtUtils`, `enableMocking`), com usuários demonstrativos `analista@portal.dev` e `admin@portal.dev`, validação de tokens e revogação em logout.
+- Suíte completa de testes criada: `src/mocks/handlers/auth.test.ts`, `src/contexts/AuthContext.test.tsx`, `src/services/tokenStorage.test.ts`, `src/services/loginValidation.test.ts`, `src/services/auth.test.ts`, `src/components/layout/PortalLayout.test.tsx`, `src/pages/LoginPage.test.tsx` e `src/App.test.tsx`.
+- Spec concluída e movida para `docs/specs/completed/US-011-autenticacao-msw-jwt.md`.
+
+
+## Entrega 2026-11-11 — US-016: Gerenciamento de Aplicações Satélite
+- Módulo `/aplicacoes` exclusivo para o perfil `admin` (`requiredRole: 'admin'` na Sidebar e `allowedRoles={['admin']}` no `ProtectedRoute`). Analistas e gestores não visualizam o item nem têm acesso à rota.
+- Listagem por rede com filtro de aplicações ativas/inativas e indicadores de totais.
+- Inativação com modal de confirmação retirando a aplicação da lista de ativas.
+- Criação com formulário (nome, clientId, rede e os 3 escopos) e exibição do segredo gerado uma única vez com ação de copiar e aviso de que não será exibido de novo.
+- Rotação de segredo com modal de confirmação, exibição do segredo novo uma vez com ação de copiar e aviso de que o segredo anterior parou de valer para tokens novos.
+- A listagem e o detalhe nunca expõem ou mantêm segredos antigos.
+- O portal não chama `POST /satellite/token`, preservando a separação com PDV/e-commerce.
+- Suíte de testes criada cobrindo serviços, componentes e autorização de rotas.
 
 ## Entrega 2026-11-05 — US-011: Autenticação JWT com MSW e Rotas Protegidas
 - Autenticação conectada com JWT: login via `POST /api/v1/auth/login`, logout via `POST /api/v1/auth/logout` e me via `GET /api/v1/auth/me`.

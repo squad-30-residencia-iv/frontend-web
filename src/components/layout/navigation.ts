@@ -1,7 +1,7 @@
-import { ChartNoAxesColumn, Database, LayoutGrid, Megaphone, ShieldCheck, Ticket, type LucideIcon } from 'lucide-react'
+import { ChartNoAxesColumn, Database, LayoutGrid, Megaphone, MonitorSmartphone, ShieldCheck, Ticket, type LucideIcon } from 'lucide-react'
 import type { UserRole } from '../../services/auth.types'
 
-export type PortalSection = 'home' | 'campaigns' | 'vouchers' | 'reports' | 'audit' | 'registry'
+export type PortalSection = 'home' | 'campaigns' | 'vouchers' | 'reports' | 'audit' | 'registry' | 'applications'
 
 export interface PortalNavigationItem {
   id: PortalSection
@@ -14,6 +14,7 @@ export interface PortalNavigationItem {
 
 export const homePath = '/home'
 export const registryPath = '/cadastros'
+export const applicationsPath = '/aplicacoes'
 
 export const portalNavigation: readonly PortalNavigationItem[] = [
   { id: 'home', label: 'Visão geral', path: homePath, icon: LayoutGrid },
@@ -22,6 +23,7 @@ export const portalNavigation: readonly PortalNavigationItem[] = [
   { id: 'reports', label: 'Relatórios', path: '/relatorios', icon: ChartNoAxesColumn },
   { id: 'audit', label: 'Auditoria', path: '/auditoria', icon: ShieldCheck },
   { id: 'registry', label: 'Cadastros', path: registryPath, icon: Database, roles: ['administrador'] },
+  { id: 'applications', label: 'Aplicações', path: applicationsPath, icon: MonitorSmartphone, roles: ['administrador'] },
 ]
 
 /** Itens que o papel da sessão vê. Sem sessão, só os itens abertos a todos. */

@@ -1,0 +1,404 @@
+.applications-page {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.applications-page .page-header {
+  margin-bottom: 24px;
+}
+
+/* Indicadores / Resumo */
+.applications-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.applications-summary-card {
+  padding: 16px 20px;
+  min-height: 84px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+
+.applications-summary-card h2 {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.applications-summary-card strong {
+  color: var(--foreground);
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+/* Barra de Filtros e Rede */
+.applications-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.applications-filter-network {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 260px;
+}
+
+.applications-filter-network label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.applications-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.applications-view-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-brand);
+}
+
+/* Tabela de Aplicações */
+.satellite-table-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.satellite-table-scroll {
+  overflow-x: auto;
+  min-height: 380px;
+}
+
+.satellite-table-scroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.satellite-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.satellite-table thead {
+  background: color-mix(in srgb, var(--color-canvas) 60%, var(--surface));
+}
+
+.satellite-table thead th {
+  height: 42px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.satellite-table th,
+.satellite-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.satellite-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-canvas) 30%, var(--surface));
+}
+
+.satellite-app-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.satellite-app-name {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.satellite-app-id {
+  color: var(--muted);
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.satellite-client-id {
+  display: inline-block;
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--color-canvas) 80%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--foreground);
+}
+
+.satellite-scopes-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.satellite-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--color-info) 10%, var(--surface));
+  color: var(--color-info);
+  border: 1px solid color-mix(in srgb, var(--color-info) 25%, transparent);
+}
+
+.satellite-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.satellite-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.satellite-status-active {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  color: var(--success);
+}
+
+.satellite-status-active .satellite-status-dot {
+  background: var(--success);
+}
+
+.satellite-status-inactive {
+  background: color-mix(in srgb, var(--muted) 15%, var(--surface));
+  color: var(--muted);
+}
+
+.satellite-status-inactive .satellite-status-dot {
+  background: var(--muted);
+}
+
+.satellite-table-col-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.satellite-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.satellite-action-button.button {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.satellite-deactivate-button.button {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.satellite-deactivate-button.button:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+/* Modal de Revelação de Segredo */
+.satellite-secret-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.satellite-secret-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--color-canvas) 80%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.satellite-secret-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-all;
+  color: var(--foreground);
+}
+
+.satellite-secret-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.satellite-secret-copy:hover {
+  border-color: var(--focus);
+  color: var(--focus);
+}
+
+.satellite-secret-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.satellite-secret-warning svg {
+  color: var(--warning);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Formulário de Criação */
+.satellite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.satellite-scopes-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 0;
+}
+
+.satellite-scopes-legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  padding: 0 4px;
+}
+
+.satellite-required {
+  color: var(--danger);
+}
+
+.satellite-scopes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.satellite-scope-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+}
+
+.satellite-scope-checkbox-label:hover {
+  background: color-mix(in srgb, var(--color-canvas) 50%, var(--surface));
+}
+
+.satellite-scope-checkbox {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-brand);
+}
+
+.satellite-scope-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.satellite-scope-name {
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.satellite-scope-code {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: monospace;
+}
+
+.satellite-field-error {
+  color: var(--danger);
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .applications-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .applications-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { ApplicationsPage } from './pages/ApplicationsPage'
 import { AuditOperationDetailsPage } from './pages/AuditOperationDetailsPage'
 import { AuditPage } from './pages/AuditPage'
 import { CampaignDetailsPage } from './pages/CampaignDetailsPage'
@@ -13,7 +14,7 @@ import { SectionPlaceholderPage, type PlaceholderSection } from './pages/Section
 import { VoucherHistoryPending, VoucherLookupPage } from './pages/VoucherLookupPage'
 import { useAuth } from './contexts/AuthContext'
 import { sessionCampaignRole } from './data/campaignWorkflow'
-import { registryPath } from './components/layout/navigation'
+import { applicationsPath, registryPath } from './components/layout/navigation'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
 const campaignEditPattern = /^\/campanhas\/([^/]+)\/editar$/
@@ -44,6 +45,14 @@ function CampaignDetailsRoute({ campaignId }: { campaignId: string }) {
 
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
+
+  if (pathname === applicationsPath) {
+    return (
+      <ProtectedRoute allowedRoles={['administrador']}>
+        <ApplicationsPage />
+      </ProtectedRoute>
+    )
+  }
 
   if (pathname === '/auditoria') {
     return (

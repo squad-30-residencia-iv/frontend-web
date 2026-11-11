@@ -8,6 +8,7 @@ import { TOKEN_KEY, USER_KEY } from '../../services/tokenStorage'
 import { PortalLayout } from './PortalLayout'
 
 const analyst = mockUsers['analista@portal.dev'].user
+const admin = mockUsers['admin@portal.dev'].user
 
 describe('PortalLayout', () => {
   beforeEach(() => {
@@ -81,7 +82,7 @@ describe('PortalLayout', () => {
 
     const links = within(screen.getByRole('navigation', { name: 'Principal' })).getAllByRole('link').map(link => link.textContent)
     const expected = ['Visão geral', 'Campanhas', 'Vouchers', 'Relatórios', 'Auditoria']
-    expect(links).toEqual(visible ? [...expected, 'Cadastros'] : expected)
+    expect(links).toEqual(visible ? [...expected, 'Cadastros', 'Aplicações'] : expected)
   })
 
   it('clicar em Sair encerra a sessão e remove o token', async () => {
@@ -102,5 +103,49 @@ describe('PortalLayout', () => {
 
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
     expect(localStorage.getItem(USER_KEY)).toBeNull()
+  })
+
+  it('não exibe o item "Aplicações" para visitante padrão (gestor)', () => {
+    render(
+      <PortalLayout>
+        <div>Conteúdo</div>
+      </PortalLayout>,
+    )
+
+    expect(screen.queryByRole('link', { name: /Aplicações/i })).not.toBeInTheDocument()
+  })
+
+  it('não exibe o item "Aplicações" para usuário com perfil analista', () => {
+    const token = generateMockJwt(analyst, 3600)
+    localStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(USER_KEY, JSON.stringify(analyst))
+
+    render(
+      <AuthProvider>
+        <PortalLayout>
+          <div>Conteúdo</div>
+        </PortalLayout>
+      </AuthProvider>,
+    )
+
+    expect(screen.queryByRole('link', { name: /Aplicações/i })).not.toBeInTheDocument()
+  })
+
+  it('exibe o item "Aplicações" exclusivamente para usuário com perfil administrador', () => {
+    const token = generateMockJwt(admin, 3600)
+    localStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(USER_KEY, JSON.stringify(admin))
+
+    render(
+      <AuthProvider>
+        <PortalLayout>
+          <div>Conteúdo</div>
+        </PortalLayout>
+      </AuthProvider>,
+    )
+
+    const link = screen.getByRole('link', { name: /Aplicações/i })
+    expect(link).toBeVisible()
+    expect(link).toHaveAttribute('href', '/aplicacoes')
   })
 })
