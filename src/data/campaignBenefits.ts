@@ -5,7 +5,7 @@ export const categoryOptions = [{ value: 'category-fashion', label: 'Moda' }, { 
 export const productOptions = [{ value: 'product-shirt', label: 'Camiseta demonstrativa' }, { value: 'product-shoes', label: 'Tênis demonstrativo' }]
 export const customerBases = [{ value: 'base-1', label: '1', customers: 2500 }]
 export const initialCampaignBenefits: CampaignDraft['benefits'] = {
-  discountType: 'percentage', percentage: '20', fixedAmount: '200,00', addedBenefits: [],
+  maximumDiscount: '', discountType: 'percentage', percentage: '20', fixedAmount: '200,00', addedBenefits: [],
   application: 'total', targetType: 'category', targetIds: [], maxVouchers: '1000',
   generationMode: 'automatic', quantityPerGrant: '1', limitPerCustomer: '1',
   customerBase: 'base-1', quantityPerCustomer: '1',
@@ -37,7 +37,8 @@ function collectCampaignBenefitsErrors(
   const errors: CampaignBenefitsErrors = {}
   const discountField = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
   if (!validateDiscount(benefits.discountType, benefits[discountField])) errors[discountField] = benefits.discountType === 'percentage' ? 'Informe um percentual entre 1% e 100%.' : 'Informe um valor em reais maior que zero, com até duas casas decimais.'
-  if (benefits.addedBenefits.some(item => !validateDiscount(item.type, item.value))) errors.addedBenefits = 'Revise os benefícios adicionados.'
+  if (benefits.discountType === 'percentage' && benefits.maximumDiscount?.trim() && !validateDiscount('fixed', benefits.maximumDiscount)) errors.maximumDiscount = 'Informe um teto em reais maior que zero ou deixe em branco para não limitar.'
+  if (benefits.addedBenefits.some(item => !validateDiscount(item.type, item.value) || (item.type === 'percentage' && Boolean(item.maximumDiscount?.trim()) && !validateDiscount('fixed', item.maximumDiscount ?? '')))) errors.addedBenefits = 'Revise os benefícios adicionados.'
   if (benefits.application === 'specific') {
     const options = benefits.targetType === 'category' ? catalog.categories : catalog.products
     if (!benefits.targetIds.length || benefits.targetIds.some(id => !options.some(option => option.value === id))) errors.targetIds = 'Selecione ao menos um produto ou categoria.'
@@ -55,13 +56,14 @@ function collectCampaignBenefitsErrors(
 export function isCampaignBenefits(value: unknown): value is CampaignDraft['benefits'] {
   if (!value || typeof value !== 'object') return false
   const item = value as Record<string, unknown>
-  return (item.discountType === 'percentage' || item.discountType === 'fixed')
+  return (item.maximumDiscount === undefined || typeof item.maximumDiscount === 'string')
+    && (item.discountType === 'percentage' || item.discountType === 'fixed')
     && ['percentage', 'fixedAmount', 'maxVouchers', 'quantityPerGrant', 'limitPerCustomer', 'customerBase', 'quantityPerCustomer'].every(key => typeof item[key] === 'string')
     && (item.application === 'total' || item.application === 'specific')
     && (item.targetType === 'category' || item.targetType === 'product')
     && (item.generationMode === 'automatic' || item.generationMode === 'batch')
     && Array.isArray(item.targetIds) && item.targetIds.every(id => typeof id === 'string')
-    && Array.isArray(item.addedBenefits) && item.addedBenefits.every((benefit: unknown) => Boolean(benefit && typeof benefit === 'object' && 'type' in benefit && (benefit.type === 'percentage' || benefit.type === 'fixed') && 'value' in benefit && typeof benefit.value === 'string'))
+    && Array.isArray(item.addedBenefits) && item.addedBenefits.every((benefit: unknown) => Boolean(benefit && typeof benefit === 'object' && 'type' in benefit && (benefit.type === 'percentage' || benefit.type === 'fixed') && 'value' in benefit && typeof benefit.value === 'string' && (!('maximumDiscount' in benefit) || typeof benefit.maximumDiscount === 'string')))
 }
 export function newCampaignBenefits(): CampaignDraft['benefits'] {
   return { ...initialCampaignBenefits, targetIds: [], addedBenefits: [] }

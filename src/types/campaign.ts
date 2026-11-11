@@ -24,6 +24,7 @@ export const statusLabels: Record<CampaignStatus, string> = {
 export interface CampaignBenefit {
   type: 'percentage' | 'fixed'
   value: string
+  maximumDiscount?: string
 }
 
 export interface CampaignCondition {
@@ -54,6 +55,7 @@ export interface CampaignDraft {
   benefits: {
     discountType: 'percentage' | 'fixed'
     percentage: string
+    maximumDiscount?: string
     fixedAmount: string
     addedBenefits: CampaignBenefit[]
     application: 'total' | 'specific'

@@ -302,3 +302,25 @@ O que o portal faz hoje:
 - MSW com estado para as cinco rotas: cascata, nomes e códigos repetidos, pai inativo e `403` para quem não é administrador. As leituras de categorias, produtos, regiões e lojas saíram de `mocks/handlers/campaigns.ts`.
 - Testes: `RegistryPage.test.tsx` (10) e três casos novos em `PortalLayout.test.tsx`. `npm run verify` e `npm run build` verdes.
 - Spec `completed/US-022-cadastros-no-portal.md`. Commit local em `task/cadastros-no-portal`, sem push.
+
+## Entrega 2026-11-10 — US-017
+- Branch feat/10_UX-ajustes: seletor único de tipo de desconto na etapa Alvos e benefícios.
+- Percentual exibe percentual e teto opcional em reais; valor fixo exibe somente reais. Teto vazio significa sem limite.
+- Teto preservado no rascunho, benefícios adicionados e revisão, com compatibilidade para dados anteriores sem esse campo.
+- Documentação: docs/CAMPAIGN_BENEFITS.md e spec US-017-selecao-desconto.md.
+- npm run verify aprovado: TypeScript e 194 testes em 17 arquivos. npm run build aprovado (avisos de bundle e anotações Zod). Sem commit ou push.
+- Sugestão de commit: feat(campaigns): simplifica seleção de desconto e adiciona teto percentual
+
+## Entrega 2026-11-10 — US-018
+- Branch feat/10_UX-ajustes: escolhas Exigir todas / Basta uma dentro dos grupos de condições e restrições, com explicações e conectores E/OU entre os cards.
+- Orientação contextual para zero, uma ou várias regras. Seleções independentes; mesmos contratos all/any, validação e persistência.
+- Documentação: docs/CAMPAIGN_RULES.md e spec US-018-ux-regras.md.
+- npm run verify aprovado (194 testes em 17 arquivos); build aprovado com avisos existentes de bundle/Zod. Validação complementar aprovada: 50 testes da criação, incluindo o novo caso de grupos vazios/restrições.
+- Sem commit ou push. Sugestão: feat(campaigns): esclarece combinação de condições e restrições
+
+## Entrega 2026-11-10 — US-019
+- Excluir todas as restrições com confirmação e feedback na etapa Regras e público, preservando as condições.
+- Testes de cancelamento, exclusão, salvamento vazio e adição posterior. npm run verify aprovado: 196 testes em 17 arquivos.
+- Spec: docs/specs/completed/US-019-excluir-restricoes.md; funcionalidade em docs/CAMPAIGN_RULES.md. Sem commit/push.
+- Sugestão de commit: feat(campaigns): permite excluir todas as restrições
+- npm run build aprovado; avisos existentes de bundle e anotações Zod.
