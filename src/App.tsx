@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { ApplicationsPage } from './pages/ApplicationsPage'
 import { AuditOperationDetailsPage } from './pages/AuditOperationDetailsPage'
 import { AuditPage } from './pages/AuditPage'
 import { CampaignDetailsPage } from './pages/CampaignDetailsPage'
@@ -34,6 +35,14 @@ function getPathname() {
 
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
+
+  if (pathname === '/aplicacoes') {
+    return (
+      <ProtectedRoute allowedRoles={['admin']}>
+        <ApplicationsPage />
+      </ProtectedRoute>
+    )
+  }
 
   if (pathname === '/auditoria') {
     return (

@@ -7,8 +7,8 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Autenticação JWT, sessão e rotas protegidas.
-- **Última atualização:** 2026-11-05.
+- **Foco:** Módulo de Aplicações Satélite (Admin) e Controle de Acesso RBAC.
+- **Última atualização:** 2026-11-11.
 
 ---
 
@@ -20,6 +20,7 @@
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-016: Gerenciamento de Aplicações Satélite para Administrador (detalhes no bloco "Entrega 2026-11-11 — US-016" abaixo).
 - US-011: Autenticação com JWT, MSW, rotas protegidas e perfil na sessão (detalhes no bloco "Entrega 2026-11-05 — US-011" abaixo).
 - Configuração inicial do ecossistema de SDD (prompts, templates e governança).
 - US-002: Button, Input, Select, Modal, ConfirmationModal, Loading, EmptyState, FeedbackAlert e feedbacks via Toast oficial HeroUI 3.2.6.
@@ -38,6 +39,16 @@
 - `npm run verify` aprovado nesta sessão: typecheck e 16 testes.
 - Spec US-001 não foi concluída; permanece em `docs/specs/in-progress/`.
 - Alterações de tema prontas para commit, sem push. Sugestão: `feat(theme): padroniza a paleta do portal nos tokens da HeroUI`.
+
+## Entrega 2026-11-11 — US-016: Gerenciamento de Aplicações Satélite
+- Módulo `/aplicacoes` exclusivo para o perfil `admin` (`requiredRole: 'admin'` na Sidebar e `allowedRoles={['admin']}` no `ProtectedRoute`). Analistas e gestores não visualizam o item nem têm acesso à rota.
+- Listagem por rede com filtro de aplicações ativas/inativas e indicadores de totais.
+- Inativação com modal de confirmação retirando a aplicação da lista de ativas.
+- Criação com formulário (nome, clientId, rede e os 3 escopos) e exibição do segredo gerado uma única vez com ação de copiar e aviso de que não será exibido de novo.
+- Rotação de segredo com modal de confirmação, exibição do segredo novo uma vez com ação de copiar e aviso de que o segredo anterior parou de valer para tokens novos.
+- A listagem e o detalhe nunca expõem ou mantêm segredos antigos.
+- O portal não chama `POST /satellite/token`, preservando a separação com PDV/e-commerce.
+- Suíte de testes criada cobrindo serviços, componentes e autorização de rotas.
 
 ## Entrega 2026-11-05 — US-011: Autenticação JWT com MSW e Rotas Protegidas
 - Autenticação conectada com JWT: login via `POST /api/v1/auth/login`, logout via `POST /api/v1/auth/logout` e me via `GET /api/v1/auth/me`.

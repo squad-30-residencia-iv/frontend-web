@@ -5,6 +5,7 @@ import { currentUser } from '../../data/currentUser'
 import { navigate } from '../../navigation/navigate'
 import { UserAvatar } from '../shared/UserAvatar'
 import {
+  getVisibleNavigation,
   homePath,
   portalNavigation,
   resolveActiveSection,
@@ -49,6 +50,8 @@ export function PortalLayout({ children, activeSection, onNavigate }: PortalLayo
     logout()
   }
 
+  const visibleNavigation = getVisibleNavigation(user?.role)
+
   return (
     <div className="portal-layout">
       <aside className="portal-sidebar" aria-label="Navegação do portal">
@@ -66,7 +69,7 @@ export function PortalLayout({ children, activeSection, onNavigate }: PortalLayo
           </span>
         </a>
         <nav aria-label="Principal">
-          {portalNavigation.map(({ id, label, path, icon: Icon }) => (
+          {visibleNavigation.map(({ id, label, path, icon: Icon }) => (
             <a
               key={id}
               href={path}
