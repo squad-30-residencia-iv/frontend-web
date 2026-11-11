@@ -76,7 +76,6 @@ export function ApplicationsTable({ applications, onRotateSecret, onDeactivate }
                       className="satellite-action-button"
                       startIcon={KeyRound}
                       onPress={() => onRotateSecret(app)}
-                      title="Rotacionar segredo da aplicação"
                       aria-label={`Rotacionar segredo de ${app.name}`}
                     >
                       Rotacionar segredo
@@ -88,7 +87,6 @@ export function ApplicationsTable({ applications, onRotateSecret, onDeactivate }
                         className="satellite-action-button satellite-deactivate-button"
                         startIcon={PowerOff}
                         onPress={() => onDeactivate(app)}
-                        title="Inativar aplicação"
                         aria-label={`Inativar aplicação ${app.name}`}
                       >
                         Inativar
