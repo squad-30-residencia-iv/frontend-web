@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { ApplicationsPage } from './pages/ApplicationsPage'
 import { AuditOperationDetailsPage } from './pages/AuditOperationDetailsPage'
 import { AuditPage } from './pages/AuditPage'
 import { CampaignDetailsPage } from './pages/CampaignDetailsPage'
@@ -7,13 +8,16 @@ import { CampaignManagementPage } from './pages/CampaignManagementPage'
 import { CreateCampaignPage } from './pages/CreateCampaignPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { RegistryPage } from './pages/RegistryPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
 import { VoucherHistoryPending, VoucherLookupPage } from './pages/VoucherLookupPage'
 import { useAuth } from './contexts/AuthContext'
 import { sessionCampaignRole } from './data/campaignWorkflow'
+import { applicationsPath, registryPath } from './components/layout/navigation'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
+const campaignEditPattern = /^\/campanhas\/([^/]+)\/editar$/
 
 function safeDecode(value: string) {
   try {
@@ -41,6 +45,14 @@ function CampaignDetailsRoute({ campaignId }: { campaignId: string }) {
 
 export function App() {
   const pathname = useSyncExternalStore(subscribeToPathname, getPathname)
+
+  if (pathname === applicationsPath) {
+    return (
+      <ProtectedRoute allowedRoles={['administrador']}>
+        <ApplicationsPage />
+      </ProtectedRoute>
+    )
+  }
 
   if (pathname === '/auditoria') {
     return (
@@ -94,6 +106,15 @@ export function App() {
     )
   }
 
+  // A tela mostra "Acesso restrito" a quem não é administrador, dentro do layout do portal.
+  if (pathname === registryPath) {
+    return (
+      <ProtectedRoute>
+        <RegistryPage />
+      </ProtectedRoute>
+    )
+  }
+
   if (pathname === '/campanhas/nova') {
     return (
       <ProtectedRoute>
@@ -106,6 +127,15 @@ export function App() {
     return (
       <ProtectedRoute>
         <CampaignManagementPage />
+      </ProtectedRoute>
+    )
+  }
+
+  const campaignEditMatch = campaignEditPattern.exec(pathname)
+  if (campaignEditMatch) {
+    return (
+      <ProtectedRoute>
+        <CreateCampaignPage key={campaignEditMatch[1]} campaignId={safeDecode(campaignEditMatch[1])} />
       </ProtectedRoute>
     )
   }

@@ -7,6 +7,7 @@ Continuar da segunda etapa valida benefits, mantém dados e mostra feedback sobr
 Salvar rascunho continua persistindo localmente, agora com as duas seções. Rascunhos anteriores são migrados sem perder information; benefits recebe defaults quando ausente ou estruturalmente inválido. Reabrir inicia na primeira etapa; ao avançar, os benefícios salvos estão disponíveis.
 
 ## Campos e comportamentos
+- Atualização US-017: o tipo de desconto usa um único Select. Percentual exibe percentual e valor máximo opcional em reais (vazio = sem limite); valor fixo exibe somente o valor em reais. O teto é validado, salvo no rascunho e nos benefícios adicionados e apresentado na revisão. Dados antigos sem teto continuam válidos.
 - Desconto percentual ou fixo, com valores alternativos preservados. Percentual maior que zero e até 100%; reais positivos com até duas casas decimais. Formatos decimais com ponto ou vírgula, sem separador de milhar ambíguo.
 - Adicionar registra o benefício escolhido na coleção do rascunho, apresentada compactamente na mesma seção; remoção individual disponível. Nenhuma regra de cumulação de descontos foi definida ou aplicada.
 - Aplicação sobre valor total da compra ou produtos/categorias específicas. Tipo Categoria/Produto e seleção múltipla. Seleção obrigatória apenas no modo específico. Mudar o tipo limpa os IDs incompatíveis.

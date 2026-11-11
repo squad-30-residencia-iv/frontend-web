@@ -8,6 +8,7 @@ import { mockUsers } from './mocks/handlers/auth'
 import { TOKEN_KEY, USER_KEY } from './services/tokenStorage'
 
 const analystUser = mockUsers['analista@portal.dev'].user
+const adminUser = mockUsers['admin@portal.dev'].user
 
 function renderApp() {
   return render(
@@ -79,6 +80,33 @@ describe('App - Rotas protegidas e Autenticação', () => {
       expect(localStorage.getItem(USER_KEY)).toBeNull()
       expect(window.location.pathname).toBe('/login')
       expect(screen.getByRole('heading', { name: 'Bem-vindo de volta!' })).toBeVisible()
+    })
+  })
+
+  it('rota /aplicacoes bloqueia acesso para perfil analista exibindo "Acesso não autorizado"', async () => {
+    const validToken = generateMockJwt(analystUser, 3600)
+    localStorage.setItem(TOKEN_KEY, validToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(analystUser))
+
+    window.history.pushState({}, '', '/aplicacoes')
+    renderApp()
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Acesso não autorizado' })).toBeVisible()
+      expect(screen.getByText('Seu perfil não possui permissão para acessar esta área.')).toBeVisible()
+    })
+  })
+
+  it('rota /aplicacoes permite acesso para perfil administrador', async () => {
+    const validToken = generateMockJwt(adminUser, 3600)
+    localStorage.setItem(TOKEN_KEY, validToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(adminUser))
+
+    window.history.pushState({}, '', '/aplicacoes')
+    renderApp()
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Aplicações Satélite' })).toBeVisible()
     })
   })
 })

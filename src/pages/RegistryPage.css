@@ -1,0 +1,25 @@
+.registry-tabs {
+  gap: 0;
+}
+
+.registry-tab-list {
+  width: min(100%, 360px);
+  min-width: 0;
+  max-width: 360px;
+}
+
+.registry-tab-panel {
+  padding-top: 14px;
+}
+
+.registry-tab-hint {
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.registry-denied {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}

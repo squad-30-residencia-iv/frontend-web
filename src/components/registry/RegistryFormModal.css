@@ -1,0 +1,80 @@
+.registry-form {
+  display: grid;
+  gap: 14px;
+}
+
+.registry-form-context {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.registry-form-note {
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--warning) 55%, var(--color-ink));
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+  font-size: 12px;
+}
+
+.registry-form-channels {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.registry-form-channels legend {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.registry-form-channel-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.registry-form-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.registry-form-option input {
+  appearance: auto;
+  accent-color: var(--color-brand);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.registry-form-error {
+  margin-top: 6px;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.registry-form-option:hover {
+  border-color: color-mix(in srgb, var(--muted) 45%, var(--border));
+}
+
+.registry-form-option:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 12%, transparent);
+}
+
+.registry-form-channels[aria-invalid="true"] .registry-form-option {
+  border-color: var(--danger);
+}
+
+.registry-form-channels:disabled .registry-form-option {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
