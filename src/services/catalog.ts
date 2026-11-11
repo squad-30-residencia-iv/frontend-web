@@ -1,5 +1,6 @@
 import { api } from './api'
 import type { CampaignStore } from '../data/campaignScope'
+import type { CampaignChannel } from '../types/campaign'
 
 export interface CatalogOption {
   value: string
@@ -39,6 +40,16 @@ export async function fetchActiveProducts(): Promise<CatalogOption[]> {
   })
 }
 
+/** "Physical" e "Virtual" da API viram os canais do assistente. */
+function readChannels(value: unknown): CampaignChannel[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(channel => {
+    if (channel === 'Physical') return ['physical' as const]
+    if (channel === 'Virtual') return ['virtual' as const]
+    return []
+  })
+}
+
 export async function fetchNetworkStores(networkId: string): Promise<CampaignStore[]> {
   const { data } = await api.get<unknown>('/api/v1/regions', { params: { networkId, activeOnly: true } })
   if (!Array.isArray(data)) throw new Error('Resposta inesperada do servidor.')
@@ -51,7 +62,12 @@ export async function fetchNetworkStores(networkId: string): Promise<CampaignSto
 
   return lists.flat().flatMap(store => {
     if (!isRecord(store) || typeof store.id !== 'string' || typeof store.name !== 'string') return []
-    return [{ id: store.id, code: typeof store.code === 'string' ? store.code : '', name: store.name }]
+    return [{
+      id: store.id,
+      code: typeof store.code === 'string' ? store.code : '',
+      name: store.name,
+      channels: readChannels(store.channels),
+    }]
   })
 }
 

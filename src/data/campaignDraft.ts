@@ -49,6 +49,11 @@ function isCampaignDraft(value: unknown): value is Pick<CampaignDraft, 'informat
     && 'voucherCap' in information && (information.voucherCap === 'unlimited' || information.voucherCap === ''))
 }
 
+/** Formulário novo, sem o rascunho guardado no navegador. */
+export function newCampaignDraft(): CampaignDraft {
+  return { information: { ...initialCampaignDraft.information }, benefits: newCampaignBenefits(), rules: newCampaignRules(), scope: newCampaignScope() }
+}
+
 export function loadCampaignDraft(): CampaignDraft {
   try {
     const stored = localStorage.getItem(campaignDraftStorageKey)
@@ -62,7 +67,7 @@ export function loadCampaignDraft(): CampaignDraft {
   } catch {
     // Armazenamento indisponível ou rascunho inválido: iniciar um formulário novo.
   }
-  return { information: { ...initialCampaignDraft.information }, benefits: newCampaignBenefits(), rules: newCampaignRules(), scope: newCampaignScope() }
+  return newCampaignDraft()
 }
 
 export type CampaignInformationErrors = Partial<Record<keyof CampaignDraft['information'], string>>

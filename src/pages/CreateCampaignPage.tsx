@@ -5,11 +5,14 @@ import { PortalLayout } from '../components/layout/PortalLayout'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { FeedbackAlert } from '../components/ui/FeedbackAlert'
+import { EmptyState } from '../components/ui/EmptyState'
+import { Loading } from '../components/ui/Loading'
 import { useFeedback } from '../components/ui/useFeedback'
 import {
   campaignDraftStorageKey,
   clearSavedCampaignId,
   loadCampaignDraft,
+  newCampaignDraft,
   readSavedCampaignId,
   validateCampaignInformation,
   validateCampaignDraft,
@@ -34,16 +37,34 @@ import { categoryOptions, productOptions } from '../data/campaignBenefits'
 import { createCampaign } from '../data/campaignRepository'
 import { useAuth } from '../contexts/AuthContext'
 import { loadPortalCatalog, type PortalCatalog } from '../services/catalog'
-import { campaignPersistBlocker, campaignPersistNotices, saveCampaignDraft } from '../services/campaigns'
+import {
+  campaignPersistBlocker,
+  campaignPersistNotices,
+  fetchEditableCampaign,
+  saveCampaignDraft,
+  type EditableCampaign,
+} from '../services/campaigns'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
 
-export function CreateCampaignPage() {
+type EditPhase = 'ready' | 'loading' | 'locked' | 'missing' | 'forbidden' | 'error'
+
+export interface CreateCampaignPageProps {
+  /** Rascunho da API reaberto em /campanhas/{id}/editar (US-021). Sem id, cria uma campanha. */
+  campaignId?: string
+}
+
+export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {}) {
   const feedback = useFeedback()
   const { user } = useAuth()
   const networkId = user?.networkId ?? null
-  const [draft, setDraft] = useState(loadCampaignDraft)
+  const editing = campaignId !== undefined
+  const signedIn = user !== null
+  const [draft, setDraft] = useState(() => editing ? newCampaignDraft() : loadCampaignDraft())
+  const [editPhase, setEditPhase] = useState<EditPhase>(editing ? 'loading' : 'ready')
+  const [editTarget, setEditTarget] = useState<EditableCampaign | null>(null)
+  const [editAttempt, setEditAttempt] = useState(0)
   const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(draft))
   const [errors, setErrors] = useState<CampaignInformationErrors>({})
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1)
@@ -59,6 +80,7 @@ export function CreateCampaignPage() {
   const [discardOpen, setDiscardOpen] = useState(false)
   const [leavePath, setLeavePath] = useState('/campanhas')
   const formRef = useRef<HTMLFormElement>(null)
+  const returnPath = campaignId ? `/campanhas/${campaignId}` : '/campanhas'
   const information = draft.information
   const dirty = JSON.stringify(draft) !== savedDraft
   const basicInformationComplete = Object.keys(validateCampaignInformation(draft)).length === 0
@@ -84,6 +106,38 @@ export function CreateCampaignPage() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [dirty])
+
+  useEffect(() => {
+    if (campaignId === undefined) return
+    if (signedIn && !networkId) {
+      setEditPhase('forbidden')
+      return
+    }
+    let cancelled = false
+    setEditPhase('loading')
+    fetchEditableCampaign(campaignId)
+      .then(target => {
+        if (cancelled) return
+        if (!target) {
+          setEditPhase('missing')
+          return
+        }
+        setEditTarget(target)
+        if (target.status !== 'draft') {
+          setEditPhase('locked')
+          return
+        }
+        const loaded = JSON.stringify(target.draft)
+        setDraft(target.draft)
+        setSavedDraft(loaded)
+        setVisitedBenefits(true)
+        setVisitedRules(true)
+        setVisitedScope(true)
+        setEditPhase('ready')
+      })
+      .catch(() => { if (!cancelled) setEditPhase('error') })
+    return () => { cancelled = true }
+  }, [campaignId, editAttempt, signedIn, networkId])
 
   useEffect(() => {
     if (!networkId) return
@@ -151,7 +205,7 @@ export function CreateCampaignPage() {
   }
 
   function handleReturn() {
-    handleNavigate('/campanhas')
+    handleNavigate(returnPath)
   }
 
   function handleReturnLink(event: MouseEvent<HTMLAnchorElement>) {
@@ -278,8 +332,17 @@ export function CreateCampaignPage() {
         return
       }
       setSaving(true)
-      saveCampaignDraft(networkId, draft, readSavedCampaignId())
+      saveCampaignDraft(networkId, draft, campaignId ?? readSavedCampaignId(), {
+        stores: catalog?.stores,
+        description: editTarget?.description ?? null,
+      })
         .then(({ notices }) => {
+          if (campaignId) {
+            setSavedDraft(JSON.stringify(draft))
+            feedback.success({ title: 'Rascunho atualizado.', description: notices.join(' ') })
+            navigate(returnPath)
+            return
+          }
           localStorage.removeItem(campaignDraftStorageKey)
           clearSavedCampaignId()
           setSavedDraft(JSON.stringify(draft))
@@ -333,17 +396,54 @@ export function CreateCampaignPage() {
     { label: 'Escopo organizacional', complete: visitedScope },
     { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog).firstInvalid === null },
   ]
+  const pageTitle = editing ? 'Editar rascunho' : 'Criar nova campanha'
+  const breadcrumbs = [
+    { label: 'Portal' },
+    { label: 'Campanhas', href: '/campanhas', onClick: editing ? undefined : handleReturnLink },
+    ...(editing ? [{ label: editTarget?.name ?? 'Campanha', href: returnPath }] : []),
+    { label: editing ? 'Editar rascunho' : 'Nova campanha' },
+  ]
+
+  if (editPhase !== 'ready') {
+    return (
+      <PortalLayout activeSection="campaigns">
+        <div className="create-campaign-page">
+          <PageHeader title={pageTitle} breadcrumbs={breadcrumbs} />
+          {editPhase === 'loading' && <Loading message="Carregando rascunho…" />}
+          {editPhase === 'locked' && <EmptyState
+            title="Esta campanha não pode ser editada"
+            description="Fora de rascunho a configuração não muda: a mecânica congela na aprovação. Para mudar alvos, quantidades, regras ou escopo, duplique a campanha no detalhe."
+            action={<Button variant="secondary" onPress={() => navigate(returnPath)}>Voltar para a campanha</Button>}
+          />}
+          {editPhase === 'missing' && <EmptyState
+            title="Campanha não encontrada"
+            description="Verifique o endereço ou volte para a listagem de campanhas."
+            action={<Button variant="secondary" onPress={() => navigate('/campanhas')}>Voltar para campanhas</Button>}
+          />}
+          {editPhase === 'forbidden' && <EmptyState
+            title="Esta conta não edita campanha"
+            description="O administrador da plataforma não tem uma rede."
+            action={<Button variant="secondary" onPress={() => navigate('/campanhas')}>Voltar para campanhas</Button>}
+          />}
+          {editPhase === 'error' && <EmptyState
+            title="Não foi possível carregar o rascunho"
+            description="Verifique sua conexão e tente novamente."
+            action={<Button variant="secondary" onPress={() => setEditAttempt(current => current + 1)}>Tentar novamente</Button>}
+          />}
+        </div>
+      </PortalLayout>
+    )
+  }
+
   return (
     <PortalLayout activeSection="campaigns" onNavigate={handleNavigate}>
       <div className="create-campaign-page">
-        <PageHeader
-          title="Criar nova campanha"
-          breadcrumbs={[
-            { label: 'Portal' },
-            { label: 'Campanhas', href: '/campanhas', onClick: handleReturnLink },
-            { label: 'Nova campanha' },
-          ]}
-        />
+        <PageHeader title={pageTitle} breadcrumbs={breadcrumbs} />
+        {editing && editTarget && editTarget.notices.length > 0 && <FeedbackAlert
+          type="warning"
+          title="O que esta tela não mostra"
+          description={editTarget.notices.join(' ')}
+        />}
         <nav aria-label="Etapas da criação" className="create-campaign-steps">
           <ol>
             {steps.map((stepLabel, index) => (
@@ -435,12 +535,12 @@ export function CreateCampaignPage() {
               startIcon={ArrowLeft}
               onPress={handleBack}
             >Voltar</Button>}
-            <Button
+            {!editing && <Button
               type="button"
               variant="secondary"
               onPress={handleSaveDraft}
-            >Salvar rascunho</Button>
-            <Button type="submit" endIcon={ArrowRight}>{saving ? 'Salvando…' : step === 5 ? 'Salvar campanha' : 'Continuar'}</Button>
+            >Salvar rascunho</Button>}
+            <Button type="submit" endIcon={ArrowRight}>{saving ? 'Salvando…' : step === 5 ? (editing ? 'Salvar alterações' : 'Salvar campanha') : 'Continuar'}</Button>
           </footer>
         </form>
         <Modal
@@ -453,7 +553,9 @@ export function CreateCampaignPage() {
         >
           {leavePath === '/campanhas'
             ? 'As alterações não salvas serão descartadas. Deseja voltar ao Gerenciamento de Campanhas?'
-            : 'As alterações não salvas serão descartadas. Deseja sair desta tela?'}
+            : leavePath === returnPath
+              ? 'As alterações não salvas serão descartadas. Deseja voltar ao detalhe da campanha?'
+              : 'As alterações não salvas serão descartadas. Deseja sair desta tela?'}
         </Modal>
       </div>
     </PortalLayout>
