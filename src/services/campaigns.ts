@@ -5,7 +5,7 @@ import { newCampaignBenefits, parseDiscount } from '../data/campaignBenefits'
 import { writeSavedCampaignId } from '../data/campaignDraft'
 import { newCampaignRules } from '../data/campaignRules'
 import { newCampaignScope, storeScopeChannels, type CampaignStore } from '../data/campaignScope'
-import type { Campaign, CampaignChannel, CampaignStatus, CampaignDraft } from '../types/campaign'
+import type { Campaign, CampaignAction, CampaignChannel, CampaignStatus, CampaignDraft } from '../types/campaign'
 import type { CampaignDetails, CampaignInfoSection } from '../types/campaignDetails'
 import type { FeaturedCampaign, HomeCampaign, HomeOverview } from '../types/home'
 
@@ -86,6 +86,7 @@ export function readApiCampaign(value: unknown): ApiCampaign {
     || typeof value.startsAt !== 'string'
     || typeof value.endsAt !== 'string'
     || typeof value.status !== 'string'
+    || !Object.hasOwn(statusByApiName, value.status)
     || !Array.isArray(value.items)
   ) {
     throw new Error('Resposta inesperada do servidor.')
@@ -127,7 +128,8 @@ function businessDate(value: string): string {
 }
 
 function mapStatus(status: string): CampaignStatus {
-  return statusByApiName[status] ?? 'draft'
+  if (!Object.hasOwn(statusByApiName, status)) throw new Error('Status inesperado do servidor.')
+  return statusByApiName[status]
 }
 
 export function formatBenefit(item: ApiCampaignItem | undefined): string {
@@ -200,6 +202,15 @@ export function isCampaignGuid(value: string) {
 }
 
 export function campaignPersistBlocker(draft: CampaignDraft): string | null {
+  if (draft.benefits.discountType === 'percentage' && draft.benefits.maximumDiscount?.trim()) {
+    return 'A API ainda não permite teto de desconto percentual. Remova o teto para salvar na API ou mantenha o rascunho neste navegador.'
+  }
+  if (draft.benefits.generationMode === 'batch') {
+    return 'A API ainda não permite geração em lote. Escolha a geração automática para salvar na API ou mantenha o rascunho neste navegador.'
+  }
+  if (draft.rules.restrictions.length > 1) {
+    return 'A API permite apenas uma faixa de restrição de compra. Mantenha uma restrição para salvar na API ou mantenha o rascunho neste navegador.'
+  }
   if (draft.benefits.addedBenefits.length > 0) {
     return 'A API grava um benefício por alvo. Remova os benefícios extras antes de salvar.'
   }
@@ -210,8 +221,9 @@ export function campaignPersistBlocker(draft: CampaignDraft): string | null {
 }
 
 export function campaignPersistNotices(draft: CampaignDraft): string[] {
-  const notices = ['Base de clientes e quantidade por concessão ficam só neste navegador.']
-  if (draft.rules.restrictions.length > 1) notices.unshift('Só a primeira faixa de compra é gravada.')
+  const notices = [draft.benefits.generationMode === 'batch'
+    ? 'A geração em lote fica somente no rascunho local; o envio à API exige geração automática.'
+    : 'Base de clientes e quantidade por concessão ficam só neste navegador.']
   return notices
 }
 
@@ -501,7 +513,7 @@ export function toCampaignDetails(value: unknown): CampaignDetails {
     benefitLabel: formatBenefit(campaign.detailItems[0]) || undefined,
     startsAt: campaign.startsAt,
     endsAt: campaign.endsAt,
-    referenceAt: campaign.startsAt,
+    referenceAt: new Date(Date.now()).toISOString(),
     voucherValidity: validityText(campaign.voucherValidity),
     metrics: { issued: 0, used: 0, expired: 0, issueLimit: campaign.totalVoucherLimit },
     lastUsedVoucher: null,
@@ -518,7 +530,7 @@ function decisionError(error: unknown): Error {
   return new Error(problemMessage(error.response?.data, genericDecisionMessage))
 }
 
-export async function decideCampaign(id: string, action: 'submit' | 'approve' | 'reject', reason?: string): Promise<CampaignDetails> {
+export async function decideCampaign(id: string, action: CampaignAction, reason?: string): Promise<CampaignDetails> {
   try {
     const body = action === 'reject' ? { reason: reason?.trim() ? reason.trim() : null } : undefined
     const { data } = await api.post<unknown>(`/api/v1/campaigns/${id}/${action}`, body)

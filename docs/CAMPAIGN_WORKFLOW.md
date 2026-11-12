@@ -1,3 +1,9 @@
+# Atualização US-023 — Campanhas da API
+
+Pausa e encerramento no detalhe de um Guid agora usam os endpoints reais, com a mesma matriz de permissões, confirmação e feedback. A resposta do servidor atualiza a tela; falhas não alteram o status local. Sem retomada. Detalhes e limitações do wizard: [CAMPAIGN_API_INTEGRATION.md](CAMPAIGN_API_INTEGRATION.md).
+
+---
+
 # Workflow de campanhas com mock — US-016
 
 Implementado na branch feat/09_UI-com-mock. A tarefa foi solicitada como fear/09_UI-com-mock; a branch real existente foi preservada. Não há chamadas HTTP, endpoints ou integração de autenticação nesta funcionalidade.

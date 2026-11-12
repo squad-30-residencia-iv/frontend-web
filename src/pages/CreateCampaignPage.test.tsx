@@ -823,6 +823,28 @@ async function continueToReview(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('Rascunho na API', () => {
+  it('avisa sobre teto sem suporte e mantém o rascunho sem iniciar gravação', async () => {
+    const analyst = mockUsers['analista@portal.dev'].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(analyst, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(analyst))
+    rememberDraft('Campanha com teto')
+    const stored = JSON.parse(localStorage.getItem(campaignDraftStorageKey) ?? '{}')
+    stored.benefits.maximumDiscount = '100,00'
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify(stored))
+    const post = vi.spyOn(api, 'post')
+    const user = userEvent.setup()
+    render(<AuthProvider><App /><FeedbackProvider /></AuthProvider>)
+    await continueToReview(user)
+    expect(screen.getByText('Ajuste a configuração antes de enviar')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByText('Esta campanha não pode ser gravada assim.')).toBeVisible()
+    expect(post).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    expect(JSON.parse(localStorage.getItem(campaignDraftStorageKey) ?? '{}').benefits.maximumDiscount).toBe('100,00')
+    post.mockRestore()
+  })
+
   it('analista grava a campanha e a vê na listagem', async () => {
     const analyst = mockUsers['analista@portal.dev'].user
     localStorage.setItem(TOKEN_KEY, generateMockJwt(analyst, 3600))
