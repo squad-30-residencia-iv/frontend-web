@@ -1,18 +1,18 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado em 2026-11-09. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
+> Atualizado em 2026-11-11. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e abre `/aplicacoes` para as aplicações satélite. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais.
+- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e abre `/aplicacoes` para as aplicações satélite. Pausar, encerrar, vouchers, relatórios e auditoria continuam locais.
 - **Última atualização:** 2026-11-11.
 
 O que o portal faz hoje:
 
-- Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `networkId`). Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com`, `gestor@empresa.com`, `admin@empresa.com`). Os testes do MSW continuam com `analista@portal.dev`, `gestor@portal.dev` e `admin@portal.dev`.
+- Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `name` e `networkId`). O nome exibido é `profile.name`: a Home usa a primeira palavra e a Sidebar o nome inteiro. Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com` Ana Lima, `gestor@empresa.com` Bruno Costa, `admin@empresa.com` Admin Plataforma). Os testes do MSW continuam com `analista@portal.dev` (Beatriz Analista), `gestor@portal.dev` (Bruno Costa) e `admin@portal.dev` (Carlos Administrador). Uma sessão antiga guarda o e-mail no lugar do nome até um novo login.
 - Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
 - O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais vão no `PUT /scopes`: a rede com os canais dela, ou cada loja com os canais escolhidos que ela opera.
 - O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Pausar e encerrar não aparecem (frontend-web#43). O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
@@ -24,6 +24,7 @@ O que o portal faz hoje:
 
 ## 🚧 Tarefas em Andamento
 
+- [ ] US-017 nome na sessão: o código e o `npm run verify` passaram. A spec `in-progress/US-017-nome-na-sessao.md` fica aberta até o caso do guard (login sem `profile.name`) ter teste. Só então mover para `completed/`.
 - [ ] Depende do backend-api#51 na `staging`: `PUT /scopes`, `PUT /campaigns/{id}` e `POST /duplicate`. Sem ele, salvar o assistente falha no `PUT /scopes`.
 - [ ] US-016 Aplicações: conferir `/aplicacoes` com o mock desligado. As rotas de cadastro de aplicação ainda não existem na API; a tela fala com o MSW.
 - [ ] Edição de campanhas fora do que a tela representa (região no escopo, condição de categoria, produto ou quantidade, validade por data fixa ou em horas, teto, benefícios diferentes por alvo): a tela avisa e substitui ao salvar (US-021, D-2).
@@ -39,6 +40,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.
 - US-016: tela `/aplicacoes`, só do administrador (`allowedRoles` e item da Sidebar com `roles: ['administrador']`). Lista, cria, inativa e rotaciona o segredo das aplicações satélite da rede escolhida. O segredo aparece uma vez. Spec `completed/US-016-aplicacoes-satelite.md`. A listagem ainda é do MSW.
 - US-022: tela `/cadastros`, só do administrador. Abas Hierarquia (rede → regiões → lojas) e Catálogo (categorias → produtos), com ativos e inativos e o status visível. Criar e editar em modal; loja exige ao menos um canal; rede leva o fuso IANA. Inativar é o `DELETE` com confirmação da cascata; inativo mostra "Reativar" (`PUT` com `isActive: true`). Recusa da API mostra `detail` ou a primeira mensagem de `errors`. Item "Cadastros" da Sidebar filtrado por papel (`roles` em `navigation.ts`). MSW com estado em `mocks/handlers/registry.ts`, que também passou a atender os seletores da campanha. Spec `completed/US-022-cadastros-no-portal.md`. `npm run verify` (junto da US-021): 30 arquivos, 304 testes, verde. `npm run build` verde, com os avisos de sempre (bundle e Zod). No navegador com o MSW, o administrador criou loja, inativou a rede e viu a cascata.
 - US-021 (frontend-web#38): o assistente grava o escopo (`PUT /api/v1/campaigns/{id}/scopes`). "Toda a rede" vai como um local sem região nem loja; "Lojas específicas" manda cada loja com os canais escolhidos que ela opera (PR-11), e a etapa acusa a loja que não opera nenhum. O rascunho da API reabre em `/campanhas/{id}/editar`, preenchido pelo `GET`, e salvar grava nome e vigência no `PUT /campaigns/{id}` sem novo `POST`; a edição avisa o que a tela não representa. Fora de rascunho a rota explica que a mecânica congela na aprovação (D6), e o detalhe oferece **Duplicar** (nome e vigência editáveis), que abre a edição da cópia. O motivo da reprovação continua opcional. Detalhe e listagem mostram o escopo gravado. Spec `completed/US-021-escopo-e-ciclo-da-campanha.md`. `npm run verify`: 29 arquivos, 291 testes. `npm run build` ok. Os corpos enviados pelo portal foram repetidos contra a API real do backend-api#51 (6 cenários).
@@ -324,3 +326,8 @@ O que o portal faz hoje:
 - Spec: docs/specs/completed/US-019-excluir-restricoes.md; funcionalidade em docs/CAMPAIGN_RULES.md. Sem commit/push.
 - Sugestão de commit: feat(campaigns): permite excluir todas as restrições
 - npm run build aprovado; avisos existentes de bundle e anotações Zod.
+
+## Entrega 2026-11-11 — US-017: nome na sessão
+- `toAuthUser` grava `profile.name`. O handler MSW devolve o mesmo campo. O gestor de mock deixa de usar o e-mail como nome.
+- Home e Sidebar não mudaram de layout. Quem já estava logado precisa entrar de novo.
+- `npm run verify` passou. Spec `in-progress/US-017-nome-na-sessao.md`, com o caso do guard sem `profile.name` ainda sem teste dedicado.
