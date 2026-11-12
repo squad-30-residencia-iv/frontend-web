@@ -1,8 +1,8 @@
 # Especificação Técnica: US-027 - Histórico do voucher
 
-> Status: In Progress
+> Status: Completed
 > História de Usuário Relacionada: https://github.com/squad-30-residencia-iv/frontend-web/issues/27
-> Responsável: [seu nome, de git config user.name]
+> Responsável: bergue-vitor
 > Data: 2026-11-09
 > Branch: `feat/10_historico-voucher`
 
@@ -37,20 +37,20 @@ Sem endpoint. A fronteira é `loadVoucherHistory(id)` em `src/data/voucherHistor
 
 ## 4. Checklist de Implementação
 
-- [ ] 1. Tipos
-- [ ] 2. Dados mockados e ordenação dos eventos
-- [ ] 3. `VoucherHistoryPage` (TSX e CSS), rota em `App.tsx` e remoção do destino provisório
-- [ ] 4. Testes da página e ajuste do teste da Consulta
-- [ ] 5. `npm run verify` e `npm run build` aprovados
-- [ ] 6. Doc da tela e `PROJECT_STATE.md` atualizados
+- [x] 1. Tipos
+- [x] 2. Dados mockados e ordenação dos eventos
+- [x] 3. `VoucherHistoryPage` (TSX e CSS), rota em `App.tsx` e remoção do destino provisório
+- [x] 4. Testes da página e ajuste do teste da Consulta
+- [x] 5. `npm run verify` e `npm run build` aprovados
+- [x] 6. Doc da tela e `PROJECT_STATE.md` atualizados
 
 ---
 
 ## 5. Casos de Teste Essenciais
 
-- [ ] Renderiza resumo, escopo e linha do tempo do voucher de referência.
-- [ ] Histórico coerente com o status (utilizado, expirado, cancelado e disponível).
-- [ ] Eventos do mais recente ao mais antigo.
-- [ ] Voltar e caminho levam a `/vouchers`.
-- [ ] Voucher inexistente, carregamento e erro com "Tentar novamente".
-- [ ] "Ver histórico" na Consulta abre a tela e `/vouchers/:id/historico` resolve no App.
+- [x] Renderiza resumo, escopo e linha do tempo do voucher de referência.
+- [x] Histórico coerente com o status (utilizado, expirado, cancelado e disponível).
+- [x] Eventos do mais recente ao mais antigo.
+- [x] Voltar e caminho levam a `/vouchers`.
+- [x] Voucher inexistente, carregamento e erro com "Tentar novamente".
+- [x] "Ver histórico" na Consulta abre a tela e `/vouchers/:id/historico` resolve no App.
