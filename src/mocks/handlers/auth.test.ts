@@ -15,6 +15,7 @@ describe('MSW Auth Handlers', () => {
     expect(res.data.profile).toEqual({
       userId: 'usr-analyst-1',
       email: 'analista@portal.dev',
+      name: 'Beatriz Analista',
       role: 'analista',
       networkId: '0199e3a0-0000-7000-8000-000000000001',
     })

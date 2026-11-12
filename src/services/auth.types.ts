@@ -18,6 +18,7 @@ export interface LoginCredentials {
 export interface UserProfile {
   userId: string
   email: string
+  name: string
   role: UserRole
   networkId: string | null
 }
@@ -30,7 +31,7 @@ export interface LoginResponse {
   profile: UserProfile
 }
 
-/** Sessão já traduzida para o portal. O nome exibido é o e-mail. */
+/** Sessão já traduzida para o portal. O nome exibido vem de `profile.name`. */
 export interface EstablishedSession {
   token: string
   expiresIn: number
@@ -82,6 +83,7 @@ export function isUserProfile(value: unknown): value is UserProfile {
     isRecord(value) &&
     typeof value.userId === 'string' &&
     typeof value.email === 'string' &&
+    typeof value.name === 'string' &&
     isUserRole(value.role) &&
     isNetworkId(value.networkId)
   )
@@ -101,7 +103,7 @@ export function isLoginResponse(value: unknown): value is LoginResponse {
 export function toAuthUser(profile: UserProfile): AuthUser {
   return {
     id: profile.userId,
-    name: profile.email,
+    name: profile.name,
     email: profile.email,
     role: profile.role,
     networkId: profile.networkId,

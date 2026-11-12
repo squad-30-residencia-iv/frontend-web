@@ -59,7 +59,7 @@ describe('PortalLayout', () => {
       </AuthProvider>,
     )
 
-    expect(screen.getByText('gestor@portal.dev')).toBeVisible()
+    expect(screen.getByText('Bruno Costa')).toBeVisible()
     expect(screen.getByText('Gestor')).toBeVisible()
   })
 

@@ -15,7 +15,7 @@ describe('auth service', () => {
     expect(data.expiresIn).toBe(3600)
     expect(data.user).toEqual({
       id: analyst.id,
-      name: analyst.email,
+      name: analyst.name,
       email: analyst.email,
       role: 'analista',
       networkId: analyst.networkId,
