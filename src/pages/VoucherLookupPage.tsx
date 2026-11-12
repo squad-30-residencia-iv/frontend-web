@@ -10,7 +10,6 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { VoucherActionsMenu } from '../components/vouchers/VoucherActionsMenu'
 import { emptyVoucherFilters, filterVouchers, loadVouchers, voucherStatusLabels } from '../data/vouchers'
 import type { Voucher, VoucherFilters } from '../types/voucher'
-import { navigate } from '../navigation/navigate'
 import './VoucherLookupPage.css'
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'success'; items: readonly Voucher[] }
@@ -161,14 +160,3 @@ function VoucherContent({ items }: { items: readonly Voucher[] }) {
   </>
 }
 
-// Apenas um destino provisório; não implementa a tela de histórico.
-export function VoucherHistoryPending() {
-  return <PortalLayout activeSection="vouchers">
-    <PageHeader title="Histórico do voucher" breadcrumbs={[{ label: 'Portal' }, { label: 'Vouchers', href: '/vouchers' }, { label: 'Histórico' }]} />
-    <EmptyState
-      title="Histórico ainda não disponível"
-      description="A consulta de movimentações será implementada em uma próxima etapa."
-      action={<Button variant="secondary" onPress={() => navigate('/vouchers')}>Voltar para vouchers</Button>}
-    />
-  </PortalLayout>
-}

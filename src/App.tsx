@@ -11,7 +11,8 @@ import { LoginPage } from './pages/LoginPage'
 import { RegistryPage } from './pages/RegistryPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SectionPlaceholderPage, type PlaceholderSection } from './pages/SectionPlaceholderPage'
-import { VoucherHistoryPending, VoucherLookupPage } from './pages/VoucherLookupPage'
+import { VoucherHistoryPage } from './pages/VoucherHistoryPage'
+import { VoucherLookupPage } from './pages/VoucherLookupPage'
 import { useAuth } from './contexts/AuthContext'
 import { sessionCampaignRole } from './data/campaignWorkflow'
 import { applicationsPath, registryPath } from './components/layout/navigation'
@@ -82,10 +83,11 @@ export function App() {
     )
   }
 
-  if (/^\/vouchers\/[^/]+\/historico$/.test(pathname)) {
+    const voucherHistoryMatch = /^\/vouchers\/([^/]+)\/historico$/.exec(pathname)
+  if (voucherHistoryMatch) {
     return (
       <ProtectedRoute>
-        <VoucherHistoryPending />
+        <VoucherHistoryPage key={voucherHistoryMatch[1]} voucherId={safeDecode(voucherHistoryMatch[1])} />
       </ProtectedRoute>
     )
   }
