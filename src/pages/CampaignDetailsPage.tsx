@@ -29,7 +29,7 @@ import { useFeedback } from '../components/ui/useFeedback'
 import { getCampaignDetails, getCampaignMetrics, getCampaignTiming, type CampaignPhase } from '../data/campaignDetails'
 import { decideCampaign, fetchCampaignDetails, isCampaignGuid } from '../services/campaigns'
 import { navigate } from '../navigation/navigate'
-import { statusLabels, type CampaignAction, type CampaignStatus, type CampaignRole } from '../types/campaign'
+import { statusLabels, type CampaignStatus, type CampaignRole } from '../types/campaign'
 import {
   voucherStatusLabels,
   type CampaignDetails,
@@ -194,37 +194,40 @@ const phaseLabels: Record<CampaignPhase, string> = {
   ended: 'Encerrada',
 }
 
-function CampaignSchedulePanels({ details }: { details: CampaignDetails }) {
+function CampaignSchedulePanels({ details, fromApi = false }: { details: CampaignDetails; fromApi?: boolean }) {
   const timing = getCampaignTiming(details.startsAt, details.endsAt, details.referenceAt)
+  // O servidor decide o status efetivo, inclusive o minuto final da vigência.
+  if (fromApi && details.status === 'scheduled') timing.phase = 'scheduled'
+  if (fromApi && ['active', 'paused'].includes(details.status)) timing.phase = 'running'
   if (details.status === 'ended') timing.phase = 'ended'
   const { voucherValidity, lastUsedVoucher } = details
   const isPaused = details.status === 'paused'
-  const awaitingActivation = ['draft', 'pending', 'rejected'].includes(details.status)
+  const emissionDisabled = ['draft', 'pending', 'rejected', 'soldOut', 'cancelled'].includes(details.status)
 
   return <div className="details-panels">
     <section className="details-panel" aria-labelledby="details-schedule-title">
       <div className="details-panel-heading">
         <h2 id="details-schedule-title">Vigência da campanha</h2>
         <StatusPill tone={isPaused ? campaignStatusTones.paused : campaignStatusTones[details.status]}>
-          {awaitingActivation ? statusLabels[details.status] : isPaused ? statusLabels.paused : phaseLabels[timing.phase]}
+          {emissionDisabled ? statusLabels[details.status] : isPaused ? statusLabels.paused : phaseLabels[timing.phase]}
         </StatusPill>
       </div>
 
       <div className="details-countdown">
         <span className="details-countdown-icon"><CalendarClock size={22} aria-hidden="true" /></span>
-        {awaitingActivation && <div><strong>{statusLabels[details.status]}</strong><p>A emissão de vouchers não está habilitada.</p></div>}
-        {!awaitingActivation && timing.phase === 'running' && <div>
+        {emissionDisabled && <div><strong>{statusLabels[details.status]}</strong><p>A emissão de vouchers não está habilitada.</p></div>}
+        {!emissionDisabled && timing.phase === 'running' && <div>
           <strong>
             {timing.days} {timing.days === 1 ? 'dia' : 'dias'}{' '}
             <small>para encerrar</small>
           </strong>
           <p>Mais {timing.hours}h {timing.minutes}min · emissão de vouchers {isPaused ? 'pausada' : 'ativa'}</p>
         </div>}
-        {!awaitingActivation && timing.phase === 'scheduled' && <div>
+        {!emissionDisabled && timing.phase === 'scheduled' && <div>
           <strong>Campanha ainda não iniciada</strong>
           <p>Começa em {formatDateTime(details.startsAt)}</p>
         </div>}
-        {!awaitingActivation && timing.phase === 'ended' && <div>
+        {!emissionDisabled && timing.phase === 'ended' && <div>
           <strong>Campanha encerrada</strong>
           <p>Encerrada em {formatDateTime(details.endsAt)}</p>
         </div>}
@@ -379,12 +382,6 @@ export interface CampaignDetailsPageProps {
 const campaignsPath = '/campanhas'
 const title = 'Detalhes da campanha'
 
-function apiDecisionActions(status: CampaignStatus, role: CampaignRole | null): CampaignAction[] {
-  if (status === 'draft' && role === 'analyst') return ['submit']
-  if (status === 'pending' && role === 'manager') return ['approve', 'reject']
-  return []
-}
-
 export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campaignRole ?? null }: CampaignDetailsPageProps) {
   const feedback = useFeedback()
   const fromApi = isCampaignGuid(campaignId)
@@ -457,7 +454,7 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
     </PortalLayout>
   }
 
-  const actions = fromApi ? apiDecisionActions(details.status, actorRole) : getCampaignActions(details.status, actorRole)
+  const actions = getCampaignActions(details.status, actorRole)
   // Analista e gestor editam o rascunho; fora dele a mecânica congela e mudar exige outra campanha (D6).
   const canChange = fromApi && actorRole !== null
   const isDraft = details.status === 'draft'
@@ -510,7 +507,7 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
         Dados de demonstração: desempenho, vouchers e configuração ilustrativos. Referência temporal: {formatDateTime(details.referenceAt, ', ')}.
       </p>}
       <CampaignMetricCards details={details} illustrative={!fromApi} />
-      <CampaignSchedulePanels details={details} />
+      <CampaignSchedulePanels details={details} fromApi={fromApi} />
       <VoucherTable vouchers={details.recentVouchers} totalIssued={details.metrics.issued} illustrative={!fromApi} />
       <CampaignInfoSections sections={details.info} illustrative={!fromApi} />
     </div>
@@ -519,7 +516,6 @@ export function CampaignDetailsPage({ campaignId, actorRole = currentUser.campai
       role={actorRole}
       onClose={() => setSelectedAction(null)}
       perform={fromApi ? async input => {
-        if (input.action !== 'submit' && input.action !== 'approve' && input.action !== 'reject') return
         setRemoteDetails(await decideCampaign(input.campaignId, input.action, input.reason))
       } : undefined}
       descriptions={fromApi ? { approve: 'A aprovação registra a decisão. Com início futuro a campanha fica agendada; se a vigência já começou, fica ativa.' } : undefined}

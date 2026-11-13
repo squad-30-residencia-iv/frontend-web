@@ -496,6 +496,11 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
           />}
           {step === 5 && <>
             <CampaignReview draft={draft} catalog={draftCatalog} />
+            {networkId && campaignPersistBlocker(draft) && <FeedbackAlert
+              type="warning"
+              title="Ajuste a configuração antes de enviar"
+              description={campaignPersistBlocker(draft) ?? undefined}
+            />}
             {networkId && <FeedbackAlert
               type="warning"
               title="O que fica só neste navegador"

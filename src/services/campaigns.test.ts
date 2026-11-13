@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { initialCampaignDraft, readSavedCampaignId } from '../data/campaignDraft'
 import { server } from '../mocks/server'
 import { api } from './api'
+import { campaignDraftStorageKey } from '../data/campaignDraft'
 import {
   campaignPersistBlocker,
   campaignToDraft,
@@ -14,6 +15,8 @@ import {
   scopeSummary,
   toHomeOverview,
   toListCampaign,
+  readApiCampaign,
+  toCampaignDetails,
   type ApiCampaign,
 } from './campaigns'
 
@@ -31,6 +34,45 @@ const campaign: ApiCampaign = {
 const networkScope = { mode: 'network' as const, networkChannels: ['physical' as const], storeIds: [], storeChannels: [] }
 
 describe('campanhas da rede', () => {
+  it.each(['UnknownStatus', 'constructor'])('recusa status fora do enum da API local: %s', status => {
+    expect(() => readApiCampaign({ ...campaign, status })).toThrow('Resposta inesperada')
+    expect(() => toListCampaign({ ...campaign, status })).toThrow('Status inesperado')
+  })
+
+  it('usa o relógio atual no detalhe remoto e mantém o status definido pelo servidor', () => {
+    const now = Date.parse('2026-10-05T12:00:00Z')
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+    try {
+      expect(toCampaignDetails(campaign)).toMatchObject({ status: 'active', referenceAt: new Date(now).toISOString() })
+      expect(toCampaignDetails({ ...campaign, status: 'Paused' }).status).toBe('paused')
+    } finally { clock.mockRestore() }
+  })
+  it.each(['teto', 'lote', 'restrições'] as const)('impede envio parcial de configuração incompatível: %s', async kind => {
+    const draft = structuredClone(initialCampaignDraft)
+    if (kind === 'teto') draft.benefits.maximumDiscount = '150,00'
+    if (kind === 'lote') draft.benefits.generationMode = 'batch'
+    if (kind === 'restrições') draft.rules.restrictions.push({ ...draft.rules.restrictions[0], id: 'restriction-extra' })
+    const original = JSON.stringify(draft)
+    localStorage.setItem(campaignDraftStorageKey, original)
+    const post = vi.spyOn(api, 'post')
+    const put = vi.spyOn(api, 'put')
+    try {
+      expect(campaignPersistBlocker(draft)).toBeTruthy()
+      await expect(saveCampaignDraft('rede', draft, null)).rejects.toThrow(/API/)
+      expect(post).not.toHaveBeenCalled()
+      expect(put).not.toHaveBeenCalled()
+      expect(localStorage.getItem(campaignDraftStorageKey)).toBe(original)
+      expect(readSavedCampaignId()).toBeNull()
+    } finally { post.mockRestore(); put.mockRestore() }
+  })
+
+  it('ignora teto antigo do percentual quando a escolha atual é valor fixo', () => {
+    const draft = structuredClone(initialCampaignDraft)
+    draft.benefits.discountType = 'fixed'
+    draft.benefits.maximumDiscount = '150,00'
+    expect(campaignPersistBlocker(draft)).toBeNull()
+  })
+
   it('traduz status, limite, escopo e o benefício do primeiro item', () => {
     const overview = toHomeOverview([campaign])
 

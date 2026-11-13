@@ -244,6 +244,7 @@ describe('Detalhes da campanha: decisão na API', () => {
     await user.click(await screen.findByRole('button', { name: 'Aprovar' }))
     await confirm(user, 'Aprovar')
     expect((await screen.findAllByText('Agendada')).length).toBeGreaterThan(0)
+    expect(screen.getByRole('region', { name: 'Vigência da campanha' })).toHaveTextContent('Campanha ainda não iniciada')
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
   })
