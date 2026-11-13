@@ -11,7 +11,7 @@ import { useFeedback } from '../components/ui/useFeedback'
 import { ApplicationsTable } from '../components/satellite/ApplicationsTable'
 import { CreateSatelliteForm } from '../components/satellite/CreateSatelliteForm'
 import { SecretRevealModal } from '../components/satellite/SecretRevealModal'
-import { satelliteNetworks } from '../data/satellite'
+import { fetchNetworks } from '../services/registry'
 import {
   createSatelliteApp,
   deactivateSatelliteApp,
@@ -28,12 +28,21 @@ type LoadState =
 
 export interface ApplicationsPageProps {
   loadApps?: (networkId: string) => Promise<SatelliteApp[]>
+  loadNetworks?: () => Promise<readonly { id: string; name: string }[]>
 }
 
-const networkOptions = satelliteNetworks.map(n => ({ value: n.id, label: n.name }))
+async function loadActiveNetworks() {
+  const networks = await fetchNetworks()
+  return networks.filter(network => network.isActive).map(network => ({ id: network.id, name: network.name }))
+}
 
-export function ApplicationsPage({ loadApps = fetchSatelliteApps }: ApplicationsPageProps) {
-  const [selectedNetworkId, setSelectedNetworkId] = useState<string>(satelliteNetworks[0]?.id ?? '')
+export function ApplicationsPage({
+  loadApps = fetchSatelliteApps,
+  loadNetworks = loadActiveNetworks,
+}: ApplicationsPageProps) {
+  const [networks, setNetworks] = useState<readonly { id: string; name: string }[]>([])
+  const [networksReady, setNetworksReady] = useState(false)
+  const [selectedNetworkId, setSelectedNetworkId] = useState('')
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [onlyActive, setOnlyActive] = useState<boolean>(true)
@@ -58,27 +67,45 @@ export function ApplicationsPage({ loadApps = fetchSatelliteApps }: Applications
 
   const feedback = useFeedback()
 
-  // Carrega aplicações da rede selecionada
   useEffect(() => {
+    let cancelled = false
+    loadNetworks()
+      .then(list => {
+        if (cancelled) return
+        setNetworks(list)
+        setSelectedNetworkId(current => current && list.some(network => network.id === current) ? current : list[0]?.id ?? '')
+        setNetworksReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [loadNetworks])
+
+  useEffect(() => {
+    if (!networksReady) return
+    if (!selectedNetworkId) {
+      setState({ status: 'success', apps: [] })
+      return
+    }
+
     let cancelled = false
     setState({ status: 'loading' })
 
     loadApps(selectedNetworkId)
       .then(apps => {
-        if (!cancelled) {
-          setState({ status: 'success', apps })
-        }
+        if (!cancelled) setState({ status: 'success', apps })
       })
       .catch(() => {
-        if (!cancelled) {
-          setState({ status: 'error' })
-        }
+        if (!cancelled) setState({ status: 'error' })
       })
 
     return () => {
       cancelled = true
     }
-  }, [selectedNetworkId, attempt, loadApps])
+  }, [selectedNetworkId, attempt, loadApps, networksReady])
 
   function retry() {
     setAttempt(c => c + 1)
@@ -186,8 +213,8 @@ export function ApplicationsPage({ loadApps = fetchSatelliteApps }: Applications
     }
   }
 
-  const selectedNetworkName =
-    satelliteNetworks.find(n => n.id === selectedNetworkId)?.name ?? 'Rede'
+  const selectedNetworkName = networks.find(network => network.id === selectedNetworkId)?.name ?? 'rede'
+  const networkOptions = networks.map(network => ({ value: network.id, label: network.name }))
 
   return (
     <PortalLayout activeSection="applications">
@@ -300,6 +327,7 @@ export function ApplicationsPage({ loadApps = fetchSatelliteApps }: Applications
           onSubmit={handleCreateApp}
           isPending={isCreating}
           defaultNetworkId={selectedNetworkId}
+          networks={networks}
         />
 
         {/* Modal: Confirmação de Inativação */}

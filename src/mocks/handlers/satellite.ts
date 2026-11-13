@@ -9,7 +9,7 @@ import type {
 } from '../../types/satellite'
 import { mockConfig } from '../mockConfig'
 
-const VALID_SCOPES: readonly SatelliteScope[] = ['voucher:redeem', 'voucher:read', 'campaign:read']
+const VALID_SCOPES: readonly SatelliteScope[] = ['campaigns:read', 'vouchers:issue', 'vouchers:redeem']
 
 let apps = [...mockSatelliteApps]
 let nextId = apps.length + 1

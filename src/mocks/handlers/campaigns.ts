@@ -3,8 +3,7 @@ import type { ApiCampaign, ApiCampaignScope } from '../../services/campaigns'
 import { parseMockJwt } from '../jwtUtils'
 
 interface MockCampaign extends ApiCampaign {
-  issuedVouchers?: number
-  reservedVouchers?: number
+  networkId?: string
 }
 
 export const networkCampaigns: MockCampaign[] = [
@@ -16,6 +15,8 @@ export const networkCampaigns: MockCampaign[] = [
     endsAt: '2026-10-31T23:59:00-03:00',
     status: 'Draft',
     totalVoucherLimit: 100,
+    issuedVouchers: 0,
+    reservedVouchers: 0,
     items: [
       { benefitType: 'Percentage', benefitValue: 10, categoryId: null },
     ],
@@ -59,8 +60,8 @@ export function resetCreatedCampaigns() {
   seedCampaign.endsAt = seedSnapshot.endsAt
   seedCampaign.rejectionReason = null
   seedCampaign.scopes = []
-  seedCampaign.issuedVouchers = undefined
-  seedCampaign.reservedVouchers = undefined
+  seedCampaign.issuedVouchers = 0
+  seedCampaign.reservedVouchers = 0
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -202,6 +203,8 @@ export const campaignHandlers = [
       endsAt: `${body.endsAt}:00-03:00`,
       status: 'Draft',
       totalVoucherLimit: null,
+      issuedVouchers: 0,
+      reservedVouchers: 0,
       perCustomerVoucherLimit: null,
       audienceType: null,
       minPurchaseAmount: null,

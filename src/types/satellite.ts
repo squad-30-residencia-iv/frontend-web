@@ -1,5 +1,5 @@
 /** Escopos disponíveis para aplicações satélite. */
-export type SatelliteScope = 'voucher:redeem' | 'voucher:read' | 'campaign:read'
+export type SatelliteScope = 'campaigns:read' | 'vouchers:issue' | 'vouchers:redeem'
 
 /** Aplicação satélite retornada pela API (sem segredo). */
 export interface SatelliteApp {

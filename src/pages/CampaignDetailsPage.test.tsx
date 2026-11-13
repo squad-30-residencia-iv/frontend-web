@@ -196,6 +196,7 @@ describe('Detalhes da campanha: rota e erros', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Volta às Aulas' })).toBeVisible()
     expect(screen.getAllByText('10% OFF').length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: 'Nenhum voucher emitido' })).toBeVisible()
+    expect(screen.getByText(/0 confirmados · 0 reservados/)).toBeVisible()
     expect(screen.getByText('Vouchers e desempenho ainda não vêm da API. A configuração abaixo é a gravada no rascunho.')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()

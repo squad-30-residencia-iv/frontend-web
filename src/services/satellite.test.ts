@@ -23,7 +23,7 @@ describe('satellite service', () => {
       name: 'Novo PDV Teste',
       clientId: 'pdv-teste-999',
       networkId: 'net-001',
-      scopes: ['voucher:redeem' as const, 'voucher:read' as const],
+      scopes: ['vouchers:redeem' as const, 'vouchers:issue' as const],
     }
 
     const response = await createSatelliteApp(payload)

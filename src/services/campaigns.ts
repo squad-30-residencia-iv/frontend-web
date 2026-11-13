@@ -32,6 +32,8 @@ export interface ApiCampaign {
   endsAt: string
   status: string
   totalVoucherLimit: number | null
+  issuedVouchers: number
+  reservedVouchers: number
   items: ApiCampaignItem[]
   rejectionReason?: string | null
   scopes?: ApiCampaignScope[]
@@ -50,6 +52,16 @@ const statusByApiName: Record<string, CampaignStatus> = {
 }
 
 const amountFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
+
+function readCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0
+}
+
+/** Parcela do limite já confirmada ou reservada. Sem limite, fica em zero. */
+export function limitShare(issued: number, reserved: number, total: number | null): number {
+  if (!total || total <= 0) return 0
+  return Math.min(100, Math.round(((issued + reserved) / total) * 100))
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -100,6 +112,8 @@ export function readApiCampaign(value: unknown): ApiCampaign {
     endsAt: value.endsAt,
     status: value.status,
     totalVoucherLimit: typeof value.totalVoucherLimit === 'number' ? value.totalVoucherLimit : null,
+    issuedVouchers: readCount(value.issuedVouchers),
+    reservedVouchers: readCount(value.reservedVouchers),
     items: value.items.map(readItem).filter((item): item is ApiCampaignItem => item !== null),
     scopes: Array.isArray(value.scopes)
       ? value.scopes.map(readScope).filter((scope): scope is ApiCampaignScope => scope !== null)
@@ -148,7 +162,7 @@ export function toListCampaign(campaign: ApiCampaign): Campaign {
     end: businessDate(campaign.endsAt),
     scope: scopeSummary(campaign.scopes),
     vouchers: campaign.totalVoucherLimit ?? 0,
-    usage: 0,
+    usage: limitShare(campaign.issuedVouchers, campaign.reservedVouchers, campaign.totalVoucherLimit),
     status: mapStatus(campaign.status),
   }
 }
@@ -515,7 +529,13 @@ export function toCampaignDetails(value: unknown): CampaignDetails {
     endsAt: campaign.endsAt,
     referenceAt: new Date(Date.now()).toISOString(),
     voucherValidity: validityText(campaign.voucherValidity),
-    metrics: { issued: 0, used: 0, expired: 0, issueLimit: campaign.totalVoucherLimit },
+    metrics: {
+      issued: campaign.issuedVouchers,
+      reserved: campaign.reservedVouchers,
+      used: 0,
+      expired: 0,
+      issueLimit: campaign.totalVoucherLimit,
+    },
     lastUsedVoucher: null,
     recentVouchers: [],
     info: detailSections(campaign),
