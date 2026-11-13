@@ -1,7 +1,13 @@
 import { http, HttpResponse } from 'msw'
 import type { ApiCampaign, ApiCampaignScope } from '../../services/campaigns'
+import { parseMockJwt } from '../jwtUtils'
 
-export const networkCampaigns: ApiCampaign[] = [
+interface MockCampaign extends ApiCampaign {
+  issuedVouchers?: number
+  reservedVouchers?: number
+}
+
+export const networkCampaigns: MockCampaign[] = [
   {
     id: '0199e3a0-0000-7000-8000-000000000111',
     name: 'Volta às Aulas',
@@ -16,7 +22,7 @@ export const networkCampaigns: ApiCampaign[] = [
   },
 ]
 
-interface StoredCampaign extends ApiCampaign {
+interface StoredCampaign extends MockCampaign {
   networkId: string
   perCustomerVoucherLimit: number | null
   audienceType: string | null
@@ -53,20 +59,36 @@ export function resetCreatedCampaigns() {
   seedCampaign.endsAt = seedSnapshot.endsAt
   seedCampaign.rejectionReason = null
   seedCampaign.scopes = []
+  seedCampaign.issuedVouchers = undefined
+  seedCampaign.reservedVouchers = undefined
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function toResponse(campaign: ApiCampaign, networkId: string, extra: Partial<StoredCampaign> = {}) {
+/** Espelha Campaign.EffectiveStatus/BusinessTime da API local; não é usado nas telas. */
+function effectiveStatus(campaign: MockCampaign) {
+  if (!['Scheduled', 'Active', 'Paused'].includes(campaign.status)) return campaign.status
+  const now = Date.now()
+  const afterEndMinute = Math.floor(Date.parse(campaign.endsAt) / 60000) * 60000 + 60000
+  if (now >= afterEndMinute) return 'Ended'
+  if (campaign.status === 'Paused') return 'Paused'
+  if (now < Date.parse(campaign.startsAt)) return 'Scheduled'
+  const consumed = (campaign.issuedVouchers ?? 0) + (campaign.reservedVouchers ?? 0)
+  return campaign.totalVoucherLimit !== null && consumed >= campaign.totalVoucherLimit ? 'SoldOut' : 'Active'
+}
+
+function toResponse(campaign: MockCampaign, networkId: string, extra: Partial<StoredCampaign> = {}) {
   return {
     ...campaign,
+    status: effectiveStatus(campaign),
     networkId,
     timeZone: 'America/Sao_Paulo',
     perCustomerVoucherLimit: extra.perCustomerVoucherLimit ?? null,
     undistributedVouchers: campaign.totalVoucherLimit,
-    issuedVouchers: 0,
+    issuedVouchers: campaign.issuedVouchers ?? 0,
+    reservedVouchers: campaign.reservedVouchers ?? 0,
     createdAt: '2026-09-01T12:00:00Z',
     audienceType: extra.audienceType ?? 'AllCustomers',
     voucherValidity: { type: 'Relative', amount: 30, unit: 'Days', cap: null, validUntil: null },
@@ -122,6 +144,25 @@ function decide(id: string, action: 'submit' | 'approve' | 'reject', reason: str
 }
 
 export const campaignHandlers = [
+  ...(['pause', 'end'] as const).map(action => http.post(`*/api/v1/campaigns/:id/${action}`, ({ params, request }) => {
+    const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') ?? ''
+    const actor = parseMockJwt(token)
+    if (!actor || actor.exp <= Date.now() / 1000) return problem(401, 'Autenticação necessária.', 'AUTH_UNAUTHENTICATED')
+    if (actor.role !== 'analista' && actor.role !== 'gestor') return problem(403, 'Seu papel não permite esta operação.', 'AUTH_FORBIDDEN_ROLE')
+    const campaign = findCampaign(String(params.id))
+    if (!campaign) return problem(404, 'Campanha não encontrada.', 'NOT_FOUND')
+    const stored = createdCampaigns.find(item => item.id === campaign.id)
+    const networkId = stored?.networkId ?? '0199e3a0-0000-7000-8000-000000000001'
+    if (actor.networkId !== networkId) return problem(403, 'Escopo organizacional fora da sua permissão de acesso', 'SCOPE_FORBIDDEN')
+    const allowed = action === 'pause' ? ['Active'] : ['Active', 'Paused']
+    if (!allowed.includes(effectiveStatus(campaign))) {
+      return action === 'pause'
+        ? problem(422, 'Somente uma campanha ativa pode ser pausada.', 'CAMPAIGN_PAUSE_NOT_ACTIVE')
+        : problem(422, 'Somente uma campanha ativa ou pausada pode ser encerrada.', 'CAMPAIGN_END_NOT_ALLOWED')
+    }
+    campaign.status = action === 'pause' ? 'Paused' : 'Ended'
+    return HttpResponse.json(toResponse(campaign, stored?.networkId ?? '0199e3a0-0000-7000-8000-000000000001', stored))
+  })),
   http.get('*/api/v1/campaigns/:id', ({ params }) => {
     const campaign = findCampaign(String(params.id))
     if (!campaign) {
