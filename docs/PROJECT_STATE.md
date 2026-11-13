@@ -40,6 +40,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.
 - US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.
 - US-016: tela `/aplicacoes`, só do administrador (`allowedRoles` e item da Sidebar com `roles: ['administrador']`). Lista, cria, inativa e rotaciona o segredo das aplicações satélite da rede escolhida. O segredo aparece uma vez. Spec `completed/US-016-aplicacoes-satelite.md`. A listagem ainda é do MSW.
 - US-022: tela `/cadastros`, só do administrador. Abas Hierarquia (rede → regiões → lojas) e Catálogo (categorias → produtos), com ativos e inativos e o status visível. Criar e editar em modal; loja exige ao menos um canal; rede leva o fuso IANA. Inativar é o `DELETE` com confirmação da cascata; inativo mostra "Reativar" (`PUT` com `isActive: true`). Recusa da API mostra `detail` ou a primeira mensagem de `errors`. Item "Cadastros" da Sidebar filtrado por papel (`roles` em `navigation.ts`). MSW com estado em `mocks/handlers/registry.ts`, que também passou a atender os seletores da campanha. Spec `completed/US-022-cadastros-no-portal.md`. `npm run verify` (junto da US-021): 30 arquivos, 304 testes, verde. `npm run build` verde, com os avisos de sempre (bundle e Zod). No navegador com o MSW, o administrador criou loja, inativou a rede e viu a cascata.
@@ -67,7 +68,7 @@ O que o portal faz hoje:
 - O início padrão de outubro de 2026 já passou. A API responde `422` e a tela mostra a mensagem. No navegador, o início precisa estar no futuro.
 - O que a tela pede e a API não grava: benefício extra no mesmo alvo e condições em "qualquer" impedem o salvamento. Mais de uma faixa, base de clientes, quantidade por concessão e a escolha de lojas e canais seguem com aviso e ficam no navegador.
 - A listagem não muda status: um clique ali não pode gravar só na memória e parecer salvo no banco. Submeter, aprovar e reprovar ficam no detalhe e, para um Guid, chamam a API.
-- Ids locais seguem a matriz da US-016: analista submete, gestor aprova para ativa ou reprova, e os dois pausam e encerram. Não há retomada. Um Guid não oferece pausar nem encerrar.
+- Ids locais seguem a matriz da US-016: analista submete, gestor aprova para ativa ou reprova, e os dois pausam e encerram. Não há retomada. No Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada pela API.
 - A Home não usa `PageHeader`. O usuário da sessão vem do `AuthContext`, com fallback para os testes isolados.
 - A HeroUI segue a paleta do portal pelos tokens `--accent`, `--danger`, `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--success` e `--warning`.
 - Stack: React, TypeScript, Vite, Tailwind e HeroUI. Navegação própria em `App.tsx`, sem react-router.
