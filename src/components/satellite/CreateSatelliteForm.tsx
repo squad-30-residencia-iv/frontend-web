@@ -2,7 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { Modal } from '../ui/Modal'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
-import { satelliteNetworks, satelliteScopeOptions } from '../../data/satellite'
+import { satelliteScopeOptions } from '../../data/satellite'
 import type { CreateSatelliteAppPayload, SatelliteScope } from '../../types/satellite'
 
 export interface CreateSatelliteFormProps {
@@ -10,10 +10,9 @@ export interface CreateSatelliteFormProps {
   onOpenChange: (isOpen: boolean) => void
   onSubmit: (payload: CreateSatelliteAppPayload) => void
   isPending: boolean
+  networks: readonly { id: string; name: string }[]
   defaultNetworkId?: string
 }
-
-const networkOptions = satelliteNetworks.map(n => ({ value: n.id, label: n.name }))
 
 interface FormErrors {
   name?: string
@@ -28,22 +27,23 @@ export function CreateSatelliteForm({
   onSubmit,
   isPending,
   defaultNetworkId = '',
+  networks,
 }: CreateSatelliteFormProps) {
   const [name, setName] = useState('')
   const [clientId, setClientId] = useState('')
   const [networkId, setNetworkId] = useState(defaultNetworkId)
-  const [scopes, setScopes] = useState<Set<SatelliteScope>>(new Set(['voucher:redeem', 'voucher:read', 'campaign:read']))
+  const [scopes, setScopes] = useState<Set<SatelliteScope>>(new Set(['campaigns:read', 'vouchers:issue', 'vouchers:redeem']))
   const [errors, setErrors] = useState<FormErrors>({})
 
   useEffect(() => {
     if (isOpen) {
       setName('')
       setClientId('')
-      setNetworkId(defaultNetworkId || (satelliteNetworks[0]?.id ?? ''))
-      setScopes(new Set(['voucher:redeem', 'voucher:read', 'campaign:read']))
+      setNetworkId(defaultNetworkId || (networks[0]?.id ?? ''))
+      setScopes(new Set(['campaigns:read', 'vouchers:issue', 'vouchers:redeem']))
       setErrors({})
     }
-  }, [isOpen, defaultNetworkId])
+  }, [isOpen, defaultNetworkId, networks])
 
   function reset() {
     setName('')
@@ -69,6 +69,8 @@ export function CreateSatelliteForm({
       return next
     })
   }
+
+  const networkOptions = networks.map(network => ({ value: network.id, label: network.name }))
 
   function validate(): FormErrors {
     const result: FormErrors = {}

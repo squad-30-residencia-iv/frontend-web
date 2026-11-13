@@ -7,7 +7,7 @@
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e abre `/aplicacoes` para as aplicações satélite. Pausar e encerrar campanhas de Guid usam a API; vouchers, relatórios e auditoria continuam locais.
+- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. A barra de uso é a parcela do limite já confirmada ou reservada, e o detalhe mostra esses dois contadores. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e, em `/aplicacoes`, lista as redes ativas e grava os escopos da API. Pausar e encerrar campanhas de Guid usam a API; utilizados, a lista de vouchers, relatórios e auditoria continuam locais.
 - **Última atualização:** 2026-11-12.
 
 O que o portal faz hoje:
@@ -15,10 +15,10 @@ O que o portal faz hoje:
 - Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `name` e `networkId`). O nome exibido é `profile.name`: a Home usa a primeira palavra e a Sidebar o nome inteiro. Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com` Ana Lima, `gestor@empresa.com` Bruno Costa, `admin@empresa.com` Admin Plataforma). Os testes do MSW continuam com `analista@portal.dev` (Beatriz Analista), `gestor@portal.dev` (Bruno Costa) e `admin@portal.dev` (Carlos Administrador). Uma sessão antiga guarda o e-mail no lugar do nome até um novo login.
 - Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
 - O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais vão no `PUT /scopes`: a rede com os canais dela, ou cada loja com os canais escolhidos que ela opera.
-- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Analista e gestor podem pausar a ativa e encerrar a ativa ou pausada, com confirmação e status devolvido pela API; não há retomada. O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. Uso e vouchers recentes ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
+- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Analista e gestor podem pausar a ativa e encerrar a ativa ou pausada, com confirmação e status devolvido pela API; não há retomada. O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. A barra da Home e do gerenciamento é `(issuedVouchers + reservedVouchers) / totalVoucherLimit`; sem limite, fica em zero. O detalhe mostra confirmados e reservas. Utilizados, expirados e a lista de vouchers ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
 - A consulta de vouchers, os relatórios e a auditoria continuam locais.
 - Em `/cadastros`, só o administrador cria, edita, reativa e inativa rede, região, loja (com os canais Físico/Virtual), categoria e produto. Inativar pede confirmação e avisa a cascata. Analista e gestor não veem o item na Sidebar e, pela URL, veem "Acesso restrito". O histórico em `/vouchers/:id/historico` continua provisório.
-- Em `/aplicacoes`, só o administrador lista, cria, inativa e rotaciona o segredo das aplicações satélite. O papel da sessão é `administrador`. A tela usa o MSW (`mocks/handlers/satellite.ts`).
+- Em `/aplicacoes`, só o administrador lista, cria, inativa e rotaciona o segredo das aplicações satélite. O papel da sessão é `administrador`. As redes do seletor e do formulário saem de `GET /api/v1/networks` (só as ativas). Os escopos enviados e exibidos são `campaigns:read`, `vouchers:issue` e `vouchers:redeem`. O MSW cobre os testes.
 
 ---
 
@@ -26,7 +26,7 @@ O que o portal faz hoje:
 
 - [ ] US-017 nome na sessão: o código e o `npm run verify` passaram. A spec `in-progress/US-017-nome-na-sessao.md` fica aberta até o caso do guard (login sem `profile.name`) ter teste. Só então mover para `completed/`.
 - [ ] Depende do backend-api#51 na `staging`: `PUT /scopes`, `PUT /campaigns/{id}` e `POST /duplicate`. Sem ele, salvar o assistente falha no `PUT /scopes`.
-- [ ] US-016 Aplicações: conferir `/aplicacoes` com o mock desligado. As rotas de cadastro de aplicação ainda não existem na API; a tela fala com o MSW.
+- [x] US-024: barra do limite, confirmados e reservas no detalhe, e `/aplicacoes` nas redes e escopos da API. Spec `completed/US-024-uso-e-aplicacoes.md`.
 - [ ] Edição de campanhas fora do que a tela representa (região no escopo, condição de categoria, produto ou quantidade, validade por data fixa ou em horas, teto, benefícios diferentes por alvo): a tela avisa e substitui ao salvar (US-021, D-2).
 - [ ] US-022 Cadastros: conferir `/cadastros` com o mock desligado, contra a API real. A escrita de categoria e produto pelo administrador já está no backend-api#52, na `staging`.
 - [x] Pausar e encerrar no detalhe de um Guid (frontend-web#43), integrado na US-023.
@@ -40,6 +40,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-024: a Home e o gerenciamento mostram a parcela do limite já confirmada ou reservada. O detalhe de um Guid mostra os confirmados e as reservas; utilizados e a lista de vouchers continuam vazios. `/aplicacoes` lista as redes ativas e grava os três escopos da API. Spec `completed/US-024-uso-e-aplicacoes.md`. `npm run verify`: 35 arquivos, 356 testes. No navegador, com a API local, a Home mostrou `0% do limite`, o detalhe mostrou `0 confirmados · 0 reservados` e `/aplicacoes` listou Supermercados Norte com os selos Campanhas, Conceder e Resgatar.
 - US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.
 - US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.
 - US-016: tela `/aplicacoes`, só do administrador (`allowedRoles` e item da Sidebar com `roles: ['administrador']`). Lista, cria, inativa e rotaciona o segredo das aplicações satélite da rede escolhida. O segredo aparece uma vez. Spec `completed/US-016-aplicacoes-satelite.md`. A listagem ainda é do MSW.
@@ -351,3 +352,10 @@ O que o portal faz hoje:
 - Guardas do wizard conferidas pelos DTOs locais e mantidas: teto monetário percentual, lote e múltiplas restrições não são suportados; rascunho local preservado.
 - npm run verify aprovado: TypeScript e 355 testes em 35 arquivos. Nove casos adicionais nesta revisão. npm run build aprovado; avisos existentes de bundle e anotações Zod.
 - Spec concluída em docs/specs/completed/US-023-integracao-ciclo-campanha.md; guia docs/CAMPAIGN_API_INTEGRATION.md atualizado. Testes HTTP em memória (MSW); nenhuma mutação enviada à API real. Sem commit/push.
+
+## Entrega 2026-11-12 — US-024: uso da campanha e aplicações na API
+- A barra da Home e do gerenciamento é a parcela do limite já confirmada ou reservada. Sem limite, fica em zero.
+- O detalhe de um Guid mostra confirmados e reservas. Utilizados, expirados e a lista de vouchers continuam vazios.
+- `/aplicacoes` lista as redes ativas e o formulário grava os escopos `campaigns:read`, `vouchers:issue` e `vouchers:redeem`.
+- `npm run verify`: 35 arquivos, 356 testes. No navegador, a Home mostrou `0% do limite`, o detalhe mostrou `0 confirmados · 0 reservados` e `/aplicacoes` listou Supermercados Norte com os três selos.
+- Spec `completed/US-024-uso-e-aplicacoes.md`.

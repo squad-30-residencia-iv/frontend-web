@@ -32,6 +32,8 @@ export interface CampaignInfoSection {
 
 export interface CampaignVoucherMetrics {
   issued: number
+  /** Reservas vivas. Ausente nas campanhas locais. */
+  reserved?: number
   used: number
   expired: number
   /** Teto de emissão. null quando a campanha não tem limite informado. */

@@ -169,7 +169,10 @@ function CampaignMetricCards({ details, illustrative = true }: { details: Campai
   return <section className="details-metrics" aria-labelledby="details-metrics-title">
     <div className="details-metrics-heading">
       <h2 id="details-metrics-title">Desempenho da campanha</h2>
-      <p>{illustrative ? 'Acumulado desde o início · Demonstração' : 'Acumulado desde o início · emissão ainda não existe'}</p>
+      <p>{illustrative
+        ? 'Acumulado desde o início · Demonstração'
+        : `${formatNumber(metrics.issued)} confirmados · ${formatNumber(details.metrics.reserved ?? 0)} reservados. Utilizados e a lista de vouchers ainda não vêm da API.`}
+      </p>
     </div>
     <div className="details-metrics-grid">
       {cards.map(({ title, value, caption, icon: Icon, tone }) => <article className="details-metric" key={title} aria-label={title}>

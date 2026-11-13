@@ -17,6 +17,7 @@ import {
   toListCampaign,
   readApiCampaign,
   toCampaignDetails,
+  limitShare,
   type ApiCampaign,
 } from './campaigns'
 
@@ -27,7 +28,9 @@ const campaign: ApiCampaign = {
   startsAt: '2026-10-01T08:00:00-03:00',
   endsAt: '2026-10-31T23:59:00-03:00',
   status: 'Active',
-  totalVoucherLimit: 100,
+    totalVoucherLimit: 100,
+    issuedVouchers: 0,
+    reservedVouchers: 0,
   items: [{ benefitType: 'Percentage', benefitValue: 10, categoryId: null }],
 }
 
@@ -43,7 +46,11 @@ describe('campanhas da rede', () => {
     const now = Date.parse('2026-10-05T12:00:00Z')
     const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
     try {
-      expect(toCampaignDetails(campaign)).toMatchObject({ status: 'active', referenceAt: new Date(now).toISOString() })
+      expect(toCampaignDetails(campaign)).toMatchObject({
+        status: 'active',
+        referenceAt: new Date(now).toISOString(),
+        metrics: { issued: 0, reserved: 0 },
+      })
       expect(toCampaignDetails({ ...campaign, status: 'Paused' }).status).toBe('paused')
     } finally { clock.mockRestore() }
   })
@@ -74,7 +81,7 @@ describe('campanhas da rede', () => {
   })
 
   it('traduz status, limite, escopo e o benefício do primeiro item', () => {
-    const overview = toHomeOverview([campaign])
+    const overview = toHomeOverview([{ ...campaign, issuedVouchers: 40, reservedVouchers: 10 }])
 
     expect(overview.campaigns[0]).toMatchObject({
       name: 'Volta às Aulas',
@@ -82,11 +89,23 @@ describe('campanhas da rede', () => {
       end: '2026-10-31',
       status: 'active',
       vouchers: 100,
-      usage: 0,
+      usage: 50,
       benefit: '10% OFF',
     })
     expect(overview.featured?.title).toBe('Volta às Aulas')
     expect(formatBenefit({ benefitType: 'FixedAmount', benefitValue: 20, categoryId: null })).toBe('R$ 20 OFF')
+  })
+
+  it('mostra confirmados e reservas no detalhe', () => {
+    const details = toCampaignDetails({ ...campaign, issuedVouchers: 40, reservedVouchers: 10 })
+    expect(details.metrics).toMatchObject({ issued: 40, reserved: 10, used: 0, issueLimit: 100 })
+  })
+
+  it('contador ausente ou inválido fica em zero', () => {
+    const read = readApiCampaign({ ...campaign, issuedVouchers: undefined, reservedVouchers: 'x' })
+    expect(read).toMatchObject({ issuedVouchers: 0, reservedVouchers: 0 })
+    expect(toListCampaign(read).usage).toBe(0)
+    expect(limitShare(4, 6, null)).toBe(0)
   })
 
   it('lista vazia não tem destaque', () => {

@@ -9,9 +9,9 @@ export interface ApplicationsTableProps {
 }
 
 const scopeBadgeLabels: Record<SatelliteScope, { label: string; short: string }> = {
-  'voucher:redeem': { label: 'Resgatar voucher', short: 'Resgatar' },
-  'voucher:read': { label: 'Consultar voucher', short: 'Consultar voucher' },
-  'campaign:read': { label: 'Consultar campanha', short: 'Consultar campanha' },
+  'vouchers:redeem': { label: 'Resgatar voucher', short: 'Resgatar' },
+  'vouchers:issue': { label: 'Conceder voucher', short: 'Conceder' },
+  'campaigns:read': { label: 'Consultar campanhas', short: 'Campanhas' },
 }
 
 export function ApplicationsTable({ applications, onRotateSecret, onDeactivate }: ApplicationsTableProps) {
