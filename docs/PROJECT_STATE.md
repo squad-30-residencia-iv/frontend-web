@@ -1,30 +1,31 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado em 2026-11-12. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
+> Atualizado em 2026-11-16. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false` e `networkId` na sessão, o portal integra campanhas, cadastros, aplicações e também **vouchers, histórico, relatórios e auditoria** via API (US-025 / EP-03). O detalhe Guid mostra confirmados, reservas e utilizados. Sem rede, vouchers/relatórios/auditoria caem no mock local.
-- **Última atualização:** 2026-11-16.
+- **Foco:** US-025 / EP-03 concluída na branch `feat/integracao-acompanhamento-api` (`3ed1f41`): com `networkId`, vouchers, histórico, relatórios e auditoria leem a API; o detalhe Guid mostra confirmados, reservas, utilizados e lista recente. Próximo passo: abrir PR e mesclar na `staging`.
+- **Última atualização:** 2026-11-16 (fechamento de sessão: correção do loading infinito nas telas de acompanhamento; `npm run verify` 370 testes).
 
 O que o portal faz hoje:
 
 - Login com JWT (`POST /api/v1/auth/login`). A sessão fica no `localStorage` (`token`, perfil com `name` e `networkId`). O nome exibido é `profile.name`: a Home usa a primeira palavra e a Sidebar o nome inteiro. Não há `GET /auth/me` nem `POST /auth/logout`: sair só limpa o armazenamento. Com o mock desligado, o login usa a API (`analista@empresa.com` Ana Lima, `gestor@empresa.com` Bruno Costa, `admin@empresa.com` Admin Plataforma). Os testes do MSW continuam com `analista@portal.dev` (Beatriz Analista), `gestor@portal.dev` (Bruno Costa) e `admin@portal.dev` (Carlos Administrador). Uma sessão antiga guarda o e-mail no lugar do nome até um novo login.
 - Home e gerenciamento leem `GET /api/v1/campaigns?networkId=` com a rede da sessão. Sem campanha no banco, a lista fica vazia. O administrador não chama a rota. A listagem não oferece submeter, aprovar, pausar nem encerrar.
 - O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais vão no `PUT /scopes`: a rede com os canais dela, ou cada loja com os canais escolhidos que ela opera.
-- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Analista e gestor podem pausar a ativa e encerrar a ativa ou pausada, com confirmação e status devolvido pela API; não há retomada. O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. A barra da Home e do gerenciamento é `(issuedVouchers + reservedVouchers) / totalVoucherLimit`; sem limite, fica em zero. O detalhe mostra confirmados e reservas. Utilizados, expirados e a lista de vouchers ficam vazios. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
-- Com rede na sessão, a consulta de vouchers, o histórico, os relatórios e a auditoria leem a API; sem rede, usam mock local.
-- Em `/cadastros`, só o administrador cria, edita, reativa e inativa rede, região, loja (com os canais Físico/Virtual), categoria e produto. Inativar pede confirmação e avisa a cascata. Analista e gestor não veem o item na Sidebar e, pela URL, veem "Acesso restrito". O histórico em `/vouchers/:id/historico` mostra resumo, escopo e linha do tempo com dados locais.
+- O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Analista e gestor podem pausar a ativa e encerrar a ativa ou pausada, com confirmação e status devolvido pela API; não há retomada. O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. A barra da Home e do gerenciamento é `(issuedVouchers + reservedVouchers) / totalVoucherLimit`; sem limite, fica em zero. O detalhe usa `redeemedVouchers`/`expiredVouchers` e lista recente via `GET /vouchers?campaignId=`. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
+- Com rede na sessão, a consulta de vouchers, o histórico, os relatórios e a auditoria leem a API; com sessão sem rede (ex.: administrador), a lista fica vazia; sem sessão (testes isolados), usam o repositório local.
+- Em `/cadastros`, só o administrador cria, edita, reativa e inativa rede, região, loja (com os canais Físico/Virtual), categoria e produto. Inativar pede confirmação e avisa a cascata. Analista e gestor não veem o item na Sidebar e, pela URL, veem "Acesso restrito". O histórico em `/vouchers/:id/historico` lê `GET /api/v1/vouchers/{id}` quando há sessão.
 - Em `/aplicacoes`, só o administrador lista, cria, inativa e rotaciona o segredo das aplicações satélite. O papel da sessão é `administrador`. As redes do seletor e do formulário saem de `GET /api/v1/networks` (só as ativas). Os escopos enviados e exibidos são `campaigns:read`, `vouchers:issue` e `vouchers:redeem`. O MSW cobre os testes.
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
-- [x] US-025: integrar vouchers, histórico, relatórios e auditoria à API (EP-03). Spec `completed/US-025-integracao-acompanhamento-api.md`. Branch `feat/integracao-acompanhamento-api`.
+- [x] US-025: integrar vouchers, histórico, relatórios e auditoria à API (EP-03). Spec `completed/US-025-integracao-acompanhamento-api.md`. Branch `feat/integracao-acompanhamento-api` (`3ed1f41`).
+- [ ] Abrir PR de `feat/integracao-acompanhamento-api` para `staging` e mesclar (depois do backend EP-03).
 - [ ] US-017 nome na sessão: o código e o `npm run verify` passaram. A spec `in-progress/US-017-nome-na-sessao.md` fica aberta até o caso do guard (login sem `profile.name`) ter teste. Só então mover para `completed/`.
 - [x] Depende do backend-api#51 na `staging`: `PUT /scopes`, `PUT /campaigns/{id}` e `POST /duplicate` — já na staging; assistente grava escopo.
 - [x] US-024: barra do limite, confirmados e reservas no detalhe, e `/aplicacoes` nas redes e escopos da API. Spec `completed/US-024-uso-e-aplicacoes.md`.
@@ -42,7 +43,7 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
-- US-025: com rede na sessão, Vouchers, Histórico, Relatórios e Auditoria chamam a API (`services/vouchers`, `reports`, `audit`). Detalhe Guid usa `redeemedVouchers`/`expiredVouchers` e lista recente via `GET /vouchers?campaignId=`. MSW em `portalReads`. Spec `completed/US-025-integracao-acompanhamento-api.md`. `npm run verify`: 36 arquivos, 370 testes.
+- US-025: com rede na sessão, Vouchers, Histórico, Relatórios e Auditoria chamam a API (`services/vouchers`, `reports`, `audit`). Detalhe Guid usa `redeemedVouchers`/`expiredVouchers` e lista recente via `GET /vouchers?campaignId=`. MSW em `portalReads`. Corrigido loading infinito: loaders resolvidos **dentro** do `useEffect` (deps estáveis `loadX`/`networkId`/`user`), sem função inline nas deps. Sessão autenticada sem rede não cai mais no mock. Spec `completed/US-025-integracao-acompanhamento-api.md`. `npm run verify`: 36 arquivos, 370 testes.
 - US-024: a Home e o gerenciamento mostram a parcela do limite já confirmada ou reservada. O detalhe de um Guid mostra os confirmados e as reservas. `/aplicacoes` lista as redes ativas e grava os três escopos da API. Spec `completed/US-024-uso-e-aplicacoes.md`. `npm run verify`: 35 arquivos, 356 testes.
 - US-027: a Consulta abre `/vouchers/:id/historico` com resumo, escopo e linha do tempo. Integração HTTP na US-025. Spec `completed/US-027-historico-voucher.md`.
 - US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.
@@ -68,7 +69,8 @@ O que o portal faz hoje:
 ## ⚠️ Bloqueios & Decisões Recentes
 
 - Com `VITE_USE_MOCK=false` e `VITE_API_BASE_URL`, o navegador chama a API direto. O CORS libera a origem do portal, não cada usuário. `http://127.0.0.1:5173` não é a mesma origem de `http://localhost:5173`.
-- Home, gerenciamento, o fim do assistente e o detalhe de um Guid leem ou gravam a API. Sem sessão, o assistente continua em `createCampaign`. Ids locais continuam em `getCampaignDetails`. Vouchers, relatórios e auditoria seguem em `loadVouchers` e `fetchReport`.
+- Home, gerenciamento, o fim do assistente e o detalhe de um Guid leem ou gravam a API. Sem sessão, o assistente continua em `createCampaign`. Ids locais continuam em `getCampaignDetails`. Com rede, vouchers/relatórios/auditoria usam a API; sem rede autenticada, lista vazia; testes isolados sem `AuthProvider` usam o mock local.
+- Carregadores das páginas de acompanhamento: não criar `const resolveX = loadX ?? (() => …)` fora do efeito e colocá-lo nas deps — a identidade muda a cada render e cancela o fetch em loop (loading infinito). Resolver o loader **dentro** do `useEffect`, dependendo só de `loadX`, `networkId`/`user` e `attempt`.
 - A listagem de lojas exige `regionId`. O portal pede as regiões da rede e, para cada uma, as lojas ativas. Não existe `GET /establishments?networkId=`.
 - O início padrão de outubro de 2026 já passou. A API responde `422` e a tela mostra a mensagem. No navegador, o início precisa estar no futuro.
 - O que a tela pede e a API não grava: benefício extra no mesmo alvo e condições em "qualquer" impedem o salvamento. Mais de uma faixa, base de clientes, quantidade por concessão e a escolha de lojas e canais seguem com aviso e ficam no navegador.
