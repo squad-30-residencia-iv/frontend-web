@@ -2,9 +2,7 @@ import { http, HttpResponse } from 'msw'
 import type { ApiCampaign, ApiCampaignScope } from '../../services/campaigns'
 import { parseMockJwt } from '../jwtUtils'
 
-interface MockCampaign extends ApiCampaign {
-  networkId?: string
-}
+type MockCampaign = ApiCampaign
 
 export const networkCampaigns: MockCampaign[] = [
   {
@@ -17,6 +15,9 @@ export const networkCampaigns: MockCampaign[] = [
     totalVoucherLimit: 100,
     issuedVouchers: 0,
     reservedVouchers: 0,
+    redeemedVouchers: 0,
+    expiredVouchers: 0,
+    networkId: '0199e3a0-0000-7000-8000-000000000001',
     items: [
       { benefitType: 'Percentage', benefitValue: 10, categoryId: null },
     ],
@@ -62,6 +63,8 @@ export function resetCreatedCampaigns() {
   seedCampaign.scopes = []
   seedCampaign.issuedVouchers = 0
   seedCampaign.reservedVouchers = 0
+  seedCampaign.redeemedVouchers = 0
+  seedCampaign.expiredVouchers = 0
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -90,6 +93,8 @@ function toResponse(campaign: MockCampaign, networkId: string, extra: Partial<St
     undistributedVouchers: campaign.totalVoucherLimit,
     issuedVouchers: campaign.issuedVouchers ?? 0,
     reservedVouchers: campaign.reservedVouchers ?? 0,
+    redeemedVouchers: campaign.redeemedVouchers ?? 0,
+    expiredVouchers: campaign.expiredVouchers ?? 0,
     createdAt: '2026-09-01T12:00:00Z',
     audienceType: extra.audienceType ?? 'AllCustomers',
     voucherValidity: { type: 'Relative', amount: 30, unit: 'Days', cap: null, validUntil: null },
@@ -185,7 +190,11 @@ export const campaignHandlers = [
       ...networkCampaigns,
       ...createdCampaigns.filter(campaign => campaign.networkId === networkId),
     ]
-    return HttpResponse.json(visible.map(campaign => toResponse(campaign, networkId, campaign)))
+    return HttpResponse.json(visible.map(campaign => toResponse(
+      campaign,
+      networkId,
+      'networkId' in campaign && typeof campaign.networkId === 'string' ? campaign as StoredCampaign : {},
+    )))
   }),
   http.post('*/api/v1/campaigns', async ({ request }) => {
     const body: unknown = await request.json()
@@ -205,6 +214,8 @@ export const campaignHandlers = [
       totalVoucherLimit: null,
       issuedVouchers: 0,
       reservedVouchers: 0,
+      redeemedVouchers: 0,
+      expiredVouchers: 0,
       perCustomerVoucherLimit: null,
       audienceType: null,
       minPurchaseAmount: null,

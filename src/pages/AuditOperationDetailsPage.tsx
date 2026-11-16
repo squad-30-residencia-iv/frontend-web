@@ -7,9 +7,11 @@ import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Loading } from '../components/ui/Loading'
 import { useFeedback } from '../components/ui/useFeedback'
+import { useAuth } from '../contexts/AuthContext'
 import { downloadAuditCsv } from '../data/auditExport'
 import { auditOperationLabels, formatAuditDateTime, getAuditJustification, loadAuditRecord } from '../data/auditRepository'
 import { returnToAudit } from '../navigation/auditNavigation'
+import { fetchAuditRecord } from '../services/audit'
 import type { AuditRecord } from '../types/audit'
 import './AuditOperationDetailsPage.css'
 
@@ -25,7 +27,8 @@ export interface AuditOperationDetailsPageProps {
   loadRecord?: (operationId: string) => Promise<AuditRecord | undefined>
 }
 
-export function AuditOperationDetailsPage({ operationId, loadRecord = loadAuditRecord }: AuditOperationDetailsPageProps) {
+export function AuditOperationDetailsPage({ operationId, loadRecord }: AuditOperationDetailsPageProps) {
+  const { user } = useAuth()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const feedback = useFeedback()
@@ -33,13 +36,17 @@ export function AuditOperationDetailsPage({ operationId, loadRecord = loadAuditR
   useEffect(() => {
     let cancelled = false
     setState({ status: 'loading' })
-    Promise.resolve().then(() => loadRecord(operationId)).then(record => {
-      if (!cancelled) setState(record ? { status: 'success', record } : { status: 'not-found' })
-    }).catch(() => {
-      if (!cancelled) setState({ status: 'error' })
-    })
+    const load = loadRecord ?? (user ? fetchAuditRecord : loadAuditRecord)
+    Promise.resolve()
+      .then(() => load(operationId))
+      .then(record => {
+        if (!cancelled) setState(record ? { status: 'success', record } : { status: 'not-found' })
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' })
+      })
     return () => { cancelled = true }
-  }, [operationId, loadRecord, attempt])
+  }, [operationId, loadRecord, user, attempt])
 
   function handleReturnLink(event: MouseEvent<HTMLAnchorElement>) {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return

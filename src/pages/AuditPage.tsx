@@ -9,8 +9,10 @@ import { useFeedback } from '../components/ui/useFeedback'
 import { AuditFilters } from '../components/audit/AuditFilters'
 import { AuditTable } from '../components/audit/AuditTable'
 import { openAuditOperation, readAuditListState } from '../navigation/auditNavigation'
+import { useAuth } from '../contexts/AuthContext'
 import { downloadAuditCsv } from '../data/auditExport'
 import { emptyAuditFilters, filterAuditRecords, getAuditSummary, loadAuditRecords } from '../data/auditRepository'
+import { fetchAuditRecords } from '../services/audit'
 import type { AuditFilters as Filters, AuditRecord } from '../types/audit'
 import './AuditPage.css'
 
@@ -20,7 +22,9 @@ export interface AuditPageProps {
   loadRecords?: () => Promise<readonly AuditRecord[]>
 }
 
-export function AuditPage({ loadRecords = loadAuditRecords }: AuditPageProps) {
+export function AuditPage({ loadRecords }: AuditPageProps) {
+  const { user } = useAuth()
+  const networkId = user?.networkId ?? null
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [initialView] = useState(readAuditListState)
@@ -31,13 +35,20 @@ export function AuditPage({ loadRecords = loadAuditRecords }: AuditPageProps) {
 
   useEffect(() => {
     let cancelled = false
-    Promise.resolve().then(loadRecords).then(records => {
-      if (!cancelled) setState({ status: 'success', records })
-    }).catch(() => {
-      if (!cancelled) setState({ status: 'error' })
+    const load = loadRecords ?? (() => {
+      if (networkId) return fetchAuditRecords(networkId)
+      return user ? Promise.resolve([]) : loadAuditRecords()
     })
+    Promise.resolve()
+      .then(load)
+      .then(records => {
+        if (!cancelled) setState({ status: 'success', records })
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' })
+      })
     return () => { cancelled = true }
-  }, [loadRecords, attempt])
+  }, [loadRecords, networkId, user, attempt])
 
   const filtered = useMemo(() => state.status === 'success' ? filterAuditRecords(state.records, applied) : [], [state, applied])
   const summary = useMemo(() => state.status === 'success' ? getAuditSummary(state.records) : null, [state])

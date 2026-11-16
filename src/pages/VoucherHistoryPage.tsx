@@ -5,8 +5,10 @@ import { PortalLayout } from '../components/layout/PortalLayout'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Loading } from '../components/ui/Loading'
+import { useAuth } from '../contexts/AuthContext'
 import { loadVoucherHistory } from '../data/voucherHistory'
 import { voucherStatusLabels } from '../data/vouchers'
+import { fetchVoucherHistory } from '../services/vouchers'
 import { navigate } from '../navigation/navigate'
 import { voucherEventLabels, type VoucherHistory } from '../types/voucherHistory'
 import './VoucherHistoryPage.css'
@@ -32,18 +34,24 @@ function formatEventDate(value: string) {
 }
 const goToVouchers = () => navigate(vouchersPath)
 
-export function VoucherHistoryPage({ voucherId, loadHistory = loadVoucherHistory }: VoucherHistoryPageProps) {
+export function VoucherHistoryPage({ voucherId, loadHistory }: VoucherHistoryPageProps) {
+  const { user } = useAuth()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let cancelled = false
-    Promise.resolve().then(() => loadHistory(voucherId)).then(history => {
-      if (!cancelled) setState(history ? { status: 'success', history } : { status: 'not-found' })
-    }).catch(() => {
-      if (!cancelled) setState({ status: 'error' })
-    })
+    // Com sessão chama a API (não depende de networkId). Sem sessão: repositório local dos testes.
+    const load = loadHistory ?? (user ? fetchVoucherHistory : loadVoucherHistory)
+    Promise.resolve()
+      .then(() => load(voucherId))
+      .then(history => {
+        if (!cancelled) setState(history ? { status: 'success', history } : { status: 'not-found' })
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' })
+      })
     return () => { cancelled = true }
-  }, [loadHistory, voucherId, attempt])
+  }, [loadHistory, user, voucherId, attempt])
 
   function retry() {
     setState({ status: 'loading' })
