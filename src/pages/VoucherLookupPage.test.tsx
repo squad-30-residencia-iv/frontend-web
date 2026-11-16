@@ -131,7 +131,8 @@ describe('Consulta de Vouchers', () => {
     const history = await screen.findByRole('menuitem', { name: 'Ver histórico' })
     await user.click(history)
     expect(window.location.pathname).toBe('/vouchers/voucher-1/historico')
-    expect(screen.getByRole('heading', { name: 'Histórico ainda não disponível' })).toBeVisible()
+    expect(await screen.findByRole('table', { name: 'Resumo' })).toHaveTextContent('VCH-8F2A91')
+    expect(screen.getByRole('heading', { level: 1, name: 'Histórico do voucher' })).toBeVisible()
   })
 })
 

@@ -351,3 +351,13 @@ O que o portal faz hoje:
 - Guardas do wizard conferidas pelos DTOs locais e mantidas: teto monetário percentual, lote e múltiplas restrições não são suportados; rascunho local preservado.
 - npm run verify aprovado: TypeScript e 355 testes em 35 arquivos. Nove casos adicionais nesta revisão. npm run build aprovado; avisos existentes de bundle e anotações Zod.
 - Spec concluída em docs/specs/completed/US-023-integracao-ciclo-campanha.md; guia docs/CAMPAIGN_API_INTEGRATION.md atualizado. Testes HTTP em memória (MSW); nenhuma mutação enviada à API real. Sem commit/push.
+
+## Entrega 2026-11-09 — US-027: histórico do voucher
+- Tela em /vouchers/:id/historico (branch feat/10_historico-voucher, issue #27) no PortalLayout com Vouchers ativo, dentro de ProtectedRoute, com PageHeader (subtitle e caminho Portal > Vouchers > Histórico). Substitui o destino provisório VoucherHistoryPending, removido de VoucherLookupPage.
+- Entrada pela Consulta: o item "Ver histórico" do VoucherActionsMenu abre a tela. Botão de voltar e caminho levam a /vouchers.
+- Resumo do voucher, escopo e regras de utilização e linha do tempo (movimentação, data/hora, origem, canal/local e resultado) do evento mais recente ao mais antigo. Estados: carregando, sucesso, voucher não encontrado e erro com tentar novamente.
+- Dados locais em data/voucherHistory.ts reaproveitando o Voucher da Consulta; loadVoucherHistory é o ponto único de troca por API e a página aceita loadHistory. VCH-8F2A91 usa os valores ilustrativos do protótipo (que se contradizem e foram mantidos); os demais vouchers têm histórico derivado do status e das datas, com benefício "Não informado".
+- Teste da Consulta ajustado para o novo destino do histórico. Pendências: contrato de API a confirmar com o backend.
+- Testes: 13 novos em VoucherHistoryPage.test.tsx e teste da Consulta ajustado; a suíte completa roda no hook de push.
+- Revisão visual no navegador conferida com o Figma (fluxo Consulta > Ver histórico).
+- Doc docs/VOUCHER_HISTORY.md; spec completed/US-027-historico-voucher.md.
