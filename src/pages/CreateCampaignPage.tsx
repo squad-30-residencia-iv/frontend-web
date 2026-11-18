@@ -24,7 +24,6 @@ import type { CampaignDraft } from '../types/campaign'
 import { CampaignBenefitsForm } from '../components/campaigns/create/CampaignBenefitsForm'
 import {
   validateCampaignBenefits,
-  validateDiscount,
   type CampaignBenefitsErrors,
 } from '../data/campaignBenefits'
 import { CampaignRulesForm } from '../components/campaigns/create/CampaignRulesForm'
@@ -228,24 +227,6 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     const field = formRef.current?.querySelector<HTMLElement>(`[name="${name}"]`)
     const focusTarget = field?.closest('.select')?.querySelector<HTMLElement>('button') ?? field
     focusTarget?.focus()
-  }
-
-  function handleAddBenefit() {
-    const benefits = draft.benefits
-    const key = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
-    const errors = validateCampaignBenefits(benefits)
-    if (!validateDiscount(benefits.discountType, benefits[key]) || errors.maximumDiscount) {
-      setBenefitsErrors({ [key]: errors[key], maximumDiscount: errors.maximumDiscount })
-      focusInvalidField(errors[key] ? key : 'maximumDiscount')
-      return
-    }
-    setDraft(current => ({
-      ...current, benefits: {
-        ...current.benefits,
-        addedBenefits: [...current.benefits.addedBenefits, { type: benefits.discountType, value: benefits[key], ...(benefits.discountType === 'percentage' ? { maximumDiscount: benefits.maximumDiscount } : {}) }],
-      }
-    }))
-    feedback.success({ title: 'Benefício adicionado ao rascunho.' })
   }
 
   function handleContinue(event: FormEvent<HTMLFormElement>) {
@@ -481,7 +462,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             categories={benefitChoices.categories}
             products={benefitChoices.products}
             onChange={handleBenefitsChange}
-            onAddBenefit={handleAddBenefit}
+
           />}
           {step === 3 && <CampaignRulesForm
             value={draft.rules}

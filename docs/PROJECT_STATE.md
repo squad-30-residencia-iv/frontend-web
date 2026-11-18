@@ -40,6 +40,8 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-025: removido Adicionar do desconto e seu handler de acumulação. A campanha configura um desconto percentual ou fixo, validado ao continuar. Benefícios extras antigos continuam visíveis e removíveis para preservar os rascunhos.
+
 - US-024: Validade do voucher exibe somente Duração em dias após a emissão. Modelo relativo e ausência de teto permanecem no contrato; rascunhos antigos com seleções vazias recebem esses padrões. Alteração somente no frontend.
 
 - US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.

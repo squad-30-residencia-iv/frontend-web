@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
@@ -20,7 +20,6 @@ interface CampaignBenefitsFormProps {
   categories?: readonly { value: string; label: string }[]
   products?: readonly { value: string; label: string }[]
   onChange: (value: Benefits) => void
-  onAddBenefit: () => void
 }
 const integerInputProps = { min: 1, step: 1 }
 const formatNumber = new Intl.NumberFormat('pt-BR')
@@ -32,7 +31,6 @@ export function CampaignBenefitsForm({
   categories = categoryOptions,
   products = productOptions,
   onChange,
-  onAddBenefit,
 }: CampaignBenefitsFormProps) {
 
   function update<Key extends keyof Benefits>(key: Key, fieldValue: Benefits[Key]) {
@@ -83,12 +81,6 @@ export function CampaignBenefitsForm({
           inputProps={{ inputMode: 'decimal' }}
         />
       }
-      <Button
-        type="button"
-        variant="secondary"
-        endIcon={Plus}
-        onPress={onAddBenefit}
-      >Adicionar</Button>
     </div>
     {value.addedBenefits.length > 0 && <ul className="campaign-benefits-added" aria-label="Benefícios adicionados">
       {value.addedBenefits.map((benefit, index) => <li key={`${index}-${benefit.type}-${benefit.value}`}>
