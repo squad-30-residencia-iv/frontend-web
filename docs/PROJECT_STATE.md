@@ -40,6 +40,8 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-024: Validade do voucher exibe somente Duração em dias após a emissão. Modelo relativo e ausência de teto permanecem no contrato; rascunhos antigos com seleções vazias recebem esses padrões. Alteração somente no frontend.
+
 - US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.
 - US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.
 - US-016: tela `/aplicacoes`, só do administrador (`allowedRoles` e item da Sidebar com `roles: ['administrador']`). Lista, cria, inativa e rotaciona o segredo das aplicações satélite da rede escolhida. O segredo aparece uma vez. Spec `completed/US-016-aplicacoes-satelite.md`. A listagem ainda é do MSW.

@@ -131,7 +131,7 @@
 
 .create-campaign-validity-fields {
   display: grid;
-  grid-template-columns: 1.3fr 1.8fr .9fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: start;
 }

@@ -62,7 +62,7 @@ export function loadCampaignDraft(): CampaignDraft {
       const benefits = 'benefits' in value && isCampaignBenefits(value.benefits) ? value.benefits : newCampaignBenefits()
       const rules = 'rules' in value && isCampaignRules(value.rules) ? value.rules : newCampaignRules()
       const scope = 'scope' in value && isCampaignScope(value.scope) ? value.scope : newCampaignScope()
-      return { information: value.information, benefits, rules, scope }
+      return { information: { ...value.information, voucherModel: 'relative', voucherCap: 'unlimited' }, benefits, rules, scope }
     }
   } catch {
     // Armazenamento indisponível ou rascunho inválido: iniciar um formulário novo.

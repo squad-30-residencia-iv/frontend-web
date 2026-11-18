@@ -43,8 +43,8 @@ describe('Criação de campanha', () => {
     expect(screen.getByLabelText('Início da vigência')).toHaveValue('2026-10-01T08:00')
     expect(screen.getByLabelText('Fim da vigência')).toHaveValue('2026-10-31T23:59')
     expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveValue(30)
-    expect(screen.getByRole('button', { name: /Modelo/ })).toHaveTextContent('Prazo relativo')
-    expect(screen.getByRole('button', { name: /Teto máximo/ })).toHaveTextContent('Sem teto')
+    expect(screen.queryByRole('button', { name: /Modelo/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Teto máximo/ })).not.toBeInTheDocument()
     expect(screen.getByText('Informações').closest('li')).toHaveAttribute('aria-current', 'step')
     expect(within(screen.getByRole('complementary', { name: 'Resumo da configuração' })).getByText('Informações básicas').closest('li')).toHaveTextContent('Informações básicas: pendente')
   })
@@ -128,17 +128,13 @@ describe('Criação de campanha', () => {
     expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Rascunho local')
   })
 
-  it('permite salvar incompleto e valida as seleções obrigatórias ao continuar', async () => {
-    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, voucherModel: '', voucherCap: '' } }))
+  it('restaura rascunho antigo com validade padrão sem exigir seleções ocultas', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, name: 'Campanha antiga', voucherModel: '', voucherCap: '' } }))
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
-    expect(await screen.findByText('Rascunho salvo neste navegador.')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(screen.getByText('Selecione o modelo de validade.')).toBeVisible()
-    expect(screen.getByText('Selecione o teto máximo.')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: /Modelo/ }))
-    await user.click(await screen.findByRole('option', { name: 'Prazo relativo' }))
+    expect(screen.getByRole('heading', { name: 'Alvos e benefícios' })).toBeVisible()
     expect(screen.queryByText('Selecione o modelo de validade.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Selecione o teto máximo.')).not.toBeInTheDocument()
   })
 
   it('ignora rascunhos inválidos e informa falha ao salvar sem perder dados', async () => {
