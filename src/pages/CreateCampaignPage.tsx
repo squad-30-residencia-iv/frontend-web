@@ -1,3 +1,4 @@
+import { batchIsReady, type CampaignBatch } from '../data/campaignBatch'
 import { PageHeader } from '../components/shared/PageHeader'
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
@@ -60,6 +61,8 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const networkId = user?.networkId ?? null
   const editing = campaignId !== undefined
   const signedIn = user !== null
+  const [batchSelection, setBatchSelection] = useState<CampaignBatch | null>(null)
+  const batchCustomerCount = batchIsReady(batchSelection) ? batchSelection.customerCount : 0
   const [draft, setDraft] = useState(() => editing ? newCampaignDraft() : loadCampaignDraft())
   const [editPhase, setEditPhase] = useState<EditPhase>(editing ? 'loading' : 'ready')
   const [editTarget, setEditTarget] = useState<EditableCampaign | null>(null)
@@ -81,7 +84,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const formRef = useRef<HTMLFormElement>(null)
   const returnPath = campaignId ? `/campanhas/${campaignId}` : '/campanhas'
   const information = draft.information
-  const dirty = JSON.stringify(draft) !== savedDraft
+  const dirty = JSON.stringify(draft) !== savedDraft || batchSelection !== null
   const basicInformationComplete = Object.keys(validateCampaignInformation(draft)).length === 0
 
   useEffect(() => {
@@ -168,6 +171,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   }
 
   function handleBenefitsChange(benefits: CampaignDraft['benefits']) {
+    if (benefits.generationMode === 'automatic') setBatchSelection(null)
     setDraft(current => ({ ...current, benefits }))
     setBenefitsErrors({})
   }
@@ -217,7 +221,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     try {
       localStorage.setItem(campaignDraftStorageKey, JSON.stringify(draft))
       setSavedDraft(JSON.stringify(draft))
-      feedback.success({ title: 'Rascunho salvo neste navegador.', description: 'Você pode voltar e continuar preenchendo depois.' })
+      feedback.success({ title: 'Rascunho salvo neste navegador.', description: draft.benefits.generationMode === 'batch' ? 'A seleção de grupos não foi salva. Selecione novamente ao reabrir o rascunho.' : 'Você pode voltar e continuar preenchendo depois.' })
     } catch {
       feedback.error({ title: 'Não foi possível salvar o rascunho.', description: 'Seus dados continuam nesta tela. Verifique o armazenamento do navegador e tente novamente.' })
     }
@@ -244,7 +248,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       return
     }
     if (step === 2) {
-      const validationErrors = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined)
+      const validationErrors = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined, batchCustomerCount)
       setBenefitsErrors(validationErrors)
       const firstInvalidField = Object.keys(validationErrors)[0]
       if (firstInvalidField) {
@@ -268,7 +272,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       return
     }
 
-    const validation = validateCampaignDraft(draft, draftCatalog)
+    const validation = validateCampaignDraft(draft, draftCatalog, batchCustomerCount)
     setErrors(validation.information)
     setBenefitsErrors(validation.benefits)
     setRulesErrors(validation.rules)
@@ -294,6 +298,11 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
         return
       }
       setStep(5)
+      return
+    }
+
+    if (draft.benefits.generationMode === 'batch') {
+      feedback.error({ title: 'Lote ainda não enviado.', description: 'Os grupos foram selecionados somente neste navegador. A inclusão de clientes e a geração de vouchers dependem da integração com o backend.' })
       return
     }
 
@@ -355,7 +364,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     feedback.success({ title: 'Campanha salva como rascunho.' })
     navigate('/campanhas')
   }
-  const benefitValidation = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined)
+  const benefitValidation = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined, batchCustomerCount)
   const benefitsComplete =
     visitedBenefits
     && !benefitValidation.percentage
@@ -377,7 +386,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     { label: 'Quantidade de vouchers', complete: quantityComplete },
     { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all' },
     { label: 'Escopo organizacional', complete: visitedScope },
-    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog).firstInvalid === null },
+    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog, batchCustomerCount).firstInvalid === null },
   ]
   const pageTitle = editing ? 'Editar rascunho' : 'Criar nova campanha'
   const breadcrumbs = [
@@ -461,6 +470,8 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             errors={benefitsErrors}
             categories={benefitChoices.categories}
             products={benefitChoices.products}
+            batchSelection={batchSelection}
+            onBatchChange={value => { setBatchSelection(value); setBenefitsErrors({}) }}
             onChange={handleBenefitsChange}
 
           />}
@@ -476,7 +487,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             onChange={handleScopeChange}
           />}
           {step === 5 && <>
-            <CampaignReview draft={draft} catalog={draftCatalog} />
+            <CampaignReview draft={draft} catalog={draftCatalog} batchCustomerCount={batchSelection?.customerCount ?? 0} batchGroupNames={batchSelection?.groups.map(group => group.name)} />
             {networkId && campaignPersistBlocker(draft) && <FeedbackAlert
               type="warning"
               title="Ajuste a configuração antes de enviar"

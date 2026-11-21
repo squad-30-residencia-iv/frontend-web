@@ -22,7 +22,7 @@ describe('Apresentação da revisão', () => {
     }
     draft.scope = { ...draft.scope, mode: 'stores', storeIds: ['store-center'], storeChannels: ['virtual'] }
     const original = JSON.stringify(draft)
-    const sections = getCampaignReviewSections(draft)
+    const sections = getCampaignReviewSections(draft, undefined, 2, ['Grupo demonstrativo A'])
     const fields = sections.flatMap(section => section.fields)
     const valueFor = (label: string) => fields.find(field => field.label === label)?.value
 
@@ -30,8 +30,9 @@ describe('Apresentação da revisão', () => {
     expect(valueFor('Produto ou categoria')).toBe('Moda, Calçados')
     expect(valueFor('Rede')).toBe('001 — Loja Centro')
     expect(valueFor('Canais')).toBe('Virtual')
-    expect(valueFor('Total previsto')).toBe('5.000 vouchers')
-    expect(valueFor('Base de clientes')).toBe('Base 1 (2.500 clientes)')
+    expect(valueFor('Total previsto')).toBe('4 vouchers')
+    expect(valueFor('Grupos selecionados')).toBe('Grupo demonstrativo A')
+    expect(valueFor('Clientes únicos')).toBe('2')
     expect(valueFor('Benefícios adicionados')).toBe('15%')
     expect(JSON.stringify(draft)).toBe(original)
   })

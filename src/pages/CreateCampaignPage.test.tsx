@@ -176,6 +176,12 @@ async function openBenefits() {
   return user
 }
 
+async function selectBatchGroup(user: ReturnType<typeof userEvent.setup>, name = 'Grupo demonstrativo A') {
+  await user.click(screen.getByRole('button', { name: /Grupos de clientes/ }))
+  await user.click(await screen.findByRole('option', { name: new RegExp(name) }))
+  await user.keyboard('{Escape}')
+}
+
 describe('Alvos e benefícios', () => {
   it('avança com a primeira etapa válida, indica conclusão e foca o título', async () => {
     await openBenefits()
@@ -188,14 +194,11 @@ describe('Alvos e benefícios', () => {
     expect(screen.getByRole('button', { name: /Tipo de benefício/ })).toHaveTextContent('Desconto percentual (%)')
     expect(screen.getByRole('radio', { name: 'Valor total da compra' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Automática' })).toBeChecked()
-    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('2.500 vouchers')
+    expect(screen.queryByLabelText('Total previsto')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toBeEnabled()
-    expect(screen.getByRole('button', { name: /Base de clientes/ })).toBeEnabled()
-    const batchQuantity = screen.getByRole('spinbutton', { name: 'Quantidade por cliente' })
-    await userEvent.setup().clear(batchQuantity)
-    await userEvent.setup().type(batchQuantity, '3')
-    expect(batchQuantity).toHaveValue(3)
-    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('7.500 vouchers')
+    await userEvent.setup().click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.getByRole('button', { name: /Grupos de clientes/ })).toBeVisible()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('0 vouchers')
   })
 
   it('bloqueia avanço da primeira etapa sem nome', async () => {
@@ -300,15 +303,21 @@ describe('Alvos e benefícios', () => {
     expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
   })
 
-  it('calcula lote por base e quantidade, ignorando campos automáticos inativos', async () => {
+  it('calcula lote pelos grupos, mantém entre etapas e salva somente configuração', async () => {
     const user = await openBenefits()
     await user.clear(screen.getByRole('spinbutton', { name: 'Quantidade por concessão' }))
     await user.click(screen.getByRole('radio', { name: 'Em lote' }))
-    expect(screen.getByRole('spinbutton', { name: 'Quantidade por concessão' })).toBeEnabled()
+    expect(screen.queryByRole('spinbutton', { name: 'Quantidade por concessão' })).not.toBeInTheDocument()
+    await selectBatchGroup(user)
     const quantity = screen.getByRole('spinbutton', { name: 'Quantidade por cliente' })
     await user.clear(quantity)
     await user.type(quantity, '2')
-    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('5.000 vouchers')
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('4 vouchers')
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    const stored = localStorage.getItem(campaignDraftStorageKey) ?? ''
+    expect(stored).not.toContain('52998224725')
+    expect(stored).not.toContain('01234567890')
+    expect(stored).not.toContain('demo-group-a')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
@@ -713,6 +722,62 @@ async function openReview() {
   await user.click(screen.getByRole('button', { name: 'Continuar' }))
   return user
 }
+
+describe('Lote por grupos cadastrados', () => {
+  it('exige grupos, agrega sem duplicar clientes, valida limite e bloqueia envio', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+      ...initialCampaignDraft,
+      information: { ...initialCampaignDraft.information, name: 'Campanha em lote' },
+      scope: { ...initialCampaignDraft.scope, mode: 'network', networkChannels: ['physical'] },
+    }))
+    const post = vi.spyOn(api, 'post')
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.queryByText(/Prévia local do lote/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione ao menos um grupo com clientes para continuar.')).toBeVisible()
+    await selectBatchGroup(user)
+    await selectBatchGroup(user, 'Grupo demonstrativo B')
+    expect(screen.getByRole('list', { name: 'Grupos selecionados' })).toHaveTextContent('Grupo demonstrativo A')
+    expect(screen.getByRole('list', { name: 'Grupos selecionados' })).toHaveTextContent('Grupo demonstrativo B')
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('4 vouchers')
+    const maximum = screen.getByRole('spinbutton', { name: /Quantidade máxima/ })
+    await user.clear(maximum)
+    await user.type(maximum, '1')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('O total do lote excede a quantidade máxima da campanha.')).toBeVisible()
+    await user.clear(maximum)
+    await user.type(maximum, '4')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    const review = screen.getByRole('region', { name: 'Alvo e benefícios' })
+    expect(review).toHaveTextContent('Grupo demonstrativo A, Grupo demonstrativo B')
+    expect(review).toHaveTextContent('Clientes únicos:4')
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByText('Lote ainda não enviado.')).toBeVisible()
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('exige seleção ao reabrir rascunho e limpa grupos ao trocar para automática', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+      ...initialCampaignDraft,
+      information: { ...initialCampaignDraft.information, name: 'Lote salvo' },
+      benefits: { ...initialCampaignDraft.benefits, generationMode: 'batch' },
+    }))
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.queryByRole('list', { name: 'Grupos selecionados' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('0 vouchers')
+    await selectBatchGroup(user)
+    expect(screen.getByRole('list', { name: 'Grupos selecionados' })).toBeVisible()
+    await user.click(screen.getByRole('radio', { name: 'Automática' }))
+    await user.click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.queryByRole('list', { name: 'Grupos selecionados' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('0 vouchers')
+  })
+})
 
 describe('Revisão geral', () => {
   it('mostra a quinta etapa com dados reais formatados e resumo completo', async () => {

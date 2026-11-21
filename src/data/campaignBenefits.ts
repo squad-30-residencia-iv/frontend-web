@@ -3,12 +3,12 @@ import type { CampaignBenefit, CampaignDraft } from '../types/campaign'
 
 export const categoryOptions = [{ value: 'category-fashion', label: 'Moda' }, { value: 'category-shoes', label: 'Calçados' }, { value: 'category-home', label: 'Casa' }]
 export const productOptions = [{ value: 'product-shirt', label: 'Camiseta demonstrativa' }, { value: 'product-shoes', label: 'Tênis demonstrativo' }]
-export const customerBases = [{ value: 'base-1', label: '1', customers: 2500 }]
+
 export const initialCampaignBenefits: CampaignDraft['benefits'] = {
   maximumDiscount: '', discountType: 'percentage', percentage: '20', fixedAmount: '200,00', addedBenefits: [],
   application: 'total', targetType: 'category', targetIds: [], maxVouchers: '1000',
   generationMode: 'automatic', quantityPerGrant: '1', limitPerCustomer: '1',
-  customerBase: 'base-1', quantityPerCustomer: '1',
+  customerBase: '', quantityPerCustomer: '1',
 }
 export type CampaignBenefitsErrors = Partial<Record<keyof CampaignDraft['benefits'], string>>
 export function parseDiscount(value: string) {
@@ -20,9 +20,8 @@ export function validateDiscount(type: CampaignBenefit['type'], value: string) {
   const amount = parseDiscount(value)
   return Number.isFinite(amount) && amount > 0 && (type !== 'percentage' || (amount >= 1 && amount <= 100))
 }
-export function getBatchTotal(benefits: CampaignDraft['benefits']) {
-  const base = customerBases.find(item => item.value === benefits.customerBase)
-  const total = (base?.customers ?? 0) * Number(benefits.quantityPerCustomer)
+export function getBatchTotal(benefits: CampaignDraft['benefits'], customerCount = 0) {
+  const total = customerCount * Number(benefits.quantityPerCustomer)
   return isPositiveInteger(benefits.quantityPerCustomer) && Number.isSafeInteger(total) ? total : 0
 }
 export interface BenefitCatalog {
@@ -33,6 +32,7 @@ export interface BenefitCatalog {
 function collectCampaignBenefitsErrors(
   benefits: CampaignDraft['benefits'],
   catalog: BenefitCatalog = { categories: categoryOptions, products: productOptions },
+  batchCustomerCount = 0,
 ): CampaignBenefitsErrors {
   const errors: CampaignBenefitsErrors = {}
   const discountField = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
@@ -48,9 +48,10 @@ function collectCampaignBenefitsErrors(
     if (!isPositiveInteger(benefits.quantityPerGrant)) errors.quantityPerGrant = 'Informe uma quantidade por concessão inteira maior que zero.'
     if (!isPositiveInteger(benefits.limitPerCustomer)) errors.limitPerCustomer = 'Informe um limite por cliente inteiro maior que zero.'
   } else {
-    if (!customerBases.some(base => base.value === benefits.customerBase)) errors.customerBase = 'Selecione uma base de clientes.'
-    if (!isPositiveInteger(benefits.quantityPerCustomer) || !getBatchTotal(benefits)) errors.quantityPerCustomer = 'Informe uma quantidade por cliente inteira válida maior que zero.'
+    if (!batchCustomerCount) errors.customerBase = 'Selecione ao menos um grupo com clientes para continuar.'
+    if (!isPositiveInteger(benefits.quantityPerCustomer) || !Number.isSafeInteger(batchCustomerCount * Number(benefits.quantityPerCustomer))) errors.quantityPerCustomer = 'Informe uma quantidade por cliente inteira válida maior que zero.'
   }
+  if (benefits.generationMode === 'batch' && getBatchTotal(benefits, batchCustomerCount) > Number(benefits.maxVouchers)) errors.maxVouchers = 'O total do lote excede a quantidade máxima da campanha.'
   return errors
 }
 export function isCampaignBenefits(value: unknown): value is CampaignDraft['benefits'] {
@@ -71,7 +72,7 @@ export function newCampaignBenefits(): CampaignDraft['benefits'] {
 
 export const campaignBenefitsSchema = createFormSchema(isCampaignBenefits, collectCampaignBenefitsErrors)
 
-export function validateCampaignBenefits(value: CampaignDraft['benefits'], catalog?: BenefitCatalog): CampaignBenefitsErrors {
-  if (catalog) return collectCampaignBenefitsErrors(value, catalog)
+export function validateCampaignBenefits(value: CampaignDraft['benefits'], catalog?: BenefitCatalog, batchCustomerCount = 0): CampaignBenefitsErrors {
+  if (catalog || value.generationMode === 'batch') return collectCampaignBenefitsErrors(value, catalog, batchCustomerCount)
   return formErrors(campaignBenefitsSchema, value)
 }
