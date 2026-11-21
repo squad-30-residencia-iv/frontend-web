@@ -1,5 +1,4 @@
 import { Input } from '../../ui/Input'
-import { Select } from '../../ui/Select'
 import type { CampaignDraft } from '../../../types/campaign'
 import type { CampaignInformationErrors } from '../../../data/campaignDraft'
 
@@ -9,8 +8,6 @@ interface CampaignInformationFormProps {
   errors: CampaignInformationErrors
   onChange: <Key extends keyof Information>(key: Key, value: Information[Key]) => void
 }
-const modelOptions = [{ value: 'relative', label: 'Prazo relativo' }]
-const capOptions = [{ value: 'unlimited', label: 'Sem teto' }]
 
 export function CampaignInformationForm({ information, errors, onChange }: CampaignInformationFormProps) {
   return (<section className="create-campaign-information" aria-labelledby="campaign-information-title">
@@ -52,16 +49,6 @@ export function CampaignInformationForm({ information, errors, onChange }: Campa
       <h3 id="voucher-validity-title">Validade do voucher</h3>
       <p>Independente da vigência da campanha</p>
       <div className="create-campaign-validity-fields">
-        <Select
-          label="Modelo"
-          name="voucherModel"
-          options={modelOptions}
-          value={information.voucherModel || null}
-          onChange={value => onChange('voucherModel', value === 'relative' ? 'relative' : '')}
-          isRequired
-          validationBehavior="aria"
-          errorMessage={errors.voucherModel}
-        />
         <div className="create-campaign-duration">
           <Input
             label="Duração"
@@ -76,16 +63,6 @@ export function CampaignInformationForm({ information, errors, onChange }: Campa
           />
           <span id="voucher-duration-unit" className="create-campaign-duration-unit">dias após a emissão</span>
         </div>
-        <Select
-          label="Teto máximo"
-          name="voucherCap"
-          options={capOptions}
-          value={information.voucherCap || null}
-          onChange={value => onChange('voucherCap', value === 'unlimited' ? 'unlimited' : '')}
-          isRequired
-          validationBehavior="aria"
-          errorMessage={errors.voucherCap}
-        />
       </div>
     </section>
   </section>)

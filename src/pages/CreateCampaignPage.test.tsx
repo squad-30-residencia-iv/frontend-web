@@ -43,8 +43,8 @@ describe('Criação de campanha', () => {
     expect(screen.getByLabelText('Início da vigência')).toHaveValue('2026-10-01T08:00')
     expect(screen.getByLabelText('Fim da vigência')).toHaveValue('2026-10-31T23:59')
     expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveValue(30)
-    expect(screen.getByRole('button', { name: /Modelo/ })).toHaveTextContent('Prazo relativo')
-    expect(screen.getByRole('button', { name: /Teto máximo/ })).toHaveTextContent('Sem teto')
+    expect(screen.queryByRole('button', { name: /Modelo/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Teto máximo/ })).not.toBeInTheDocument()
     expect(screen.getByText('Informações').closest('li')).toHaveAttribute('aria-current', 'step')
     expect(within(screen.getByRole('complementary', { name: 'Resumo da configuração' })).getByText('Informações básicas').closest('li')).toHaveTextContent('Informações básicas: pendente')
   })
@@ -128,17 +128,13 @@ describe('Criação de campanha', () => {
     expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Rascunho local')
   })
 
-  it('permite salvar incompleto e valida as seleções obrigatórias ao continuar', async () => {
-    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, voucherModel: '', voucherCap: '' } }))
+  it('restaura rascunho antigo com validade padrão sem exigir seleções ocultas', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({ information: { ...initialCampaignDraft.information, name: 'Campanha antiga', voucherModel: '', voucherCap: '' } }))
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
-    expect(await screen.findByText('Rascunho salvo neste navegador.')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
-    expect(screen.getByText('Selecione o modelo de validade.')).toBeVisible()
-    expect(screen.getByText('Selecione o teto máximo.')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: /Modelo/ }))
-    await user.click(await screen.findByRole('option', { name: 'Prazo relativo' }))
+    expect(screen.getByRole('heading', { name: 'Alvos e benefícios' })).toBeVisible()
     expect(screen.queryByText('Selecione o modelo de validade.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Selecione o teto máximo.')).not.toBeInTheDocument()
   })
 
   it('ignora rascunhos inválidos e informa falha ao salvar sem perder dados', async () => {
@@ -180,6 +176,12 @@ async function openBenefits() {
   return user
 }
 
+async function selectBatchGroup(user: ReturnType<typeof userEvent.setup>, name = 'Grupo demonstrativo A') {
+  await user.click(screen.getByRole('button', { name: /Grupos de clientes/ }))
+  await user.click(await screen.findByRole('option', { name: new RegExp(name) }))
+  await user.keyboard('{Escape}')
+}
+
 describe('Alvos e benefícios', () => {
   it('avança com a primeira etapa válida, indica conclusão e foca o título', async () => {
     await openBenefits()
@@ -192,14 +194,11 @@ describe('Alvos e benefícios', () => {
     expect(screen.getByRole('button', { name: /Tipo de benefício/ })).toHaveTextContent('Desconto percentual (%)')
     expect(screen.getByRole('radio', { name: 'Valor total da compra' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Automática' })).toBeChecked()
-    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('2.500 vouchers')
+    expect(screen.queryByLabelText('Total previsto')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toBeEnabled()
-    expect(screen.getByRole('button', { name: /Base de clientes/ })).toBeEnabled()
-    const batchQuantity = screen.getByRole('spinbutton', { name: 'Quantidade por cliente' })
-    await userEvent.setup().clear(batchQuantity)
-    await userEvent.setup().type(batchQuantity, '3')
-    expect(batchQuantity).toHaveValue(3)
-    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('7.500 vouchers')
+    await userEvent.setup().click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.getByRole('button', { name: /Grupos de clientes/ })).toBeVisible()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('0 vouchers')
   })
 
   it('bloqueia avanço da primeira etapa sem nome', async () => {
@@ -222,42 +221,41 @@ describe('Alvos e benefícios', () => {
     expect(percentage).toHaveFocus()
   })
 
-  it('valida o teto percentual e o preserva no benefício e rascunho', async () => {
+  it('valida o teto percentual e o preserva no desconto único e rascunho', async () => {
     const user = await openBenefits()
     const maximum = screen.getByRole('textbox', { name: 'Valor máximo de desconto (R$)' })
     expect(screen.queryByRole('textbox', { name: 'Valor do desconto (R$)' })).not.toBeInTheDocument()
     await user.type(maximum, '-1')
-    await user.click(screen.getByRole('button', { name: 'Adicionar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByText(/Informe um teto em reais/)).toBeVisible()
     await user.clear(maximum)
     await user.type(maximum, '150,50')
-    await user.click(screen.getByRole('button', { name: 'Adicionar' }))
-    expect(screen.getByRole('list', { name: 'Benefícios adicionados' })).toHaveTextContent(/máximo.*150,50/)
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
     const saved = JSON.parse(localStorage.getItem(campaignDraftStorageKey) ?? '{}')
     expect(saved.benefits.maximumDiscount).toBe('150,50')
-    expect(saved.benefits.addedBenefits[0].maximumDiscount).toBe('150,50')
+    expect(saved.benefits.addedBenefits).toEqual([])
   })
 
-  it('alterna desconto para reais, adiciona e remove benefícios localmente', async () => {
+  it('configura um desconto fixo sem oferecer acumulação de benefícios', async () => {
     const user = await openBenefits()
+    expect(screen.queryByRole('button', { name: 'Adicionar' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Tipo de benefício/ }))
     await user.click(screen.getByRole('option', { name: 'Desconto com valor fixo (R$)' }))
     const fixed = screen.getByRole('textbox', { name: 'Valor do desconto (R$)' })
     expect(screen.queryByRole('textbox', { name: 'Valor do desconto (%)' })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: 'Valor máximo de desconto (R$)' })).not.toBeInTheDocument()
     await user.clear(fixed)
-    await user.type(fixed, '35,50')
-    await user.click(screen.getByRole('button', { name: 'Adicionar' }))
-    const list = screen.getByRole('list', { name: 'Benefícios adicionados' })
-    expect(list).toHaveTextContent(/35,50/)
-    expect(await screen.findByText('Benefício adicionado ao rascunho.')).toBeVisible()
-    await user.click(within(list).getByRole('button', { name: 'Remover benefício 1' }))
-    expect(screen.queryByRole('list', { name: 'Benefícios adicionados' })).not.toBeInTheDocument()
-    await user.clear(fixed)
     await user.type(fixed, '-2')
-    await user.click(screen.getByRole('button', { name: 'Adicionar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByText('Informe um valor em reais maior que zero, com até duas casas decimais.')).toBeVisible()
+    await user.clear(fixed)
+    await user.type(fixed, '35,50')
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    const saved = JSON.parse(localStorage.getItem(campaignDraftStorageKey) ?? '{}')
+    expect(saved.benefits.fixedAmount).toBe('35,50')
+    expect(saved.benefits.addedBenefits).toEqual([])
   })
 
   it('seleciona múltiplas categorias e preserva ao voltar e avançar', async () => {
@@ -305,15 +303,21 @@ describe('Alvos e benefícios', () => {
     expect(screen.queryByRole('heading', { name: 'Revisão' })).not.toBeInTheDocument()
   })
 
-  it('calcula lote por base e quantidade, ignorando campos automáticos inativos', async () => {
+  it('calcula lote pelos grupos, mantém entre etapas e salva somente configuração', async () => {
     const user = await openBenefits()
     await user.clear(screen.getByRole('spinbutton', { name: 'Quantidade por concessão' }))
     await user.click(screen.getByRole('radio', { name: 'Em lote' }))
-    expect(screen.getByRole('spinbutton', { name: 'Quantidade por concessão' })).toBeEnabled()
+    expect(screen.queryByRole('spinbutton', { name: 'Quantidade por concessão' })).not.toBeInTheDocument()
+    await selectBatchGroup(user)
     const quantity = screen.getByRole('spinbutton', { name: 'Quantidade por cliente' })
     await user.clear(quantity)
     await user.type(quantity, '2')
-    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('5.000 vouchers')
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('4 vouchers')
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
+    const stored = localStorage.getItem(campaignDraftStorageKey) ?? ''
+    expect(stored).not.toContain('52998224725')
+    expect(stored).not.toContain('01234567890')
+    expect(stored).not.toContain('demo-group-a')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
@@ -718,6 +722,62 @@ async function openReview() {
   await user.click(screen.getByRole('button', { name: 'Continuar' }))
   return user
 }
+
+describe('Lote por grupos cadastrados', () => {
+  it('exige grupos, agrega sem duplicar clientes, valida limite e bloqueia envio', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+      ...initialCampaignDraft,
+      information: { ...initialCampaignDraft.information, name: 'Campanha em lote' },
+      scope: { ...initialCampaignDraft.scope, mode: 'network', networkChannels: ['physical'] },
+    }))
+    const post = vi.spyOn(api, 'post')
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.queryByText(/Prévia local do lote/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Selecione ao menos um grupo com clientes para continuar.')).toBeVisible()
+    await selectBatchGroup(user)
+    await selectBatchGroup(user, 'Grupo demonstrativo B')
+    expect(screen.getByRole('list', { name: 'Grupos selecionados' })).toHaveTextContent('Grupo demonstrativo A')
+    expect(screen.getByRole('list', { name: 'Grupos selecionados' })).toHaveTextContent('Grupo demonstrativo B')
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('4 vouchers')
+    const maximum = screen.getByRole('spinbutton', { name: /Quantidade máxima/ })
+    await user.clear(maximum)
+    await user.type(maximum, '1')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('O total do lote excede a quantidade máxima da campanha.')).toBeVisible()
+    await user.clear(maximum)
+    await user.type(maximum, '4')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    const review = screen.getByRole('region', { name: 'Alvo e benefícios' })
+    expect(review).toHaveTextContent('Grupo demonstrativo A, Grupo demonstrativo B')
+    expect(review).toHaveTextContent('Clientes únicos:4')
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByText('Lote ainda não enviado.')).toBeVisible()
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('exige seleção ao reabrir rascunho e limpa grupos ao trocar para automática', async () => {
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
+      ...initialCampaignDraft,
+      information: { ...initialCampaignDraft.information, name: 'Lote salvo' },
+      benefits: { ...initialCampaignDraft.benefits, generationMode: 'batch' },
+    }))
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.queryByRole('list', { name: 'Grupos selecionados' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('0 vouchers')
+    await selectBatchGroup(user)
+    expect(screen.getByRole('list', { name: 'Grupos selecionados' })).toBeVisible()
+    await user.click(screen.getByRole('radio', { name: 'Automática' }))
+    await user.click(screen.getByRole('radio', { name: 'Em lote' }))
+    expect(screen.queryByRole('list', { name: 'Grupos selecionados' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Total previsto')).toHaveTextContent('0 vouchers')
+  })
+})
 
 describe('Revisão geral', () => {
   it('mostra a quinta etapa com dados reais formatados e resumo completo', async () => {

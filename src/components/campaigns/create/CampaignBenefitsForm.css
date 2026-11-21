@@ -71,7 +71,7 @@ painéis acompanham seus campos. */
 }
 
 .campaign-benefits-discount {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .campaign-benefits-panel .button {

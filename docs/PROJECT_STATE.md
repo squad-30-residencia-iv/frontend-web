@@ -1,6 +1,6 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado em 2026-11-12. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
+> Atualizado em 2026-11-21. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **Sprint:** Sprint 1
 - **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e abre `/aplicacoes` para as aplicações satélite. Pausar e encerrar campanhas de Guid usam a API; vouchers, relatórios e auditoria continuam locais.
-- **Última atualização:** 2026-11-12.
+- **Última atualização:** 2026-11-21.
 
 O que o portal faz hoje:
 
@@ -39,6 +39,14 @@ O que o portal faz hoje:
 ---
 
 ## ✅ Últimas Entregas Concluídas
+
+- US-027: lote agora seleciona múltiplos grupos, mostra e remove os escolhidos e soma clientes únicos. Catálogo demonstrativo centralizado até existir consulta de grupos reais. Substitui a importação CSV da US-026, sem frases explicativas no formulário. Veja `CAMPAIGN_BATCH_GROUPS.md`.
+
+- US-026 (versão anterior): importação de CPFs substituída pela seleção de grupos na US-027. A conclusão do lote continua aguardando o backend.
+
+- US-025: removido Adicionar do desconto e seu handler de acumulação. A campanha configura um desconto percentual ou fixo, validado ao continuar. Benefícios extras antigos continuam visíveis e removíveis para preservar os rascunhos.
+
+- US-024: Validade do voucher exibe somente Duração em dias após a emissão. Modelo relativo e ausência de teto permanecem no contrato; rascunhos antigos com seleções vazias recebem esses padrões. Alteração somente no frontend.
 
 - US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.
 - US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.

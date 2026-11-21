@@ -4,11 +4,13 @@ import type { BenefitCatalog } from '../../../data/campaignBenefits'
 import type { CampaignStore } from '../../../data/campaignScope'
 import './CampaignReview.css'
 
-export function CampaignReview({ draft, catalog }: {
+export function CampaignReview({ draft, catalog, batchCustomerCount = 0, batchGroupNames = [] }: {
   draft: CampaignDraft
+  batchCustomerCount?: number
+  batchGroupNames?: readonly string[]
   catalog?: { categories?: BenefitCatalog['categories']; products?: BenefitCatalog['products']; stores?: readonly CampaignStore[] }
 }) {
-  const sections = getCampaignReviewSections(draft, catalog)
+  const sections = getCampaignReviewSections(draft, catalog, batchCustomerCount, batchGroupNames)
 
   return (
     <section className="create-campaign-information campaign-review" aria-labelledby="campaign-review-title">
