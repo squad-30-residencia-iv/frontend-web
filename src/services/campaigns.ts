@@ -26,6 +26,7 @@ export interface ApiCampaignScope {
 
 export interface ApiCampaign {
   id: string
+  networkId: string | null
   name: string
   description: string | null
   startsAt: string
@@ -34,6 +35,8 @@ export interface ApiCampaign {
   totalVoucherLimit: number | null
   issuedVouchers: number
   reservedVouchers: number
+  redeemedVouchers: number
+  expiredVouchers: number
   items: ApiCampaignItem[]
   rejectionReason?: string | null
   scopes?: ApiCampaignScope[]
@@ -106,6 +109,7 @@ export function readApiCampaign(value: unknown): ApiCampaign {
 
   return {
     id: value.id,
+    networkId: typeof value.networkId === 'string' ? value.networkId : null,
     name: value.name,
     description: typeof value.description === 'string' ? value.description : null,
     startsAt: value.startsAt,
@@ -114,6 +118,8 @@ export function readApiCampaign(value: unknown): ApiCampaign {
     totalVoucherLimit: typeof value.totalVoucherLimit === 'number' ? value.totalVoucherLimit : null,
     issuedVouchers: readCount(value.issuedVouchers),
     reservedVouchers: readCount(value.reservedVouchers),
+    redeemedVouchers: readCount(value.redeemedVouchers),
+    expiredVouchers: readCount(value.expiredVouchers),
     items: value.items.map(readItem).filter((item): item is ApiCampaignItem => item !== null),
     scopes: Array.isArray(value.scopes)
       ? value.scopes.map(readScope).filter((scope): scope is ApiCampaignScope => scope !== null)
@@ -516,7 +522,7 @@ function detailSections(campaign: ApiCampaignDetail): CampaignInfoSection[] {
   ]
 }
 
-export function toCampaignDetails(value: unknown): CampaignDetails {
+export function toCampaignDetails(value: unknown, recentVouchers: CampaignDetails['recentVouchers'] = []): CampaignDetails {
   const campaign = readDetail(value)
   return {
     id: campaign.id,
@@ -532,12 +538,12 @@ export function toCampaignDetails(value: unknown): CampaignDetails {
     metrics: {
       issued: campaign.issuedVouchers,
       reserved: campaign.reservedVouchers,
-      used: 0,
-      expired: 0,
+      used: campaign.redeemedVouchers,
+      expired: campaign.expiredVouchers,
       issueLimit: campaign.totalVoucherLimit,
     },
     lastUsedVoucher: null,
-    recentVouchers: [],
+    recentVouchers,
     info: detailSections(campaign),
     rejectionReason: campaign.rejectionReason ?? undefined,
   }
@@ -563,7 +569,38 @@ export async function decideCampaign(id: string, action: CampaignAction, reason?
 export async function fetchCampaignDetails(id: string): Promise<CampaignDetails | null> {
   try {
     const { data } = await api.get<unknown>(`/api/v1/campaigns/${id}`)
-    return toCampaignDetails(data)
+    const campaign = readDetail(data)
+    if (!campaign.networkId) return toCampaignDetails(data)
+    const { data: voucherRows } = await api.get<Array<{
+      code: string
+      customerDocumentMasked: string
+      issuedAt: string
+      validUntil: string
+      usesCount: number
+      maxUses: number
+      status: string
+    }>>('/api/v1/vouchers', { params: { networkId: campaign.networkId, campaignId: id } }).catch(() => ({ data: [] as const }))
+
+    const statusMap: Record<string, CampaignDetails['recentVouchers'][number]['status']> = {
+      Available: 'available',
+      Redeemed: 'used',
+      Expired: 'expired',
+      Provisional: 'available',
+    }
+    const recentVouchers = (Array.isArray(voucherRows) ? voucherRows : [])
+      .filter(row => row.status !== 'Discarded' && row.status !== 'Cancelled')
+      .slice(0, 7)
+      .map(row => ({
+        code: row.code,
+        customerMask: row.customerDocumentMasked,
+        issuedAt: row.issuedAt,
+        expiresAt: row.validUntil,
+        uses: row.usesCount,
+        maxUses: row.maxUses,
+        status: statusMap[row.status] ?? 'available',
+      }))
+
+    return toCampaignDetails(data, recentVouchers)
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) return null
     throw error

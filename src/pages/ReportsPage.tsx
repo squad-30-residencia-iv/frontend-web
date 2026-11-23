@@ -11,8 +11,10 @@ import { buildReportCsv, downloadCsv, reportCsvFilename } from '../components/re
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Loading } from '../components/ui/Loading'
+import { useAuth } from '../contexts/AuthContext'
 import { defaultReportFilters, normalizeReportFilters, parseReportFilters, serializeReportFilters } from '../data/reportFilters'
 import { fetchReport, fetchReportCatalog } from '../data/reports'
+import { fetchReportCatalogFromApi, fetchReportFromApi } from '../services/reports'
 import { navigate } from '../navigation/navigate'
 import type { ReportCatalog, ReportData, ReportFilters } from '../types/report'
 import './ReportsPage.css'
@@ -37,13 +39,27 @@ const pageTitle = 'Relatórios e indicadores'
 const pageSubtitle = 'Acompanhe o desempenho das campanhas e a utilização dos vouchers'
 const breadcrumbs = [{ label: 'Portal' }, { label: 'Relatórios' }]
 
-export function ReportsPage({ loadCatalog = fetchReportCatalog, loadReport = fetchReport }: ReportsPageProps) {
+export function ReportsPage({ loadCatalog, loadReport }: ReportsPageProps) {
+  const { user } = useAuth()
+  const networkId = user?.networkId ?? null
   const [state, setState] = useState<CatalogState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
-    loadCatalog()
+    const load = loadCatalog ?? (() => {
+      if (networkId) return fetchReportCatalogFromApi(networkId)
+      return user ? Promise.resolve({
+        periods: [],
+        campaigns: [],
+        categories: [],
+        networks: [],
+        regions: [],
+        establishments: [],
+        customerTypes: [],
+      } satisfies ReportCatalog) : fetchReportCatalog()
+    })
+    load()
       .then(catalog => {
         if (!cancelled) setState({ status: 'success', catalog })
       })
@@ -51,7 +67,7 @@ export function ReportsPage({ loadCatalog = fetchReportCatalog, loadReport = fet
         if (!cancelled) setState({ status: 'error' })
       })
     return () => { cancelled = true }
-  }, [loadCatalog, attempt])
+  }, [loadCatalog, networkId, user, attempt])
 
   function handleRetry() {
     setState({ status: 'loading' })
@@ -78,7 +94,9 @@ export function ReportsPage({ loadCatalog = fetchReportCatalog, loadReport = fet
           action={<Button onPress={() => navigate('/campanhas/nova')}>Criar campanha</Button>}
         />
       </>}
-      {state.status === 'success' && state.catalog.campaigns.length > 0 && <ReportsContent catalog={state.catalog} loadReport={loadReport} />}
+      {state.status === 'success' && state.catalog.campaigns.length > 0 && (
+        <ReportsContent catalog={state.catalog} networkId={networkId} loadReport={loadReport} />
+      )}
     </div>
   </PortalLayout>
 }
@@ -90,10 +108,11 @@ function writeFiltersToUrl(filters: ReportFilters) {
 
 interface ReportsContentProps {
   catalog: ReportCatalog
-  loadReport: (filters: ReportFilters) => Promise<ReportData>
+  networkId: string | null
+  loadReport?: (filters: ReportFilters) => Promise<ReportData>
 }
 
-function ReportsContent({ catalog, loadReport }: ReportsContentProps) {
+function ReportsContent({ catalog, networkId, loadReport }: ReportsContentProps) {
   const [initial] = useState(() => parseReportFilters(window.location.search, catalog))
   const [draft, setDraft] = useState<ReportFilters>(initial)
   const [applied, setApplied] = useState<ReportFilters>(initial)
@@ -102,7 +121,10 @@ function ReportsContent({ catalog, loadReport }: ReportsContentProps) {
 
   useEffect(() => {
     let cancelled = false
-    loadReport(applied)
+    const load = loadReport ?? ((filters: ReportFilters) => (
+      networkId ? fetchReportFromApi(networkId, filters) : fetchReport(filters)
+    ))
+    load(applied)
       .then(data => {
         if (!cancelled) setReport({ status: 'success', data })
       })
@@ -110,7 +132,7 @@ function ReportsContent({ catalog, loadReport }: ReportsContentProps) {
         if (!cancelled) setReport({ status: 'error' })
       })
     return () => { cancelled = true }
-  }, [loadReport, applied, attempt])
+  }, [loadReport, networkId, applied, attempt])
 
   function commit(filters: ReportFilters) {
     const next = normalizeReportFilters(catalog, filters)

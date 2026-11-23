@@ -23,14 +23,17 @@ import {
 
 const campaign: ApiCampaign = {
   id: '0199e3a0-0000-7000-8000-000000000111',
+  networkId: '0199e3a0-0000-7000-8000-000000000001',
   name: 'Volta às Aulas',
   description: 'Campanha da rede',
   startsAt: '2026-10-01T08:00:00-03:00',
   endsAt: '2026-10-31T23:59:00-03:00',
   status: 'Active',
-    totalVoucherLimit: 100,
-    issuedVouchers: 0,
-    reservedVouchers: 0,
+  totalVoucherLimit: 100,
+  issuedVouchers: 0,
+  reservedVouchers: 0,
+  redeemedVouchers: 0,
+  expiredVouchers: 0,
   items: [{ benefitType: 'Percentage', benefitValue: 10, categoryId: null }],
 }
 

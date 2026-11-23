@@ -171,7 +171,7 @@ function CampaignMetricCards({ details, illustrative = true }: { details: Campai
       <h2 id="details-metrics-title">Desempenho da campanha</h2>
       <p>{illustrative
         ? 'Acumulado desde o início · Demonstração'
-        : `${formatNumber(metrics.issued)} confirmados · ${formatNumber(details.metrics.reserved ?? 0)} reservados. Utilizados e a lista de vouchers ainda não vêm da API.`}
+        : `${formatNumber(metrics.issued)} confirmados · ${formatNumber(details.metrics.reserved ?? 0)} reservados · ${formatNumber(metrics.used)} utilizados.`}
       </p>
     </div>
     <div className="details-metrics-grid">
