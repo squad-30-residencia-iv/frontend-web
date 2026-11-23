@@ -1,12 +1,60 @@
 import { createFormSchema, formErrors } from '../schemas/validation'
 import type { CampaignBenefit, CampaignDraft } from '../types/campaign'
 
+export const MaxCampaignItems = 1000
 export const categoryOptions = [{ value: 'category-fashion', label: 'Moda' }, { value: 'category-shoes', label: 'Calçados' }, { value: 'category-home', label: 'Casa' }]
-export const productOptions = [{ value: 'product-shirt', label: 'Camiseta demonstrativa' }, { value: 'product-shoes', label: 'Tênis demonstrativo' }]
+export const productOptions = [
+  { value: 'product-shirt', label: 'Camiseta demonstrativa', code: 'CAM-DEMO' },
+  { value: 'product-shoes', label: 'Tênis demonstrativo', code: 'TEN-DEMO' },
+]
+
+/** Primeiro token da linha, para aceitar `CODIGO — nome` além do código sozinho. */
+export function productCodeFromEntry(entry: string): string {
+  const trimmed = entry.trim()
+  if (!trimmed) return ''
+  return trimmed.split(/\s+[—–-]\s+/)[0]?.trim() ?? trimmed
+}
+
+/** Códigos únicos, sem diferenciar maiúsculas; a primeira grafia informada permanece. */
+export function parseProductCodes(text: string): string[] {
+  const seen = new Set<string>()
+  const codes: string[] = []
+  for (const part of text.split(/[\n,;]+/)) {
+    const code = productCodeFromEntry(part)
+    if (!code) continue
+    const key = code.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    codes.push(code)
+  }
+  return codes
+}
+
+export function targetOptionLabel(option: { label: string; code?: string }) {
+  return option.code ? `${option.code} — ${option.label}` : option.label
+}
+
+/** Cola códigos no seletor: marca o produto do catálogo e grava o código no lote. */
+export function applyProductCodeBatch(
+  currentIds: readonly string[],
+  currentCodes: string,
+  pasted: string,
+  products: BenefitCatalog['products'] = [],
+) {
+  const codes = parseProductCodes(pasted)
+  const extraIds = codes.flatMap(code => {
+    const product = products.find(item => item.code?.toLowerCase() === code.toLowerCase())
+    return product && !currentIds.includes(product.value) ? [product.value] : []
+  })
+  return {
+    targetIds: [...currentIds, ...extraIds],
+    productCodes: parseProductCodes([currentCodes, pasted].join('\n')).join('\n'),
+  }
+}
 
 export const initialCampaignBenefits: CampaignDraft['benefits'] = {
   maximumDiscount: '', discountType: 'percentage', percentage: '20', fixedAmount: '200,00', addedBenefits: [],
-  application: 'total', targetType: 'category', targetIds: [], maxVouchers: '1000',
+  application: 'total', targetType: 'category', targetIds: [], productCodes: '', maxVouchers: '1000',
   generationMode: 'automatic', quantityPerGrant: '1', limitPerCustomer: '1',
   customerBase: '', quantityPerCustomer: '1',
 }
@@ -26,7 +74,21 @@ export function getBatchTotal(benefits: CampaignDraft['benefits'], customerCount
 }
 export interface BenefitCatalog {
   categories: readonly { value: string; label: string }[]
-  products: readonly { value: string; label: string }[]
+  products: readonly { value: string; label: string; code?: string }[]
+}
+
+export function unionProductTargetCount(
+  benefits: CampaignDraft['benefits'],
+  products: BenefitCatalog['products'] = [],
+): number {
+  const codes = parseProductCodes(benefits.productCodes ?? '')
+  const keys = new Set(codes.map(code => code.toLowerCase()))
+  const extra = benefits.targetIds.filter(id => {
+    const option = products.find(product => product.value === id)
+    const code = option?.code?.trim()
+    return !(code && keys.has(code.toLowerCase()))
+  }).length
+  return codes.length + extra
 }
 
 function collectCampaignBenefitsErrors(
@@ -40,8 +102,24 @@ function collectCampaignBenefitsErrors(
   if (benefits.discountType === 'percentage' && benefits.maximumDiscount?.trim() && !validateDiscount('fixed', benefits.maximumDiscount)) errors.maximumDiscount = 'Informe um teto em reais maior que zero ou deixe em branco para não limitar.'
   if (benefits.addedBenefits.some(item => !validateDiscount(item.type, item.value) || (item.type === 'percentage' && Boolean(item.maximumDiscount?.trim()) && !validateDiscount('fixed', item.maximumDiscount ?? '')))) errors.addedBenefits = 'Revise os benefícios adicionados.'
   if (benefits.application === 'specific') {
-    const options = benefits.targetType === 'category' ? catalog.categories : catalog.products
-    if (!benefits.targetIds.length || benefits.targetIds.some(id => !options.some(option => option.value === id))) errors.targetIds = 'Selecione ao menos um produto ou categoria.'
+    if (benefits.targetType === 'category') {
+      const options = catalog.categories
+      if (!benefits.targetIds.length || benefits.targetIds.some(id => !options.some(option => option.value === id))) {
+        errors.targetIds = 'Selecione ao menos um produto ou categoria.'
+      }
+    } else {
+      const options = catalog.products
+      if (benefits.targetIds.some(id => !options.some(option => option.value === id))) {
+        errors.targetIds = 'Selecione ao menos um produto ou categoria.'
+      }
+      const count = unionProductTargetCount(benefits, options)
+      if (count === 0) {
+        errors.targetIds = 'Selecione ao menos um produto ou informe códigos.'
+        errors.productCodes = 'Informe ao menos um código ou selecione produtos.'
+      } else if (count > MaxCampaignItems) {
+        errors.productCodes = 'Informe no máximo 1.000 produtos (lista e seletor juntos).'
+      }
+    }
   }
   if (!isPositiveInteger(benefits.maxVouchers)) errors.maxVouchers = 'Informe uma quantidade máxima inteira maior que zero.'
   if (benefits.generationMode === 'automatic') {
@@ -64,10 +142,11 @@ export function isCampaignBenefits(value: unknown): value is CampaignDraft['bene
     && (item.targetType === 'category' || item.targetType === 'product')
     && (item.generationMode === 'automatic' || item.generationMode === 'batch')
     && Array.isArray(item.targetIds) && item.targetIds.every(id => typeof id === 'string')
+    && (item.productCodes === undefined || typeof item.productCodes === 'string')
     && Array.isArray(item.addedBenefits) && item.addedBenefits.every((benefit: unknown) => Boolean(benefit && typeof benefit === 'object' && 'type' in benefit && (benefit.type === 'percentage' || benefit.type === 'fixed') && 'value' in benefit && typeof benefit.value === 'string' && (!('maximumDiscount' in benefit) || typeof benefit.maximumDiscount === 'string')))
 }
 export function newCampaignBenefits(): CampaignDraft['benefits'] {
-  return { ...initialCampaignBenefits, targetIds: [], addedBenefits: [] }
+  return { ...initialCampaignBenefits, targetIds: [], productCodes: '', addedBenefits: [] }
 }
 
 export const campaignBenefitsSchema = createFormSchema(isCampaignBenefits, collectCampaignBenefitsErrors)

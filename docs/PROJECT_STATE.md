@@ -24,6 +24,7 @@ O que o portal faz hoje:
 
 ## 🚧 Tarefas em Andamento
 
+- [x] US-028: alvo de produto por código no assistente (seletor + lista; `productCode`/`productId` no `PUT /items`). Spec ainda em `docs/specs/in-progress/US-028-alvo-produto-por-codigo.md` até o save-session. `npm run verify`: 39 arquivos, 387 testes.
 - [x] US-025: integrar vouchers, histórico, relatórios e auditoria à API (EP-03). Spec `completed/US-025-integracao-acompanhamento-api.md`. Mesclada na `staging`.
 - [x] Mesclar `feat/integracao-acompanhamento-api` na `staging` (depois do backend EP-03).
 - [ ] US-017 nome na sessão: o código e o `npm run verify` passaram. A spec `in-progress/US-017-nome-na-sessao.md` fica aberta até o caso do guard (login sem `profile.name`) ter teste. Só então mover para `completed/`.
@@ -38,6 +39,17 @@ O que o portal faz hoje:
 - [ ] US-012 Home: código e testes escritos. Falta `npm run verify`, `npm run build` e a revisão visual. A spec `US-012-home-sidebar.md` ainda diz que `/auditoria` é placeholder; isso foi substituído pela US-014/US-015.
 - [ ] Specs desatualizadas, sem reabrir o trabalho: `in-progress/US-011-autenticacao-msw-jwt.md` é o rascunho anterior (cita `react-router` e checklist aberto). A spec válida é `completed/US-011-autenticacao-msw-jwt.md`. `in-progress/US-001-login.md` não descreve o login atual; a autenticação foi entregue na US-011. `completed/US-014-auditoria.md` ainda fala em modal; a US-015 trocou pelo detalhe em rota.
 - [ ] Há três specs com o id US-013 (consulta de vouchers, detalhes da campanha e relatórios) e duas com US-012 (PageHeader e Home). O id do arquivo distingue qual é qual.
+
+### Fora do ponto atual (próximas entregas)
+
+- Lote da campanha com lista de CPF (hoje grupos mock + bloqueio na API).
+- Público elegível `Restricted` alinhado ao satélite (portal ainda manda `AllCustomers`).
+- Etapa de restrições no resgate (`redemption-targets` / `redemption-windows`).
+- Navegação pelo resumo (etapas verdes clicáveis).
+- Combinação OU (“basta uma”) no motor.
+- Clareza extra do escopo organizacional (copy/mapa).
+- Importação em lote de lojas e de produtos no `/cadastros`.
+- Tags de campanha e redesenho dos filtros do dashboard.
 
 ---
 

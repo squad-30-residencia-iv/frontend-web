@@ -44,6 +44,7 @@ import {
   saveCampaignDraft,
   type EditableCampaign,
 } from '../services/campaigns'
+import { ApiProblemError } from '../services/problemDetails'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -325,6 +326,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       setSaving(true)
       saveCampaignDraft(networkId, draft, campaignId ?? readSavedCampaignId(), {
         stores: catalog?.stores,
+        products: catalog?.products,
         description: editTarget?.description ?? null,
       })
         .then(({ notices }) => {
@@ -341,6 +343,14 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
           navigate('/campanhas')
         })
         .catch((error: unknown) => {
+          if (error instanceof ApiProblemError && error.codes.length) {
+            setBenefitsErrors(current => ({
+              ...current,
+              productCodes: `Códigos recusados: ${error.codes.join(', ')}.`,
+            }))
+            pendingFocusRef.current = 'productCodes'
+            setStep(2)
+          }
           feedback.error({
             title: 'Não foi possível concluir o salvamento.',
             description: error instanceof Error ? error.message : 'Não foi possível registrar a campanha. Seus dados continuam nesta tela; tente novamente.',
@@ -372,6 +382,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     && !benefitValidation.fixedAmount
     && !benefitValidation.addedBenefits
     && !benefitValidation.targetIds
+    && !benefitValidation.productCodes
   const quantityComplete =
     visitedBenefits
     && !benefitValidation.maxVouchers

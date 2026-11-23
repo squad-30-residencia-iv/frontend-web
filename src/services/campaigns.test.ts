@@ -10,6 +10,7 @@ import {
   duplicateCampaign,
   fetchNetworkCampaigns,
   formatBenefit,
+  campaignItemBody,
   saveCampaignDraft,
   scopeBody,
   scopeSummary,
@@ -206,6 +207,32 @@ describe('escopo e edição do rascunho (US-021)', () => {
     expect(toListCampaign({ ...campaign, scopes: [region] }).scope).toBe('Região Norte')
   })
 
+  it('monta PUT items com productCode exclusivo e une o seletor', () => {
+    const draft = {
+      ...initialCampaignDraft,
+      benefits: {
+        ...initialCampaignDraft.benefits,
+        application: 'specific' as const,
+        targetType: 'product' as const,
+        targetIds: ['p1', 'p2'],
+        productCodes: 'SKU-A\nsku-b',
+      },
+    }
+    const items = campaignItemBody(draft, [
+      { value: 'p1', code: 'SKU-A' },
+      { value: 'p2', code: 'OTHER' },
+    ])
+
+    expect(items).toEqual([
+      expect.objectContaining({ targetType: 'Product', productCode: 'SKU-A' }),
+      expect.objectContaining({ targetType: 'Product', productCode: 'sku-b' }),
+      expect.objectContaining({ targetType: 'Product', productId: 'p2' }),
+    ])
+    expect(items[0]).not.toHaveProperty('productId')
+    expect(items[1]).not.toHaveProperty('productId')
+    expect(items[2]).not.toHaveProperty('productCode')
+  })
+
   it('grava nome e vigência e o escopo ao salvar uma campanha que já existe', async () => {
     const requests: string[] = []
     const onRequest = ({ request }: { request: Request }) => { requests.push(`${request.method} ${new URL(request.url).pathname}`) }
@@ -257,6 +284,47 @@ describe('escopo e edição do rascunho (US-021)', () => {
     expect(notices.join(' ')).toMatch(/validade gravada/)
     expect(notices.join(' ')).toMatch(/Condições de categoria/)
     expect(notices.join(' ')).toMatch(/Regiões gravadas/)
+  })
+
+  it('reabre alvos de produto na lista de códigos e no seletor', () => {
+    const { draft } = campaignToDraft({
+      ...campaign,
+      status: 'Draft',
+      items: [
+        { targetType: 'Product', categoryId: null, productId: 'p1', productCode: 'CAM-DEMO', benefitType: 'Percentage', benefitValue: 10 },
+        { targetType: 'Product', categoryId: null, productId: null, productCode: 'TEN-DEMO', benefitType: 'Percentage', benefitValue: 10 },
+      ],
+    })
+
+    expect(draft.benefits.application).toBe('specific')
+    expect(draft.benefits.targetType).toBe('product')
+    expect(draft.benefits.targetIds).toEqual(['p1'])
+    expect(draft.benefits.productCodes).toBe('CAM-DEMO\nTEN-DEMO')
+  })
+
+  it('propaga codes do 422 no PUT items', async () => {
+    const id = '0199e3a0-0000-7000-8000-000000000111'
+    server.use(http.put('*/api/v1/campaigns/:id/items', () => HttpResponse.json({
+      status: 422,
+      detail: 'Um ou mais códigos de produto não existem no catálogo.',
+      code: 'CAMPAIGN_ITEM_PRODUCT_CODE_NOT_FOUND',
+      codes: ['ZZZ-NOPE'],
+    }, { status: 422 })))
+    const draft = {
+      ...initialCampaignDraft,
+      benefits: {
+        ...initialCampaignDraft.benefits,
+        application: 'specific' as const,
+        targetType: 'product' as const,
+        productCodes: 'ZZZ-NOPE',
+      },
+      scope: networkScope,
+    }
+
+    await expect(saveCampaignDraft('0199e3a0-0000-7000-8000-000000000001', draft, id)).rejects.toMatchObject({
+      message: expect.stringMatching(/ZZZ-NOPE/),
+      codes: ['ZZZ-NOPE'],
+    })
   })
 
   it('duplica e devolve o id da cópia; o 422 mostra o detail', async () => {

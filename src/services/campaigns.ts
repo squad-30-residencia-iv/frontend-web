@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { api } from './api'
 import { problemMessage, toProblemError } from './problemDetails'
-import { newCampaignBenefits, parseDiscount } from '../data/campaignBenefits'
+import { newCampaignBenefits, parseDiscount, parseProductCodes } from '../data/campaignBenefits'
 import { writeSavedCampaignId } from '../data/campaignDraft'
 import { newCampaignRules } from '../data/campaignRules'
 import { newCampaignScope, storeScopeChannels, type CampaignStore } from '../data/campaignScope'
@@ -252,21 +252,43 @@ function benefitAmount(draft: CampaignDraft) {
   return parseDiscount(raw)
 }
 
-function itemBody(draft: CampaignDraft) {
+export interface ProductTargetOption {
+  value: string
+  code?: string
+}
+
+/** Corpo de `PUT /items`: Product do seletor usa `productId`; da lista, só `productCode`. */
+export function campaignItemBody(draft: CampaignDraft, products: readonly ProductTargetOption[] = []) {
   const benefitType = draft.benefits.discountType === 'percentage' ? 'Percentage' : 'FixedAmount'
   const benefitValue = benefitAmount(draft)
+  const shared = { benefitType, benefitValue, voucherLimit: null as null }
   if (draft.benefits.application === 'total') {
-    return [{ targetType: 'All', categoryId: null, productId: null, benefitType, benefitValue, voucherLimit: null }]
+    return [{ targetType: 'All', categoryId: null, productId: null, ...shared }]
   }
-  const targetType = draft.benefits.targetType === 'category' ? 'Category' : 'Product'
-  return draft.benefits.targetIds.map(id => ({
-    targetType,
-    categoryId: targetType === 'Category' ? id : null,
-    productId: targetType === 'Product' ? id : null,
-    benefitType,
-    benefitValue,
-    voucherLimit: null,
+  if (draft.benefits.targetType === 'category') {
+    return draft.benefits.targetIds.map(id => ({
+      targetType: 'Category',
+      categoryId: id,
+      productId: null,
+      ...shared,
+    }))
+  }
+
+  const codes = parseProductCodes(draft.benefits.productCodes)
+  const keys = new Set(codes.map(code => code.toLowerCase()))
+  const fromList = codes.map(productCode => ({
+    targetType: 'Product' as const,
+    categoryId: null,
+    productCode,
+    ...shared,
   }))
+  const fromSelector = draft.benefits.targetIds.flatMap(id => {
+    const option = products.find(product => product.value === id)
+    const code = option?.code?.trim()
+    if (code && keys.has(code.toLowerCase())) return []
+    return [{ targetType: 'Product' as const, categoryId: null, productId: id, ...shared }]
+  })
+  return [...fromList, ...fromSelector]
 }
 
 const apiChannels: Record<CampaignChannel, string> = { physical: 'Physical', virtual: 'Virtual' }
@@ -288,6 +310,8 @@ export function scopeBody(scope: CampaignDraft['scope'], stores: readonly Campai
 export interface SaveCampaignContext {
   /** Lojas da rede, com os canais, para o corpo do escopo. */
   stores?: readonly CampaignStore[]
+  /** Produtos ativos, com `code`, para unir seletor e lista no `PUT /items`. */
+  products?: readonly ProductTargetOption[]
   /** Descrição gravada; a tela não a edita e a reenvia ao salvar uma campanha existente. */
   description?: string | null
 }
@@ -332,7 +356,7 @@ export async function saveCampaignDraft(
       ? Number(draft.benefits.quantityPerCustomer)
       : Number(draft.benefits.limitPerCustomer)
     const firstRestriction = draft.rules.restrictions[0]
-    await api.put(`/api/v1/campaigns/${id}/items`, { items: itemBody(draft) })
+    await api.put(`/api/v1/campaigns/${id}/items`, { items: campaignItemBody(draft, context.products) })
     await api.put(`/api/v1/campaigns/${id}/quantities`, {
       totalVoucherLimit: Number(draft.benefits.maxVouchers),
       perCustomerVoucherLimit: perCustomer,
@@ -389,6 +413,7 @@ interface ApiCondition {
 interface ApiDetailItem extends ApiCampaignItem {
   targetType: string
   productId: string | null
+  productCode: string | null
 }
 
 interface ApiCampaignDetail extends ApiCampaign {
@@ -436,6 +461,7 @@ function readDetail(value: unknown): ApiCampaignDetail {
       ...base,
       targetType: typeof item.targetType === 'string' ? item.targetType : 'All',
       productId: typeof item.productId === 'string' ? item.productId : null,
+      productCode: typeof item.productCode === 'string' ? item.productCode : null,
     }]
   }) : []
 
@@ -647,6 +673,11 @@ function draftBenefits(campaign: ApiCampaignDetail, notices: string[]): Campaign
         const id = targetType === 'category' ? item.categoryId : item.productId
         return item.targetType === first.targetType && id ? [id] : []
       })
+      if (targetType === 'product') {
+        benefits.productCodes = items
+          .flatMap(item => item.targetType === 'Product' && item.productCode ? [item.productCode] : [])
+          .join('\n')
+      }
       if (items.some(item => item.targetType !== first.targetType)) {
         notices.push('A campanha mistura tipos de alvo; ao salvar, ficam só os do mesmo tipo do primeiro.')
       }

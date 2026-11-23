@@ -1,5 +1,5 @@
 import type { CampaignChannel, CampaignDraft } from '../types/campaign'
-import { categoryOptions, productOptions, getBatchTotal, parseDiscount, type BenefitCatalog } from './campaignBenefits'
+import { categoryOptions, productOptions, getBatchTotal, parseDiscount, parseProductCodes, type BenefitCatalog } from './campaignBenefits'
 import { campaignStores, type CampaignStore } from './campaignScope'
 
 export interface CampaignReviewField {
@@ -53,7 +53,26 @@ export function getCampaignReviewSections(
     return store ? `${store.code} — ${store.name}` : 'Loja indisponível'
   })
   const targetOptions = benefits.targetType === 'category' ? categories : products
-  const targetNames = benefits.targetIds.map(id => targetOptions.find(option => option.value === id)?.label ?? 'Item indisponível')
+  const pastedCodes = parseProductCodes(benefits.productCodes)
+  const selectedNames = benefits.targetIds.map(id => {
+    const option = targetOptions.find(item => item.value === id)
+    const catalogCode = products.find(item => item.value === id)?.code
+    if (
+      benefits.targetType === 'product'
+      && catalogCode
+      && pastedCodes.some(item => item.toLowerCase() === catalogCode.toLowerCase())
+    ) {
+      return null
+    }
+    return option?.label ?? 'Item indisponível'
+  }).filter((label): label is string => label !== null)
+  const codeNames = benefits.targetType === 'product'
+    ? parseProductCodes(benefits.productCodes).map(code => {
+      const option = products.find(item => item.code?.toLowerCase() === code.toLowerCase())
+      return option ? `${code} — ${option.label}` : code
+    })
+    : []
+  const targetNames = [...selectedNames, ...codeNames]
   const isSpecific = benefits.application === 'specific'
   const isAutomatic = benefits.generationMode === 'automatic'
   const discountValue = benefits.discountType === 'percentage' ? benefits.percentage : benefits.fixedAmount

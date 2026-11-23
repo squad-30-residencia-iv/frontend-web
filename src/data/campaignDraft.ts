@@ -59,7 +59,12 @@ export function loadCampaignDraft(): CampaignDraft {
     const stored = localStorage.getItem(campaignDraftStorageKey)
     const value: unknown = stored ? JSON.parse(stored) : null
     if (isCampaignDraft(value)) {
-      const benefits = 'benefits' in value && isCampaignBenefits(value.benefits) ? value.benefits : newCampaignBenefits()
+      const benefits = 'benefits' in value && isCampaignBenefits(value.benefits)
+        ? {
+            ...value.benefits,
+            productCodes: typeof value.benefits.productCodes === 'string' ? value.benefits.productCodes : '',
+          }
+        : newCampaignBenefits()
       const rules = 'rules' in value && isCampaignRules(value.rules) ? value.rules : newCampaignRules()
       const scope = 'scope' in value && isCampaignScope(value.scope) ? value.scope : newCampaignScope()
       return { information: { ...value.information, voucherModel: 'relative', voucherCap: 'unlimited' }, benefits, rules, scope }

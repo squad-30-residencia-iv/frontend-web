@@ -92,8 +92,51 @@ painéis acompanham seus campos. */
 .campaign-benefits-targets {
   display: grid;
   gap: 10px;
-  max-width: 290px;
+  max-width: 460px;
   margin-bottom: 14px;
+}
+
+.campaign-benefits-codes {
+  display: grid;
+  gap: 6px;
+}
+
+.campaign-benefits-codes label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.campaign-benefits-codes textarea, .campaign-benefits-codes input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 9px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-ink);
+  background: var(--surface);
+}
+
+.campaign-benefits-codes textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.campaign-benefits-codes input {
+  min-height: 37px;
+}
+
+.campaign-benefits-codes textarea:focus-visible, .campaign-benefits-codes input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.campaign-benefits-codes-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .campaign-benefits-maximum {

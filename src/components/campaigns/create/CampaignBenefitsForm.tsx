@@ -6,10 +6,13 @@ import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
 import type { CampaignDraft } from '../../../types/campaign'
 import {
+  applyProductCodeBatch,
   categoryOptions,
   productOptions,
   getBatchTotal,
   parseDiscount,
+  parseProductCodes,
+  targetOptionLabel,
   type CampaignBenefitsErrors,
 } from '../../../data/campaignBenefits'
 import './CampaignBenefitsForm.css'
@@ -19,7 +22,7 @@ interface CampaignBenefitsFormProps {
   value: Benefits
   errors: CampaignBenefitsErrors
   categories?: readonly { value: string; label: string }[]
-  products?: readonly { value: string; label: string }[]
+  products?: readonly { value: string; label: string; code?: string }[]
   batchSelection: CampaignBatch | null
   onBatchChange: (batch: CampaignBatch | null) => void
   onChange: (value: Benefits) => void
@@ -43,6 +46,12 @@ export function CampaignBenefitsForm({
   }
   const specific = value.application === 'specific'
   const batch = value.generationMode === 'batch'
+  const productTargets = products.map(option => ({ value: option.value, label: targetOptionLabel(option) }))
+
+  function commitSelectorCodes(text: string) {
+    const next = applyProductCodeBatch(value.targetIds, value.productCodes, text, products)
+    onChange({ ...value, targetIds: next.targetIds, productCodes: next.productCodes })
+  }
   return <section className="create-campaign-information campaign-benefits" aria-labelledby="campaign-benefits-title">
     <h2 id="campaign-benefits-title" tabIndex={-1}>Alvos e benefícios</h2>
     <Select
@@ -134,20 +143,68 @@ export function CampaignBenefitsForm({
         name="targetType"
         options={[{ value: 'category', label: 'Categoria' }, { value: 'product', label: 'Produto' }]}
         value={value.targetType}
-        onChange={next => onChange({ ...value, targetType: next === 'product' ? 'product' : 'category', targetIds: [] })}
+        onChange={next => onChange({
+          ...value,
+          targetType: next === 'product' ? 'product' : 'category',
+          targetIds: [],
+          productCodes: next === 'product' ? value.productCodes : '',
+        })}
       />
       <Select
         selectionMode="multiple"
         label="Produtos ou categoria"
         name="targetIds"
-        options={value.targetType === 'category' ? categories : products}
+        options={value.targetType === 'category' ? categories : productTargets}
         value={value.targetIds}
         onChange={next => update('targetIds', next.map(String))}
         placeholder="Selecione uma ou mais opções"
-        isRequired={specific}
+        isRequired={specific && (value.targetType === 'category' || parseProductCodes(value.productCodes).length === 0)}
         validationBehavior="aria"
         errorMessage={errors.targetIds}
       />
+      {value.targetType === 'product' && <>
+        <div className="campaign-benefits-codes">
+          <label htmlFor="campaign-product-selector-codes">Adicionar ao seletor por código</label>
+          <input
+            id="campaign-product-selector-codes"
+            name="selectorProductCodes"
+            placeholder="MOD-001 — Camiseta, CAL-001"
+            onKeyDown={event => {
+              if (event.key !== 'Enter') return
+              event.preventDefault()
+              commitSelectorCodes(event.currentTarget.value)
+              event.currentTarget.value = ''
+            }}
+            onPaste={event => {
+              const text = event.clipboardData.getData('text')
+              if (!/[\n,;]/.test(text)) return
+              event.preventDefault()
+              commitSelectorCodes(text)
+              event.currentTarget.value = ''
+            }}
+          />
+          <p className="campaign-benefits-codes-hint">Digite ou cole vários códigos (com ou sem o nome) e pressione Enter. O produto do catálogo entra no seletor.</p>
+        </div>
+      <div className="campaign-benefits-codes">
+        <label htmlFor="campaign-product-codes">Códigos de produto</label>
+        <textarea
+          id="campaign-product-codes"
+          name="productCodes"
+          value={value.productCodes}
+          onChange={event => update('productCodes', event.target.value)}
+          rows={8}
+          placeholder={'MOD-001 — Camiseta básica\nCAL-001 — Tênis casual'}
+          aria-invalid={Boolean(errors.productCodes) || undefined}
+          aria-describedby={errors.productCodes ? 'campaign-product-codes-error' : 'campaign-product-codes-hint'}
+        />
+        <p id="campaign-product-codes-hint" className="campaign-benefits-codes-hint">
+          Lote: um código por linha, com ou sem o nome (CODIGO — produto). Também aceita vírgula ou ponto e vírgula.
+        </p>
+        {errors.productCodes && <p id="campaign-product-codes-error" className="campaign-benefits-error" role="alert">
+          {errors.productCodes}
+        </p>}
+      </div>
+      </>}
     </div>
     <Input
       className="campaign-benefits-maximum"

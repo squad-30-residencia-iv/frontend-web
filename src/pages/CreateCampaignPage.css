@@ -83,6 +83,23 @@
   padding: 8px 12px;
 }
 
+.create-campaign-form .select--multiple .select__trigger {
+  height: auto;
+  min-height: 37px;
+  align-items: flex-start;
+  white-space: normal;
+}
+
+.create-campaign-form .select--multiple .select__value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
 .create-campaign-form input::placeholder {
   color: var(--color-ink);
   opacity: 1;
@@ -287,6 +304,11 @@
     min-height: 32px;
     font-size: 11px;
     padding: 6px 10px;
+  }
+
+  .create-campaign-form .select--multiple .select__trigger {
+    height: auto;
+    min-height: 32px;
   }
 
   .create-campaign-validity {

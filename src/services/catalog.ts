@@ -5,6 +5,7 @@ import type { CampaignChannel } from '../types/campaign'
 export interface CatalogOption {
   value: string
   label: string
+  code?: string
 }
 
 export interface PortalCatalog {
@@ -20,7 +21,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function readOption(value: unknown, labelOf: (record: Record<string, unknown>) => string | null): CatalogOption | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null
   const label = labelOf(value)
-  return label ? { value: value.id, label } : null
+  if (!label) return null
+  const code = typeof value.code === 'string' && value.code.trim() ? value.code : undefined
+  return code ? { value: value.id, label, code } : { value: value.id, label }
 }
 
 async function readList(url: string, params: Record<string, string | boolean>, labelOf: (record: Record<string, unknown>) => string | null) {

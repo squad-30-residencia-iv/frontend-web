@@ -11,6 +11,8 @@ import { mockUsers } from '../mocks/handlers/auth'
 import { api } from '../services/api'
 import { TOKEN_KEY, USER_KEY } from '../services/tokenStorage'
 import { clearToasts } from '../test/clearToasts'
+import { http, HttpResponse } from 'msw'
+import { server } from '../mocks/server'
 
 beforeAll(() => {
   vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn() })
@@ -267,8 +269,8 @@ describe('Alvos e benefícios', () => {
     await user.click(await screen.findByRole('option', { name: 'Moda' }))
     await user.click(screen.getByRole('option', { name: 'Calçados' }))
     await user.keyboard('{Escape}')
-    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('Moda')
-    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('Calçados')
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('Moda + Calçados')
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).not.toHaveTextContent('and')
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
     expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha completa')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
@@ -282,10 +284,33 @@ describe('Alvos e benefícios', () => {
     await user.click(screen.getByRole('button', { name: /^Categoria Tipo$/ }))
     await user.click(await screen.findByRole('option', { name: 'Produto' }))
     await user.click(screen.getByRole('button', { name: /Produtos ou categoria/ }))
-    await user.click(await screen.findByRole('option', { name: 'Camiseta demonstrativa' }))
+    await user.click(await screen.findByRole('option', { name: /Camiseta demonstrativa/ }))
     await user.keyboard('{Escape}')
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+  })
+
+  it('avança só com códigos de produto colados', async () => {
+    const user = await openBenefits()
+    await user.click(screen.getByRole('radio', { name: 'Produtos ou categorias específicas' }))
+    await user.click(screen.getByRole('button', { name: /^Categoria Tipo$/ }))
+    await user.click(await screen.findByRole('option', { name: 'Produto' }))
+    expect(screen.getByRole('textbox', { name: 'Códigos de produto' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('Informe ao menos um código ou selecione produtos.')).toBeVisible()
+    await user.type(screen.getByRole('textbox', { name: 'Códigos de produto' }), 'CAM-001 — Camiseta; cam-001\nSKU-2')
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByRole('heading', { name: 'Regras e público' })).toBeVisible()
+  })
+
+  it('adiciona códigos pelo seletor e mostra os nomes com +', async () => {
+    const user = await openBenefits()
+    await user.click(screen.getByRole('radio', { name: 'Produtos ou categorias específicas' }))
+    await user.click(screen.getByRole('button', { name: /^Categoria Tipo$/ }))
+    await user.click(await screen.findByRole('option', { name: 'Produto' }))
+    await user.type(screen.getByRole('textbox', { name: 'Adicionar ao seletor por código' }), 'CAM-DEMO — Camiseta{Enter}')
+    expect(screen.getByRole('button', { name: /Produtos ou categoria/ })).toHaveTextContent('CAM-DEMO — Camiseta demonstrativa')
+    expect(screen.getByRole('textbox', { name: 'Códigos de produto' })).toHaveValue('CAM-DEMO')
   })
 
   it('valida a geração automática e avança para a terceira etapa', async () => {
@@ -916,6 +941,31 @@ describe('Rascunho na API', () => {
     expect(screen.getByText(/ficam só neste navegador/)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
     expect(await screen.findByRole('link', { name: 'Campanha da API' })).toBeVisible()
+  })
+
+  it('mostra os códigos recusados no 422 do PUT items', async () => {
+    const analyst = mockUsers['analista@portal.dev'].user
+    localStorage.setItem(TOKEN_KEY, generateMockJwt(analyst, 3600))
+    localStorage.setItem(USER_KEY, JSON.stringify(analyst))
+    rememberDraft('Campanha com código inválido')
+    const stored = JSON.parse(localStorage.getItem(campaignDraftStorageKey) ?? '{}')
+    stored.benefits.application = 'specific'
+    stored.benefits.targetType = 'product'
+    stored.benefits.productCodes = 'ZZZ-NOPE'
+    localStorage.setItem(campaignDraftStorageKey, JSON.stringify(stored))
+    server.use(http.put('*/api/v1/campaigns/:id/items', () => HttpResponse.json({
+      status: 422,
+      detail: 'Um ou mais códigos de produto não existem no catálogo.',
+      code: 'CAMPAIGN_ITEM_PRODUCT_CODE_NOT_FOUND',
+      codes: ['ZZZ-NOPE'],
+    }, { status: 422 })))
+    const user = userEvent.setup()
+    render(<AuthProvider><App /><FeedbackProvider /></AuthProvider>)
+    await continueToReview(user)
+    await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
+    expect(await screen.findByText('Códigos recusados: ZZZ-NOPE.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Alvos e benefícios' })).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Códigos de produto' })).toHaveValue('ZZZ-NOPE')
   })
 
   it('administrador não chama a API', async () => {

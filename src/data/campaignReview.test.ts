@@ -37,6 +37,22 @@ describe('Apresentação da revisão', () => {
     expect(JSON.stringify(draft)).toBe(original)
   })
 
+  it('lista códigos de produto e o nome do catálogo quando houver', () => {
+    const draft = validDraft()
+    draft.benefits = {
+      ...draft.benefits,
+      application: 'specific',
+      targetType: 'product',
+      targetIds: ['product-shirt'],
+      productCodes: 'TEN-DEMO',
+    }
+    const value = getCampaignReviewSections(draft)
+      .flatMap(section => section.fields)
+      .find(field => field.label === 'Produto ou categoria')?.value
+    expect(value).toMatch(/Camiseta demonstrativa/)
+    expect(value).toMatch(/TEN-DEMO/)
+  })
+
   it('apresenta vazios opcionais e ausência de condições sem valores técnicos', () => {
     const draft = validDraft()
     draft.rules = { ...draft.rules, conditions: [], restrictions: [] }
