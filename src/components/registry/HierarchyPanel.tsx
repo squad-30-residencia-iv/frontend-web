@@ -75,6 +75,7 @@ export function HierarchyPanel({ selection, onSelectionChange, refreshKey, edito
       createBlockedReason={region && !region.isActive ? 'Reative a região para cadastrar lojas.' : undefined}
       pendingRowId={reactivatingId}
       onCreate={() => editor.openCreate('store', regionId, {}, regionLabel)}
+      onImport={() => { if (regionId) editor.openImport('store', regionId, regionLabel) }}
       onEdit={row => editor.openEdit('store', row, regionLabel)}
       onDeactivate={row => editor.askDeactivate('store', row)}
       onReactivate={row => editor.reactivate('store', row)}

@@ -59,8 +59,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function problem(status: number, detail: string, code: string) {
-  return HttpResponse.json({ status, title: detail, detail, code }, { status })
+function problem(status: number, detail: string, code: string, extra?: Record<string, unknown>) {
+  return HttpResponse.json({ status, title: detail, detail, code, ...extra }, { status })
 }
 
 function validation(field: string, message: string) {
@@ -111,6 +111,25 @@ function readChannels(body: Record<string, unknown>): string[] | Response {
   }
   if (new Set(channels).size !== channels.length) return validation('Channels', 'Os canais do estabelecimento não podem se repetir.')
   return channels.map(String)
+}
+
+function readImportLines(items: unknown, field: string, codeMax: number): { code: string; name: string }[] | Response {
+  if (!Array.isArray(items) || items.length === 0) return validation(field, 'Informe ao menos um item.')
+  if (items.length > 1000) return validation(field, 'O lote aceita no máximo 1.000 linhas.')
+  const lines: { code: string; name: string }[] = []
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index]
+    if (!isRecord(item)) return validation(`${field}[${index}]`, 'Informe código e nome.')
+    const code = text(item, 'code')
+    const name = text(item, 'name')
+    if (!code) return validation(`${field}[${index}].Code`, 'Informe o código.')
+    if (!name) return validation(`${field}[${index}].Name`, 'Informe o nome.')
+    if (code.length > codeMax) return validation(`${field}[${index}].Code`, `O código deve ter no máximo ${codeMax} caracteres.`)
+    if (name.length > 150) return validation(`${field}[${index}].Name`, 'O nome deve ter no máximo 150 caracteres.')
+    if (lines.some(line => same(line.code, code))) return validation(`${field}[${index}].Code`, 'O código se repete no lote.')
+    lines.push({ code, name })
+  }
+  return lines
 }
 
 function deactivateNetwork(network: MockNetwork) {
@@ -232,6 +251,37 @@ export const registryHandlers = [
     if (!regionId) return problem(400, 'Informe a região do estabelecimento.', 'VALIDATION_ERROR')
     return HttpResponse.json(byActive(registryState.establishments.filter(store => store.regionId === regionId), url))
   }),
+  http.post('*/api/v1/establishments/import', async ({ request }) => {
+    const denied = forbidWrite(request)
+    if (denied) return denied
+    const body = await readBody(request)
+    const regionId = text(body, 'regionId')
+    const region = registryState.regions.find(item => item.id === regionId)
+    if (!region) return problem(422, 'Região informada não encontrada', 'ESTABLISHMENT_REGION_NOT_FOUND')
+    if (!region.isActive) return problem(422, 'Região informada está inativa', 'ESTABLISHMENT_REGION_INACTIVE')
+    const channels = readChannels(body)
+    if (channels instanceof Response) return channels
+    const lines = readImportLines(body.establishments, 'Establishments', 20)
+    if (lines instanceof Response) return lines
+    const taken = [...new Set(lines.filter(line =>
+      registryState.establishments.some(store => store.regionId === regionId && same(store.code, line.code)),
+    ).map(line => line.code))]
+    if (taken.length) {
+      return problem(422, 'Já existe um estabelecimento com este código nesta região.', 'ESTABLISHMENT_CODE_TAKEN', { codes: taken })
+    }
+    for (const line of lines) {
+      registryState.establishments.push({
+        id: nextId(),
+        regionId,
+        code: line.code,
+        name: line.name,
+        channels,
+        isActive: true,
+        createdAt,
+      })
+    }
+    return HttpResponse.json({ created: lines.length }, { status: 201 })
+  }),
   http.post('*/api/v1/establishments', async ({ request }) => {
     const denied = forbidWrite(request)
     if (denied) return denied
@@ -329,6 +379,34 @@ export const registryHandlers = [
     const categoryId = url.searchParams.get('categoryId')
     const products = categoryId ? registryState.products.filter(product => product.categoryId === categoryId) : registryState.products
     return HttpResponse.json(byActive(products, url))
+  }),
+  http.post('*/api/v1/products/import', async ({ request }) => {
+    const denied = forbidWrite(request)
+    if (denied) return denied
+    const body = await readBody(request)
+    const categoryId = text(body, 'categoryId')
+    const category = registryState.categories.find(item => item.id === categoryId)
+    if (!category) return problem(422, 'Categoria informada não encontrada', 'PRODUCT_CATEGORY_NOT_FOUND')
+    if (!category.isActive) return problem(422, 'Categoria informada está inativa', 'PRODUCT_CATEGORY_INACTIVE')
+    const lines = readImportLines(body.products, 'Products', 30)
+    if (lines instanceof Response) return lines
+    const taken = [...new Set(lines.filter(line =>
+      registryState.products.some(product => same(product.code, line.code)),
+    ).map(line => line.code))]
+    if (taken.length) {
+      return problem(422, 'Já existe produto com este identificador', 'PRODUCT_CODE_TAKEN', { codes: taken })
+    }
+    for (const line of lines) {
+      registryState.products.push({
+        id: nextId(),
+        categoryId,
+        code: line.code,
+        name: line.name,
+        isActive: true,
+        createdAt,
+      })
+    }
+    return HttpResponse.json({ created: lines.length }, { status: 201 })
   }),
   http.post('*/api/v1/products', async ({ request }) => {
     const denied = forbidWrite(request)

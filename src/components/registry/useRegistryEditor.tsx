@@ -1,13 +1,16 @@
 import { useRef, useState } from 'react'
 import { ConfirmationModal } from '../ui/ConfirmationModal'
 import { useFeedback } from '../ui/useFeedback'
-import { createRegistryItem, deactivateRegistryItem, updateRegistryItem } from '../../services/registry'
-import type { RegistryEntity, RegistryFormValues, RegistryRow } from '../../types/registry'
+import type { RegistryImportKind, RegistryImportLine } from '../../data/registryImport'
+import { createRegistryItem, deactivateRegistryItem, importProducts, importStores, updateRegistryItem } from '../../services/registry'
+import type { RegistryEntity, RegistryFormValues, RegistryRow, StoreChannel } from '../../types/registry'
 import { RegistryFormModal, type RegistryFormRequest } from './RegistryFormModal'
-import { emptyFormValues, outcomeMessage, registryCopy } from './registryCopy'
+import { RegistryImportModal, type RegistryImportRequest } from './RegistryImportModal'
+import { emptyFormValues, importOutcomeMessage, outcomeMessage, registryCopy } from './registryCopy'
 
 export interface RegistryEditorActions {
   openCreate: (entity: RegistryEntity, parentId: string | null, initial?: Partial<RegistryFormValues>, context?: string) => void
+  openImport: (kind: RegistryImportKind, parentId: string, context?: string) => void
   openEdit: (entity: RegistryEntity, row: RegistryRow, context?: string) => void
   askDeactivate: (entity: RegistryEntity, row: RegistryRow) => void
   reactivate: (entity: RegistryEntity, row: RegistryRow) => void
@@ -33,6 +36,8 @@ export function useRegistryEditor(onChanged: () => void) {
   const feedback = useFeedback()
   const [form, setForm] = useState<RegistryFormRequest | null>(null)
   const [formError, setFormError] = useState('')
+  const [importRequest, setImportRequest] = useState<RegistryImportRequest | null>(null)
+  const [importError, setImportError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [target, setTarget] = useState<DeactivateTarget | null>(null)
   const [isDeactivating, setIsDeactivating] = useState(false)
@@ -47,6 +52,10 @@ export function useRegistryEditor(onChanged: () => void) {
   const actions: RegistryEditorActions = {
     openCreate(entity, parentId, initial, context) {
       openForm({ entity, mode: 'create', row: null, parentId, initial: { ...emptyFormValues, ...initial }, context })
+    },
+    openImport(kind, parentId, context) {
+      setImportError('')
+      setImportRequest({ kind, parentId, context })
     },
     openEdit(entity, row, context) {
       openForm({ entity, mode: 'edit', row, parentId: null, initial: row.values, context })
@@ -93,6 +102,27 @@ export function useRegistryEditor(onChanged: () => void) {
     })
   }
 
+  async function submitImport(lines: RegistryImportLine[], channels: StoreChannel[]) {
+    const request = importRequest
+    if (!request) return
+    await run(async () => {
+      setIsSaving(true)
+      setImportError('')
+      try {
+        const created = request.kind === 'product'
+          ? await importProducts(request.parentId, lines)
+          : await importStores(request.parentId, channels, lines)
+        setImportRequest(null)
+        feedback.success({ title: importOutcomeMessage(request.kind, created) })
+        onChanged()
+      } catch (error) {
+        setImportError(errorText(error))
+      } finally {
+        setIsSaving(false)
+      }
+    })
+  }
+
   async function confirmDeactivate() {
     const current = target
     if (!current) return
@@ -133,6 +163,13 @@ export function useRegistryEditor(onChanged: () => void) {
       errorMessage={formError}
       onSubmit={values => void submitForm(values)}
       onClose={() => setForm(null)}
+    />
+    <RegistryImportModal
+      request={importRequest}
+      isPending={isSaving}
+      errorMessage={importError}
+      onSubmit={(lines, channels) => void submitImport(lines, channels)}
+      onClose={() => setImportRequest(null)}
     />
     <ConfirmationModal
       action="deactivate"

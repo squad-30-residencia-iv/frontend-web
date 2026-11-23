@@ -17,14 +17,15 @@ O que o portal faz hoje:
 - O assistente, com rede na sessão, grava o rascunho: `POST /api/v1/campaigns` e os `PUT` de itens, quantidades, público, validade, restrições e condições. O id fica no navegador e é reaproveitado se um `PUT` falhar. Categorias, produtos e lojas vêm da API. Lojas e canais vão no `PUT /scopes`: a rede com os canais dela, ou cada loja com os canais escolhidos que ela opera.
 - O detalhe de um Guid lê `GET /api/v1/campaigns/{id}`. O papel da sessão escolhe a ação: analista submete o rascunho; gestor aprova ou reprova a pendente. A tela mostra o status devolvido, inclusive **Agendada** quando o início ainda é futuro. Analista e gestor podem pausar a ativa e encerrar a ativa ou pausada, com confirmação e status devolvido pela API; não há retomada. O rascunho mostra **Editar rascunho**, que abre `/campanhas/{id}/editar`; fora de rascunho, **Duplicar** cria outra campanha em rascunho e abre a edição dela. A configuração mostra o escopo gravado. A barra da Home e do gerenciamento é `(issuedVouchers + reservedVouchers) / totalVoucherLimit`; sem limite, fica em zero. O detalhe usa `redeemedVouchers`/`expiredVouchers` e lista recente via `GET /vouchers?campaignId=`. Ids locais (`1`, `79`) continuam no repositório, com a matriz antiga.
 - Com rede na sessão, a consulta de vouchers, o histórico, os relatórios e a auditoria leem a API; com sessão sem rede (ex.: administrador), a lista fica vazia; sem sessão (testes isolados), usam o repositório local.
-- Em `/cadastros`, só o administrador cria, edita, reativa e inativa rede, região, loja (com os canais Físico/Virtual), categoria e produto. Inativar pede confirmação e avisa a cascata. Analista e gestor não veem o item na Sidebar e, pela URL, veem "Acesso restrito". O histórico em `/vouchers/:id/historico` lê `GET /api/v1/vouchers/{id}` quando há sessão.
+- Em `/cadastros`, só o administrador cria, edita, reativa e inativa rede, região, loja (com os canais Físico/Virtual), categoria e produto. Com categoria ou região ativa, **Importar em lote** cola linhas `CODIGO — Nome` e chama `POST /products/import` ou `POST /establishments/import` (1 a 1.000, tudo ou nada). Inativar pede confirmação e avisa a cascata. Analista e gestor não veem o item na Sidebar e, pela URL, veem "Acesso restrito". O histórico em `/vouchers/:id/historico` lê `GET /api/v1/vouchers/{id}` quando há sessão.
 - Em `/aplicacoes`, só o administrador lista, cria, inativa e rotaciona o segredo das aplicações satélite. O papel da sessão é `administrador`. As redes do seletor e do formulário saem de `GET /api/v1/networks` (só as ativas). Os escopos enviados e exibidos são `campaigns:read`, `vouchers:issue` e `vouchers:redeem`. O MSW cobre os testes.
 
 ---
 
 ## 🚧 Tarefas em Andamento
 
-- [x] US-028: alvo de produto por código no assistente (seletor + lista; `productCode`/`productId` no `PUT /items`). Spec ainda em `docs/specs/in-progress/US-028-alvo-produto-por-codigo.md` até o save-session. `npm run verify`: 39 arquivos, 387 testes.
+- [x] US-029: importação em lote de produtos e lojas em `/cadastros` (`POST /products/import` e `/establishments/import`). Spec `completed/US-029-importacao-lote-cadastros.md`. `npm run verify`: 40 arquivos, 396 testes.
+- [x] US-028: alvo de produto por código no assistente (seletor + lista; `productCode`/`productId` no `PUT /items`). Spec ainda em `docs/specs/in-progress/US-028-alvo-produto-por-codigo.md` até o save-session.
 - [x] US-025: integrar vouchers, histórico, relatórios e auditoria à API (EP-03). Spec `completed/US-025-integracao-acompanhamento-api.md`. Mesclada na `staging`.
 - [x] Mesclar `feat/integracao-acompanhamento-api` na `staging` (depois do backend EP-03).
 - [ ] US-017 nome na sessão: o código e o `npm run verify` passaram. A spec `in-progress/US-017-nome-na-sessao.md` fica aberta até o caso do guard (login sem `profile.name`) ter teste. Só então mover para `completed/`.
@@ -48,13 +49,13 @@ O que o portal faz hoje:
 - Navegação pelo resumo (etapas verdes clicáveis).
 - Combinação OU (“basta uma”) no motor.
 - Clareza extra do escopo organizacional (copy/mapa).
-- Importação em lote de lojas e de produtos no `/cadastros`.
 - Tags de campanha e redesenho dos filtros do dashboard.
 
 ---
 
 ## ✅ Últimas Entregas Concluídas
 
+- US-029 (lote no cadastro): com categoria ou região ativa, o administrador cola `CODIGO — Nome` e envia `POST /api/v1/products/import` ou `POST /api/v1/establishments/import`. Loja de lote pede os canais Físico/Virtual. 422 com `codes` permanece no modal. Sem arquivo. Spec `completed/US-029-importacao-lote-cadastros.md`. `npm run verify`: 40 arquivos, 396 testes.
 - US-025 (acompanhamento na API): com rede na sessão, Vouchers, Histórico, Relatórios e Auditoria chamam a API (`services/vouchers`, `reports`, `audit`). Detalhe Guid usa `redeemedVouchers`/`expiredVouchers` e lista recente via `GET /vouchers?campaignId=`. MSW em `portalReads`. Corrigido loading infinito: loaders resolvidos **dentro** do `useEffect`. Sessão autenticada sem rede não cai mais no mock. Spec `completed/US-025-integracao-acompanhamento-api.md`.
 - US-027 (lote por grupos): seleção de múltiplos grupos, remoção e soma de clientes únicos. Catálogo demonstrativo até existir consulta de grupos reais. Substitui a importação CSV da US-026. Spec `completed/US-027-lote-grupos.md`. Veja `CAMPAIGN_BATCH_GROUPS.md`.
 - US-026 (lote por CPF): importação de CPFs substituída pela seleção de grupos na US-027. A conclusão do lote continua aguardando o backend. Spec `completed/US-026-lote-cpf.md`.

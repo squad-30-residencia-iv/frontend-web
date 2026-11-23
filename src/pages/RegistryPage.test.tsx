@@ -123,6 +123,27 @@ describe('Cadastros: hierarquia', () => {
     expect(registryState.establishments.find(store => store.code === '010')?.channels).toEqual(['Physical', 'Virtual'])
   })
 
+  it('importa lojas em lote na região ativa, com os canais do lote', async () => {
+    const user = renderRegistry()
+    await openItem(user, 'Redes', 'Rede Exemplo')
+    await openItem(user, 'Regiões', 'Sudeste')
+
+    await user.click(within(column('Lojas')).getByRole('button', { name: 'Importar em lote' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Importar lojas em lote' })
+    expect(within(dialog).getByText('Região: Sudeste')).toBeVisible()
+    await user.click(within(dialog).getByRole('textbox', { name: 'Lista' }))
+    await user.paste('010 — Loja Shopping\n020 — Loja Parque')
+    await user.click(within(dialog).getByRole('button', { name: 'Importar' }))
+    expect(within(dialog).getByText('Escolha ao menos um canal.')).toBeVisible()
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Físico' }))
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Virtual' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Importar' }))
+    expect(await screen.findByText('2 lojas criadas.')).toBeVisible()
+    expect(await rowOf('Lojas', 'Loja Shopping')).toHaveTextContent('Código 010 · Físico e Virtual')
+    expect(registryState.establishments.find(store => store.code === '020')?.channels).toEqual(['Physical', 'Virtual'])
+  })
+
   it('inativar a rede pede confirmação, avisa a cascata e inativa regiões e lojas', async () => {
     const user = renderRegistry()
     await openItem(user, 'Redes', 'Rede Exemplo')
@@ -232,6 +253,54 @@ describe('Cadastros: catálogo', () => {
     expect(await screen.findByText('Categoria reativada.')).toBeVisible()
     await waitFor(async () => expect(await rowOf('Categorias', 'Papelaria')).toHaveTextContent('Ativa'))
     expect(await rowOf('Produtos', 'Caderno')).toHaveTextContent('Inativo')
+  })
+
+  it('importa produtos em lote na categoria ativa e recusa código já cadastrado', async () => {
+    const user = renderRegistry()
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }))
+    await openItem(user, 'Categorias', 'Papelaria')
+
+    await user.click(within(column('Produtos')).getByRole('button', { name: 'Importar em lote' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Importar produtos em lote' })
+    expect(within(dialog).getByText('Categoria: Papelaria')).toBeVisible()
+    await user.click(within(dialog).getByRole('textbox', { name: 'Lista' }))
+    await user.paste('CAN-1 — Caneta\nLAP-2 — Lápis')
+    await user.click(within(dialog).getByRole('button', { name: 'Importar' }))
+    expect(await screen.findByText('2 produtos criados.')).toBeVisible()
+    expect(screen.queryByRole('dialog', { name: 'Importar produtos em lote' })).not.toBeInTheDocument()
+    expect(await rowOf('Produtos', 'Caneta')).toHaveTextContent('Código CAN-1')
+    expect(await rowOf('Produtos', 'Lápis')).toHaveTextContent('Código LAP-2')
+
+    await user.click(within(column('Produtos')).getByRole('button', { name: 'Importar em lote' }))
+    const retry = await screen.findByRole('dialog', { name: 'Importar produtos em lote' })
+    await user.click(within(retry).getByRole('textbox', { name: 'Lista' }))
+    await user.paste('CAN-1 — Outra caneta')
+    await user.click(within(retry).getByRole('button', { name: 'Importar' }))
+    expect(await within(retry).findByText(/Já existe produto com este identificador/)).toBeVisible()
+    expect(within(retry).getByText(/Códigos: CAN-1/)).toBeVisible()
+    expect(screen.getByRole('dialog', { name: 'Importar produtos em lote' })).toBeVisible()
+    expect(registryState.products.filter(product => product.code === 'CAN-1')).toHaveLength(1)
+  })
+
+  it('recusa lista inválida antes de enviar e desabilita o lote com a categoria inativa', async () => {
+    const user = renderRegistry()
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }))
+    await openItem(user, 'Categorias', 'Papelaria')
+
+    await user.click(within(column('Produtos')).getByRole('button', { name: 'Importar em lote' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Importar produtos em lote' })
+    await user.click(within(dialog).getByRole('textbox', { name: 'Lista' }))
+    await user.paste('CAN-1 — Caneta\nCAN-1 — Outra')
+    await user.click(within(dialog).getByRole('button', { name: 'Importar' }))
+    expect(within(dialog).getByText(/aparece mais de uma vez no lote/)).toBeVisible()
+    expect(registryState.products).toHaveLength(1)
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    await user.click(within(await rowOf('Categorias', 'Papelaria')).getByRole('button', { name: 'Inativar categoria Papelaria' }))
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Inativar' }))
+    expect(await screen.findByText('Categoria inativada.')).toBeVisible()
+    expect(within(column('Produtos')).getByRole('button', { name: 'Importar em lote' })).toBeDisabled()
+    expect(within(column('Produtos')).getByText('Reative a categoria para cadastrar produtos.')).toBeVisible()
   })
 })
 

@@ -45,6 +45,7 @@ export function CatalogPanel({ categoryId, onCategoryChange, refreshKey, editor,
       createBlockedReason={category && !category.isActive ? 'Reative a categoria para cadastrar produtos.' : undefined}
       pendingRowId={reactivatingId}
       onCreate={() => editor.openCreate('product', categoryId, {}, categoryLabel)}
+      onImport={() => { if (categoryId) editor.openImport('product', categoryId, categoryLabel) }}
       onEdit={row => editor.openEdit('product', row, categoryLabel)}
       onDeactivate={row => editor.askDeactivate('product', row)}
       onReactivate={row => editor.reactivate('product', row)}

@@ -1,5 +1,6 @@
 import { api } from './api'
 import { toProblemError } from './problemDetails'
+import type { RegistryImportLine } from '../data/registryImport'
 import {
   storeChannels,
   type RegistryCategory,
@@ -167,4 +168,33 @@ export function updateRegistryItem(entity: RegistryEntity, id: string, values: R
 /** Inativa o cadastro. Rede, região e categoria levam os filhos junto. */
 export function deactivateRegistryItem(entity: RegistryEntity, id: string): Promise<void> {
   return send(() => api.delete(`${resourcePaths[entity]}/${id}`))
+}
+
+function readCreated(data: unknown, fallback: number): number {
+  if (isRecord(data) && typeof data.created === 'number' && Number.isFinite(data.created)) return data.created
+  return fallback
+}
+
+/** Lote de produtos da categoria. Tudo ou nada. Devolve a quantidade criada. */
+export async function importProducts(categoryId: string, products: RegistryImportLine[]): Promise<number> {
+  try {
+    const { data } = await api.post<unknown>(`${resourcePaths.product}/import`, { categoryId, products })
+    return readCreated(data, products.length)
+  } catch (error) {
+    throw toProblemError(error, genericSaveMessage)
+  }
+}
+
+/** Lote de lojas da região, com os mesmos canais para todas. Tudo ou nada. */
+export async function importStores(
+  regionId: string,
+  channels: StoreChannel[],
+  establishments: RegistryImportLine[],
+): Promise<number> {
+  try {
+    const { data } = await api.post<unknown>(`${resourcePaths.store}/import`, { regionId, channels, establishments })
+    return readCreated(data, establishments.length)
+  } catch (error) {
+    throw toProblemError(error, genericSaveMessage)
+  }
 }
