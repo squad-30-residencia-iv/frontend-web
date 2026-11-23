@@ -62,7 +62,7 @@ export function loadCampaignDraft(): CampaignDraft {
       const benefits = 'benefits' in value && isCampaignBenefits(value.benefits) ? value.benefits : newCampaignBenefits()
       const rules = 'rules' in value && isCampaignRules(value.rules) ? value.rules : newCampaignRules()
       const scope = 'scope' in value && isCampaignScope(value.scope) ? value.scope : newCampaignScope()
-      return { information: value.information, benefits, rules, scope }
+      return { information: { ...value.information, voucherModel: 'relative', voucherCap: 'unlimited' }, benefits, rules, scope }
     }
   } catch {
     // Armazenamento indisponível ou rascunho inválido: iniciar um formulário novo.
@@ -99,11 +99,11 @@ export interface DraftCatalog {
   stores?: readonly CampaignStore[]
 }
 
-export function validateCampaignDraft(draft: CampaignDraft, catalog: DraftCatalog = {}) {
+export function validateCampaignDraft(draft: CampaignDraft, catalog: DraftCatalog = {}, batchCustomerCount = 0) {
   const information = validateCampaignInformation(draft)
   const benefits = catalog.categories && catalog.products
-    ? validateCampaignBenefits(draft.benefits, { categories: catalog.categories, products: catalog.products })
-    : validateCampaignBenefits(draft.benefits)
+    ? validateCampaignBenefits(draft.benefits, { categories: catalog.categories, products: catalog.products }, batchCustomerCount)
+    : validateCampaignBenefits(draft.benefits, undefined, batchCustomerCount)
   const rules = validateCampaignRules(draft.rules)
   const scope = catalog.stores ? validateCampaignScope(draft.scope, catalog.stores) : validateCampaignScope(draft.scope)
   const stages = [

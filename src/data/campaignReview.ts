@@ -1,5 +1,5 @@
 import type { CampaignChannel, CampaignDraft } from '../types/campaign'
-import { categoryOptions, productOptions, customerBases, getBatchTotal, parseDiscount, type BenefitCatalog } from './campaignBenefits'
+import { categoryOptions, productOptions, getBatchTotal, parseDiscount, type BenefitCatalog } from './campaignBenefits'
 import { campaignStores, type CampaignStore } from './campaignScope'
 
 export interface CampaignReviewField {
@@ -39,6 +39,8 @@ function formatDiscount(type: 'percentage' | 'fixed', value: string) {
 export function getCampaignReviewSections(
   draft: CampaignDraft,
   catalog: { categories?: BenefitCatalog['categories']; products?: BenefitCatalog['products']; stores?: readonly CampaignStore[] } = {},
+  batchCustomerCount = 0,
+  batchGroupNames: readonly string[] = [],
 ): CampaignReviewSection[] {
   const { information, benefits, rules, scope } = draft
   const categories = catalog.categories ?? categoryOptions
@@ -78,10 +80,10 @@ export function getCampaignReviewSections(
   if (isAutomatic) {
     benefitFields.push({ label: 'Quantidade por concessão', value: formatQuantity(benefits.quantityPerGrant) })
   } else {
-    const base = customerBases.find(item => item.value === benefits.customerBase)
     benefitFields.push(
-      { label: 'Base de clientes', value: base ? `Base ${base.label} (${numberFormat.format(base.customers)} clientes)` : 'Não informado' },
-      { label: 'Total previsto', value: `${numberFormat.format(getBatchTotal(benefits))} vouchers` },
+      { label: 'Grupos selecionados', value: batchGroupNames.join(', ') || 'Não informado' },
+      { label: 'Clientes únicos', value: numberFormat.format(batchCustomerCount) },
+      { label: 'Total previsto', value: `${numberFormat.format(getBatchTotal(benefits, batchCustomerCount))} vouchers` },
     )
   }
 

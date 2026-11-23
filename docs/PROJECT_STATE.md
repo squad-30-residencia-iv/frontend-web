@@ -1,14 +1,14 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado em 2026-11-12. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
+> Atualizado em 2026-11-21. As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
 ## 📌 Contexto Geral
 
 - **Sprint:** Sprint 1
-- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. A barra de uso é a parcela do limite já confirmada ou reservada, e o detalhe mostra esses dois contadores. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e, em `/aplicacoes`, lista as redes ativas e grava os escopos da API. Pausar e encerrar campanhas de Guid usam a API; utilizados, a lista de vouchers, relatórios e auditoria continuam locais.
-- **Última atualização:** 2026-11-12.
+- **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. A barra de uso é a parcela do limite já confirmada ou reservada, e o detalhe mostra esses dois contadores. O assistente grava lojas e canais, o rascunho da API pode ser reaberto e, fora de rascunho, a campanha é duplicada (D6). Na criação, a validade do voucher é só em dias após a emissão, há desconto único por campanha e o lote escolhe grupos de clientes (US-024 a US-027 do front). O administrador mantém rede, região, loja, categoria e produto em `/cadastros` e, em `/aplicacoes`, lista as redes ativas e grava os escopos da API. Pausar e encerrar campanhas de Guid usam a API; utilizados, a lista de vouchers, relatórios e auditoria continuam locais.
+- **Última atualização:** 2026-11-21.
 
 O que o portal faz hoje:
 
@@ -41,8 +41,12 @@ O que o portal faz hoje:
 
 ## ✅ Últimas Entregas Concluídas
 
-- US-024: a Home e o gerenciamento mostram a parcela do limite já confirmada ou reservada. O detalhe de um Guid mostra os confirmados e as reservas; utilizados e a lista de vouchers continuam vazios. `/aplicacoes` lista as redes ativas e grava os três escopos da API. Spec `completed/US-024-uso-e-aplicacoes.md`. `npm run verify`: 35 arquivos, 356 testes. No navegador, com a API local, a Home mostrou `0% do limite`, o detalhe mostrou `0 confirmados · 0 reservados` e `/aplicacoes` listou Supermercados Norte com os selos Campanhas, Conceder e Resgatar.
-- US-027: a Consulta abre `/vouchers/:id/historico` com resumo, escopo e linha do tempo, em dados locais (`loadVoucherHistory`). O contrato da API ainda falta. Spec `completed/US-027-historico-voucher.md`.
+- US-027 (lote por grupos): seleção de múltiplos grupos, remoção e soma de clientes únicos. Catálogo demonstrativo centralizado até existir consulta de grupos reais. Substitui a importação CSV da US-026, sem frases explicativas no formulário. Spec `completed/US-027-lote-grupos.md`. Veja `CAMPAIGN_BATCH_GROUPS.md`.
+- US-026 (lote por CPF): importação de CPFs substituída pela seleção de grupos na US-027. A conclusão do lote continua aguardando o backend. Spec `completed/US-026-lote-cpf.md`.
+- US-025 (desconto único): removido Adicionar do desconto e seu handler de acumulação. A campanha configura um desconto percentual ou fixo, validado ao continuar. Benefícios extras antigos continuam visíveis e removíveis para preservar os rascunhos. Spec `completed/US-025-desconto-unico.md`.
+- US-024 (validade em dias): validade do voucher só como duração em dias após a emissão. Modelo relativo e ausência de teto permanecem no contrato; rascunhos antigos com seleções vazias recebem esses padrões. Alteração somente no frontend. Spec `completed/US-024-validade-duracao.md`.
+- US-024 (uso na API): a Home e o gerenciamento mostram a parcela do limite já confirmada ou reservada. O detalhe de um Guid mostra os confirmados e as reservas; utilizados e a lista de vouchers continuam vazios. `/aplicacoes` lista as redes ativas e grava os três escopos da API. Spec `completed/US-024-uso-e-aplicacoes.md`. `npm run verify`: 35 arquivos, 356 testes.
+- US-027 (histórico do voucher): a Consulta abre `/vouchers/:id/historico` com resumo, escopo e linha do tempo, em dados locais (`loadVoucherHistory`). O contrato da API ainda falta. Spec `completed/US-027-historico-voucher.md`.
 - US-023: no detalhe de um Guid, analista e gestor pausam a ativa e encerram a ativa ou pausada (`POST /pause` e `POST /end`), com confirmação e o status devolvido pela API. Não há retomada. O assistente recusa teto percentual, geração em lote e múltiplas restrições antes de gravar. Spec `completed/US-023-integracao-ciclo-campanha.md`.
 - US-017 nome: a sessão passa a usar `profile.name`. A Home mostra "Olá, {primeiro nome}!" e a Sidebar o nome inteiro. `npm run verify` passou (typecheck e a suíte). Spec ainda em `in-progress/US-017-nome-na-sessao.md` por um caso de teste do guard.
 - US-016: tela `/aplicacoes`, só do administrador (`allowedRoles` e item da Sidebar com `roles: ['administrador']`). Lista, cria, inativa e rotaciona o segredo das aplicações satélite da rede escolhida. O segredo aparece uma vez. Spec `completed/US-016-aplicacoes-satelite.md`. A listagem ainda é do MSW.

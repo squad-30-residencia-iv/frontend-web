@@ -1,4 +1,6 @@
-import { Plus, X } from 'lucide-react'
+import { CampaignBatchGroups } from './CampaignBatchGroups'
+import type { CampaignBatch } from '../../../data/campaignBatch'
+import { X } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
@@ -6,7 +8,6 @@ import type { CampaignDraft } from '../../../types/campaign'
 import {
   categoryOptions,
   productOptions,
-  customerBases,
   getBatchTotal,
   parseDiscount,
   type CampaignBenefitsErrors,
@@ -19,8 +20,9 @@ interface CampaignBenefitsFormProps {
   errors: CampaignBenefitsErrors
   categories?: readonly { value: string; label: string }[]
   products?: readonly { value: string; label: string }[]
+  batchSelection: CampaignBatch | null
+  onBatchChange: (batch: CampaignBatch | null) => void
   onChange: (value: Benefits) => void
-  onAddBenefit: () => void
 }
 const integerInputProps = { min: 1, step: 1 }
 const formatNumber = new Intl.NumberFormat('pt-BR')
@@ -31,8 +33,9 @@ export function CampaignBenefitsForm({
   errors,
   categories = categoryOptions,
   products = productOptions,
+  batchSelection,
+  onBatchChange,
   onChange,
-  onAddBenefit,
 }: CampaignBenefitsFormProps) {
 
   function update<Key extends keyof Benefits>(key: Key, fieldValue: Benefits[Key]) {
@@ -83,12 +86,6 @@ export function CampaignBenefitsForm({
           inputProps={{ inputMode: 'decimal' }}
         />
       }
-      <Button
-        type="button"
-        variant="secondary"
-        endIcon={Plus}
-        onPress={onAddBenefit}
-      >Adicionar</Button>
     </div>
     {value.addedBenefits.length > 0 && <ul className="campaign-benefits-added" aria-label="Benefícios adicionados">
       {value.addedBenefits.map((benefit, index) => <li key={`${index}-${benefit.type}-${benefit.value}`}>
@@ -187,7 +184,7 @@ export function CampaignBenefitsForm({
         />Em lote
       </label>
     </fieldset>
-    <section aria-labelledby="campaign-automatic-title">
+    {!batch && <section aria-labelledby="campaign-automatic-title">
       <h4 id="campaign-automatic-title">Automática:</h4>
       <p>O voucher será gerado automaticamente quando o cliente atender às condições definidas na campanha.</p>
       <div className="campaign-benefits-panel campaign-benefits-automatic">
@@ -214,21 +211,11 @@ export function CampaignBenefitsForm({
           errorMessage={errors.limitPerCustomer}
         />
       </div>
-    </section>
-    <section aria-labelledby="campaign-batch-title">
+    </section>}
+    {batch && <section aria-labelledby="campaign-batch-title">
       <h4 id="campaign-batch-title">Em lote:</h4>
-      <p>Os vouchers serão gerados de uma única vez para uma base de clientes.</p>
+      <CampaignBatchGroups value={batchSelection} onChange={onBatchChange} error={errors.customerBase} />
       <div className="campaign-benefits-panel campaign-benefits-batch">
-        <Select
-          label="Base de clientes"
-          name="customerBase"
-          options={customerBases}
-          value={value.customerBase || null}
-          onChange={next => update('customerBase', String(next ?? ''))}
-          isRequired={batch}
-          validationBehavior="aria"
-          errorMessage={errors.customerBase}
-        />
         <Input
           label="Quantidade por cliente"
           name="quantityPerCustomer"
@@ -243,10 +230,10 @@ export function CampaignBenefitsForm({
         <div className="campaign-benefits-total">
           <span id="campaign-total-label">Total previsto</span>
           <output aria-labelledby="campaign-total-label" aria-live="polite">
-            {formatNumber.format(getBatchTotal(value))} vouchers
+            {formatNumber.format(getBatchTotal(value, batchSelection?.customerCount ?? 0))} vouchers
           </output>
         </div>
       </div>
-    </section>
+    </section>}
   </section>
 }
