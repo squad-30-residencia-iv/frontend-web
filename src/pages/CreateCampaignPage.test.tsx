@@ -749,7 +749,7 @@ async function openReview() {
 }
 
 describe('Lote por grupos cadastrados', () => {
-  it('exige grupos, agrega sem duplicar clientes, valida limite e bloqueia envio', async () => {
+  it('exige grupos, agrega sem duplicar clientes, valida o teto e grava o rascunho local', async () => {
     localStorage.setItem(campaignDraftStorageKey, JSON.stringify({
       ...initialCampaignDraft,
       information: { ...initialCampaignDraft.information, name: 'Campanha em lote' },
@@ -781,7 +781,7 @@ describe('Lote por grupos cadastrados', () => {
     expect(review).toHaveTextContent('Grupo demonstrativo A, Grupo demonstrativo B')
     expect(review).toHaveTextContent('Clientes únicos:4')
     await user.click(screen.getByRole('button', { name: 'Salvar campanha' }))
-    expect(await screen.findByText('Lote ainda não enviado.')).toBeVisible()
+    expect(await screen.findByText('Campanha salva como rascunho.')).toBeVisible()
     expect(post).not.toHaveBeenCalled()
   })
 

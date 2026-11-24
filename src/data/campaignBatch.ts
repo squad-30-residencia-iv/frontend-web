@@ -2,6 +2,7 @@ export interface CampaignCustomerGroup {
   id: string
   name: string
   customerIds: readonly string[]
+  memberCount?: number
 }
 
 /** Catálogo demonstrativo até existir consulta de grupos no backend. Sem CPFs. */

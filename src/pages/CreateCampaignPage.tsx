@@ -1,4 +1,4 @@
-import { batchIsReady, type CampaignBatch } from '../data/campaignBatch'
+import { batchIsReady, type CampaignBatch, type CampaignCustomerGroup } from '../data/campaignBatch'
 import { PageHeader } from '../components/shared/PageHeader'
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
@@ -44,6 +44,7 @@ import {
   saveCampaignDraft,
   type EditableCampaign,
 } from '../services/campaigns'
+import { fetchCustomerGroups, previewCustomerGroups } from '../services/customerGroups'
 import { ApiProblemError } from '../services/problemDetails'
 import './CreateCampaignPage.css'
 
@@ -63,6 +64,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const editing = campaignId !== undefined
   const signedIn = user !== null
   const [batchSelection, setBatchSelection] = useState<CampaignBatch | null>(null)
+  const [customerCatalog, setCustomerCatalog] = useState<CampaignCustomerGroup[] | null>(null)
   const batchCustomerCount = batchIsReady(batchSelection) ? batchSelection.customerCount : 0
   const [draft, setDraft] = useState(() => editing ? newCampaignDraft() : loadCampaignDraft())
   const [editPhase, setEditPhase] = useState<EditPhase>(editing ? 'loading' : 'ready')
@@ -133,6 +135,12 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
         const loaded = JSON.stringify(target.draft)
         setDraft(target.draft)
         setSavedDraft(loaded)
+        if (target.customerGroups.length) {
+          setBatchSelection({
+            groups: target.customerGroups.map(group => ({ id: group.groupId, name: group.name, customerIds: [] })),
+            customerCount: target.uniqueCustomerCount,
+          })
+        }
         setVisitedBenefits(true)
         setVisitedRules(true)
         setVisitedScope(true)
@@ -157,6 +165,26 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       })
     return () => { cancelled = true }
   }, [networkId, feedback])
+
+  useEffect(() => {
+    if (!networkId) {
+      setCustomerCatalog(null)
+      return
+    }
+    let cancelled = false
+    fetchCustomerGroups(networkId, true)
+      .then(list => {
+        if (cancelled) return
+        setCustomerCatalog(list.map(group => ({
+          id: group.id,
+          name: group.name,
+          customerIds: [],
+          memberCount: group.memberCount,
+        })))
+      })
+      .catch(() => { if (!cancelled) setCustomerCatalog([]) })
+    return () => { cancelled = true }
+  }, [networkId])
 
   const draftCatalog: DraftCatalog | undefined = networkId
     ? { categories: catalog?.categories ?? [], products: catalog?.products ?? [], stores: catalog?.stores ?? [] }
@@ -302,11 +330,6 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       return
     }
 
-    if (draft.benefits.generationMode === 'batch') {
-      feedback.error({ title: 'Lote ainda não enviado.', description: 'Os grupos foram selecionados somente neste navegador. A inclusão de clientes e a geração de vouchers dependem da integração com o backend.' })
-      return
-    }
-
     if (saving) return
 
     if (user && !networkId) {
@@ -318,7 +341,11 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     }
 
     if (networkId) {
-      const blocker = campaignPersistBlocker(draft)
+      const persist = {
+        groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
+        uniqueCustomers: batchSelection?.customerCount ?? 0,
+      }
+      const blocker = campaignPersistBlocker(draft, persist)
       if (blocker) {
         feedback.error({ title: 'Esta campanha não pode ser gravada assim.', description: blocker })
         return
@@ -328,6 +355,8 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
         stores: catalog?.stores,
         products: catalog?.products,
         description: editTarget?.description ?? null,
+        customerGroupIds: persist.groupIds,
+        uniqueCustomers: persist.uniqueCustomers,
       })
         .then(({ notices }) => {
           if (campaignId) {
@@ -483,6 +512,8 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             products={benefitChoices.products}
             batchSelection={batchSelection}
             onBatchChange={value => { setBatchSelection(value); setBenefitsErrors({}) }}
+            groups={customerCatalog ?? undefined}
+            resolveCount={networkId ? ids => previewCustomerGroups(networkId, [...ids]) : undefined}
             onChange={handleBenefitsChange}
 
           />}
@@ -499,10 +530,16 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
           />}
           {step === 5 && <>
             <CampaignReview draft={draft} catalog={draftCatalog} batchCustomerCount={batchSelection?.customerCount ?? 0} batchGroupNames={batchSelection?.groups.map(group => group.name)} />
-            {networkId && campaignPersistBlocker(draft) && <FeedbackAlert
+            {networkId && campaignPersistBlocker(draft, {
+              groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
+              uniqueCustomers: batchSelection?.customerCount ?? 0,
+            }) && <FeedbackAlert
               type="warning"
               title="Ajuste a configuração antes de enviar"
-              description={campaignPersistBlocker(draft) ?? undefined}
+              description={campaignPersistBlocker(draft, {
+                groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
+                uniqueCustomers: batchSelection?.customerCount ?? 0,
+              }) ?? undefined}
             />}
             {networkId && <FeedbackAlert
               type="warning"

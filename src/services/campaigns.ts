@@ -24,6 +24,11 @@ export interface ApiCampaignScope {
   channels: string[]
 }
 
+export interface ApiCustomerGroupLink {
+  groupId: string
+  name: string
+}
+
 export interface ApiCampaign {
   id: string
   networkId: string | null
@@ -40,6 +45,8 @@ export interface ApiCampaign {
   items: ApiCampaignItem[]
   rejectionReason?: string | null
   scopes?: ApiCampaignScope[]
+  customerGroups?: ApiCustomerGroupLink[]
+  uniqueCustomerCount?: number
 }
 
 const statusByApiName: Record<string, CampaignStatus> = {
@@ -124,6 +131,13 @@ export function readApiCampaign(value: unknown): ApiCampaign {
     scopes: Array.isArray(value.scopes)
       ? value.scopes.map(readScope).filter((scope): scope is ApiCampaignScope => scope !== null)
       : [],
+    customerGroups: Array.isArray(value.customerGroups)
+      ? value.customerGroups.flatMap(item => {
+          if (!isRecord(item) || typeof item.groupId !== 'string' || typeof item.name !== 'string') return []
+          return [{ groupId: item.groupId, name: item.name }]
+        })
+      : [],
+    uniqueCustomerCount: readCount(value.uniqueCustomerCount),
   }
 }
 
@@ -221,12 +235,27 @@ export function isCampaignGuid(value: string) {
   return guidPattern.test(value)
 }
 
-export function campaignPersistBlocker(draft: CampaignDraft): string | null {
+export interface CampaignPersistInput {
+  groupIds?: readonly string[]
+  uniqueCustomers?: number
+}
+
+export function campaignPersistBlocker(draft: CampaignDraft, input: CampaignPersistInput = {}): string | null {
   if (draft.benefits.discountType === 'percentage' && draft.benefits.maximumDiscount?.trim()) {
     return 'A API ainda não permite teto de desconto percentual. Remova o teto para salvar na API ou mantenha o rascunho neste navegador.'
   }
   if (draft.benefits.generationMode === 'batch') {
-    return 'A API ainda não permite geração em lote. Escolha a geração automática para salvar na API ou mantenha o rascunho neste navegador.'
+    const groupIds = input.groupIds ?? []
+    if (groupIds.length === 0) {
+      return 'A API grava a campanha em lote só com grupos de clientes cadastrados. Selecione ao menos um grupo ou escolha a geração automática.'
+    }
+    const unique = input.uniqueCustomers ?? 0
+    const perCustomer = Number(draft.benefits.quantityPerCustomer)
+    const total = Number(draft.benefits.maxVouchers)
+    const needed = unique * perCustomer
+    if (!Number.isFinite(needed) || !Number.isFinite(total) || needed > total) {
+      return `A união dos grupos precisa de ${needed} vouchers e o teto da campanha é ${total}. A API recusa o lote acima do teto.`
+    }
   }
   if (draft.rules.restrictions.length > 1) {
     return 'A API permite apenas uma faixa de restrição de compra. Mantenha uma restrição para salvar na API ou mantenha o rascunho neste navegador.'
@@ -242,7 +271,7 @@ export function campaignPersistBlocker(draft: CampaignDraft): string | null {
 
 export function campaignPersistNotices(draft: CampaignDraft): string[] {
   const notices = [draft.benefits.generationMode === 'batch'
-    ? 'A geração em lote fica somente no rascunho local; o envio à API exige geração automática.'
+    ? 'Os vouchers deste lote ainda não são emitidos. O início da campanha é quando a emissão futura acontece; a validade em dias é o prazo de uso, igual para todos; o fim da campanha não encerra o voucher.'
     : 'Base de clientes e quantidade por concessão ficam só neste navegador.']
   return notices
 }
@@ -314,6 +343,9 @@ export interface SaveCampaignContext {
   products?: readonly ProductTargetOption[]
   /** Descrição gravada; a tela não a edita e a reenvia ao salvar uma campanha existente. */
   description?: string | null
+  /** Grupos da campanha em lote. Geração automática envia lista vazia. */
+  customerGroupIds?: readonly string[]
+  uniqueCustomers?: number
 }
 
 function optionalMoney(value: string) {
@@ -333,7 +365,8 @@ export async function saveCampaignDraft(
   existingId: string | null,
   context: SaveCampaignContext = {},
 ) {
-  const blocker = campaignPersistBlocker(draft)
+  const groupIds = draft.benefits.generationMode === 'batch' ? (context.customerGroupIds ?? []) : []
+  const blocker = campaignPersistBlocker(draft, { groupIds, uniqueCustomers: context.uniqueCustomers })
   if (blocker) throw new Error(blocker)
 
   let id = existingId
@@ -361,6 +394,7 @@ export async function saveCampaignDraft(
       totalVoucherLimit: Number(draft.benefits.maxVouchers),
       perCustomerVoucherLimit: perCustomer,
     })
+    await api.put(`/api/v1/campaigns/${id}/customer-groups`, { groupIds: [...groupIds] })
     await api.put(`/api/v1/campaigns/${id}/audience`, { audienceType: 'AllCustomers' })
     await api.put(`/api/v1/campaigns/${id}/voucher-validity`, {
       type: 'Relative',
@@ -643,6 +677,8 @@ export interface EditableCampaign {
   draft: CampaignDraft
   /** O que a tela não representa e será substituído ao salvar (D-2). */
   notices: string[]
+  customerGroups: ApiCustomerGroupLink[]
+  uniqueCustomerCount: number
 }
 
 const moneyText = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
@@ -686,6 +722,10 @@ function draftBenefits(campaign: ApiCampaignDetail, notices: string[]): Campaign
 
   benefits.maxVouchers = campaign.totalVoucherLimit ? String(campaign.totalVoucherLimit) : ''
   benefits.limitPerCustomer = campaign.perCustomerVoucherLimit ? String(campaign.perCustomerVoucherLimit) : '1'
+  if (campaign.customerGroups?.length) {
+    benefits.generationMode = 'batch'
+    benefits.quantityPerCustomer = campaign.perCustomerVoucherLimit ? String(campaign.perCustomerVoucherLimit) : ''
+  }
   return benefits
 }
 
@@ -758,7 +798,12 @@ export function campaignToDraft(value: unknown): Omit<EditableCampaign, 'id' | '
     scope: draftScope(campaign.scopes ?? [], notices),
   }
 
-  return { draft, notices }
+  return {
+    draft,
+    notices,
+    customerGroups: campaign.customerGroups ?? [],
+    uniqueCustomerCount: campaign.uniqueCustomerCount ?? 0,
+  }
 }
 
 /** Campanha da API para o assistente; null quando não existe. */

@@ -1,6 +1,7 @@
 import { authHandlers } from './auth'
 import { campaignHandlers } from './campaigns'
 import { portalReadHandlers } from './portalReads'
+import { customerGroupHandlers } from './customerGroups'
 import { registryHandlers } from './registry'
 import { satelliteHandlers } from './satellite'
 
@@ -9,5 +10,6 @@ export const handlers = [
   ...campaignHandlers,
   ...portalReadHandlers,
   ...registryHandlers,
+  ...customerGroupHandlers,
   ...satelliteHandlers,
 ]

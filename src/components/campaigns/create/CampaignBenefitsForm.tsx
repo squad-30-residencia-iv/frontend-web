@@ -1,5 +1,5 @@
 import { CampaignBatchGroups } from './CampaignBatchGroups'
-import type { CampaignBatch } from '../../../data/campaignBatch'
+import type { CampaignBatch, CampaignCustomerGroup } from '../../../data/campaignBatch'
 import { X } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
@@ -25,6 +25,8 @@ interface CampaignBenefitsFormProps {
   products?: readonly { value: string; label: string; code?: string }[]
   batchSelection: CampaignBatch | null
   onBatchChange: (batch: CampaignBatch | null) => void
+  groups?: readonly CampaignCustomerGroup[]
+  resolveCount?: (ids: readonly string[]) => Promise<number>
   onChange: (value: Benefits) => void
 }
 const integerInputProps = { min: 1, step: 1 }
@@ -38,6 +40,8 @@ export function CampaignBenefitsForm({
   products = productOptions,
   batchSelection,
   onBatchChange,
+  groups,
+  resolveCount,
   onChange,
 }: CampaignBenefitsFormProps) {
 
@@ -271,7 +275,8 @@ export function CampaignBenefitsForm({
     </section>}
     {batch && <section aria-labelledby="campaign-batch-title">
       <h4 id="campaign-batch-title">Em lote:</h4>
-      <CampaignBatchGroups value={batchSelection} onChange={onBatchChange} error={errors.customerBase} />
+      <p>O início é quando os vouchers passam a existir. A validade em dias é o prazo de uso, igual para todos. O fim da campanha não encerra o voucher.</p>
+      <CampaignBatchGroups value={batchSelection} onChange={onBatchChange} groups={groups} resolveCount={resolveCount} error={errors.customerBase} />
       <div className="campaign-benefits-panel campaign-benefits-batch">
         <Input
           label="Quantidade por cliente"

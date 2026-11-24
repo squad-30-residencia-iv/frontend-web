@@ -77,6 +77,16 @@ describe('campanhas da rede', () => {
     } finally { post.mockRestore(); put.mockRestore() }
   })
 
+  it('aceita o lote quando a união cabe no teto e recusa quando passa', () => {
+    const draft = structuredClone(initialCampaignDraft)
+    draft.benefits.generationMode = 'batch'
+    draft.benefits.quantityPerCustomer = '2'
+    draft.benefits.maxVouchers = '6'
+    expect(campaignPersistBlocker(draft, { groupIds: ['grupo'], uniqueCustomers: 3 })).toBeNull()
+    expect(campaignPersistBlocker(draft, { groupIds: ['grupo'], uniqueCustomers: 4 })).toMatch(/API/)
+    expect(campaignPersistBlocker(draft)).toMatch(/API/)
+  })
+
   it('ignora teto antigo do percentual quando a escolha atual é valor fixo', () => {
     const draft = structuredClone(initialCampaignDraft)
     draft.benefits.discountType = 'fixed'

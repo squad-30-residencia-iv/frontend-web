@@ -149,7 +149,12 @@ export function newCampaignBenefits(): CampaignDraft['benefits'] {
   return { ...initialCampaignBenefits, targetIds: [], productCodes: '', addedBenefits: [] }
 }
 
-export const campaignBenefitsSchema = createFormSchema(isCampaignBenefits, collectCampaignBenefitsErrors)
+export const campaignBenefitsSchema = createFormSchema(isCampaignBenefits, value => {
+  const errors = collectCampaignBenefitsErrors(value)
+  // A união dos grupos não entra no rascunho gravado; o assistente já conferiu a seleção.
+  if (value.generationMode === 'batch') delete errors.customerBase
+  return errors
+})
 
 export function validateCampaignBenefits(value: CampaignDraft['benefits'], catalog?: BenefitCatalog, batchCustomerCount = 0): CampaignBenefitsErrors {
   if (catalog || value.generationMode === 'batch') return collectCampaignBenefitsErrors(value, catalog, batchCustomerCount)

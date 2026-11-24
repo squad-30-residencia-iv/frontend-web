@@ -15,7 +15,8 @@ import { VoucherHistoryPage } from './pages/VoucherHistoryPage'
 import { VoucherLookupPage } from './pages/VoucherLookupPage'
 import { useAuth } from './contexts/AuthContext'
 import { sessionCampaignRole } from './data/campaignWorkflow'
-import { applicationsPath, registryPath } from './components/layout/navigation'
+import { applicationsPath, customerGroupsPath, registryPath } from './components/layout/navigation'
+import { CustomerGroupsPage } from './pages/CustomerGroupsPage'
 
 const campaignDetailsPattern = /^\/campanhas\/([^/]+)$/
 const campaignEditPattern = /^\/campanhas\/([^/]+)\/editar$/
@@ -109,6 +110,14 @@ export function App() {
   }
 
   // A tela mostra "Acesso restrito" a quem não é administrador, dentro do layout do portal.
+  if (pathname === customerGroupsPath) {
+    return (
+      <ProtectedRoute>
+        <CustomerGroupsPage />
+      </ProtectedRoute>
+    )
+  }
+
   if (pathname === registryPath) {
     return (
       <ProtectedRoute>
