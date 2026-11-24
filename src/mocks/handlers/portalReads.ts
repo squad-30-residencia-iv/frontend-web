@@ -20,15 +20,7 @@ const voucher = {
 }
 
 export const portalReadHandlers = [
-  http.get('/api/v1/vouchers', ({ request }) => {
-    const url = new URL(request.url)
-    if (url.searchParams.get('networkId') !== networkId) {
-      return HttpResponse.json({ title: 'Escopo', detail: 'Fora do escopo', code: 'SCOPE_FORBIDDEN' }, { status: 403 })
-    }
-    return HttpResponse.json([voucher])
-  }),
-
-  http.get('/api/v1/vouchers/:id', ({ params }) => {
+  http.get('*/api/v1/vouchers/:id', ({ params }) => {
     if (params.id !== voucherId) {
       return HttpResponse.json({ title: 'Não encontrado', detail: 'Voucher não encontrado.', code: 'NOT_FOUND' }, { status: 404 })
     }
@@ -50,6 +42,18 @@ export const portalReadHandlers = [
         },
       ],
     })
+  }),
+
+  http.get('*/api/v1/vouchers', ({ request }) => {
+    const url = new URL(request.url)
+    if (url.searchParams.get('networkId') !== networkId) {
+      return HttpResponse.json({ title: 'Escopo', detail: 'Fora do escopo', code: 'SCOPE_FORBIDDEN' }, { status: 403 })
+    }
+    const requestedCampaign = url.searchParams.get('campaignId')
+    if (requestedCampaign && requestedCampaign !== voucher.campaignId) {
+      return HttpResponse.json([])
+    }
+    return HttpResponse.json([voucher])
   }),
 
   http.get('/api/v1/reports/catalog', () => HttpResponse.json({
