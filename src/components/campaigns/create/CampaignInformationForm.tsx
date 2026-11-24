@@ -1,15 +1,16 @@
 import { Input } from '../../ui/Input'
 import type { CampaignDraft } from '../../../types/campaign'
-import type { CampaignInformationErrors } from '../../../data/campaignDraft'
+import { localDateTimeValue, type CampaignInformationErrors } from '../../../data/campaignDraft'
 
 type Information = CampaignDraft['information']
 interface CampaignInformationFormProps {
   information: Information
   errors: CampaignInformationErrors
+  requireFutureStart?: boolean
   onChange: <Key extends keyof Information>(key: Key, value: Information[Key]) => void
 }
 
-export function CampaignInformationForm({ information, errors, onChange }: CampaignInformationFormProps) {
+export function CampaignInformationForm({ information, errors, requireFutureStart = true, onChange }: CampaignInformationFormProps) {
   return (<section className="create-campaign-information" aria-labelledby="campaign-information-title">
     <h2 id="campaign-information-title" tabIndex={-1}>Informações básicas</h2>
     <p className="create-campaign-description">Identifique a campanha e defina quando ela poderá emitir vouchers.</p>
@@ -33,6 +34,7 @@ export function CampaignInformationForm({ information, errors, onChange }: Campa
         isRequired
         validationBehavior="aria"
         errorMessage={errors.start}
+        inputProps={requireFutureStart ? { min: localDateTimeValue() } : undefined}
       />
       <Input
         label="Fim da vigência"

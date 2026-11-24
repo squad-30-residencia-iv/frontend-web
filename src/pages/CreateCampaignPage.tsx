@@ -62,6 +62,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const { user } = useAuth()
   const networkId = user?.networkId ?? null
   const editing = campaignId !== undefined
+  const informationOptions = { requireFutureStart: !editing }
   const signedIn = user !== null
   const [batchSelection, setBatchSelection] = useState<CampaignBatch | null>(null)
   const [customerCatalog, setCustomerCatalog] = useState<CampaignCustomerGroup[] | null>(null)
@@ -88,7 +89,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const returnPath = campaignId ? `/campanhas/${campaignId}` : '/campanhas'
   const information = draft.information
   const dirty = JSON.stringify(draft) !== savedDraft || batchSelection !== null
-  const basicInformationComplete = Object.keys(validateCampaignInformation(draft)).length === 0
+  const basicInformationComplete = Object.keys(validateCampaignInformation(draft, informationOptions)).length === 0
 
   useEffect(() => {
     const heading = formRef.current?.querySelector<HTMLElement>('h2')
@@ -265,7 +266,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   function handleContinue(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (step === 1) {
-      const validationErrors = validateCampaignInformation(draft)
+      const validationErrors = validateCampaignInformation(draft, informationOptions)
       setErrors(validationErrors)
       const firstInvalidField = Object.keys(validationErrors)[0]
       if (firstInvalidField) {
@@ -301,7 +302,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       return
     }
 
-    const validation = validateCampaignDraft(draft, draftCatalog, batchCustomerCount)
+    const validation = validateCampaignDraft(draft, draftCatalog, batchCustomerCount, informationOptions)
     setErrors(validation.information)
     setBenefitsErrors(validation.benefits)
     setRulesErrors(validation.rules)
@@ -425,7 +426,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     { label: 'Alvos, benefícios e quantidade', complete: benefitsComplete && quantityComplete, step: 2 },
     { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all', step: 3 },
     { label: 'Escopo organizacional', complete: visitedScope, step: 4 },
-    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog, batchCustomerCount).firstInvalid === null, step: 5 },
+    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog, batchCustomerCount, informationOptions).firstInvalid === null, step: 5 },
   ]
   const pageTitle = editing ? 'Editar rascunho' : 'Criar nova campanha'
   const breadcrumbs = [
@@ -516,6 +517,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
           {step === 1 && <CampaignInformationForm
             information={information}
             errors={errors}
+            requireFutureStart={!editing}
             onChange={updateField}
           />}
           {step === 2 && <CampaignBenefitsForm

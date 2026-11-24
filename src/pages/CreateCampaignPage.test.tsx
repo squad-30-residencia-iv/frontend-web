@@ -5,7 +5,7 @@ import { App } from '../App'
 import { AuthProvider } from '../contexts/AuthContext'
 import { CreateCampaignPage } from './CreateCampaignPage'
 import { FeedbackProvider } from '../components/ui/FeedbackProvider'
-import { campaignDraftStorageKey, initialCampaignDraft } from '../data/campaignDraft'
+import { campaignDraftStorageKey, initialCampaignDraft, localDateTimeValue } from '../data/campaignDraft'
 import { generateMockJwt } from '../mocks/jwtUtils'
 import { mockUsers } from '../mocks/handlers/auth'
 import { api } from '../services/api'
@@ -42,8 +42,8 @@ describe('Criação de campanha', () => {
   it('abre a URL diretamente e mostra campos, datas e etapa atual', () => {
     setup()
     expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toBeRequired()
-    expect(screen.getByLabelText('Início da vigência')).toHaveValue('2026-10-01T08:00')
-    expect(screen.getByLabelText('Fim da vigência')).toHaveValue('2026-10-31T23:59')
+    expect(screen.getByLabelText('Início da vigência')).toHaveValue(localDateTimeValue())
+    expect(screen.getByLabelText('Fim da vigência')).toHaveValue('')
     expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveValue(30)
     expect(screen.queryByRole('button', { name: /Modelo/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Teto máximo/ })).not.toBeInTheDocument()
@@ -64,6 +64,16 @@ describe('Criação de campanha', () => {
     expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveFocus()
   })
 
+  it('recusa início da vigência anterior ao momento atual', async () => {
+    const user = setup()
+    await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Campanha atrasada')
+    fireEvent.change(screen.getByLabelText('Início da vigência'), { target: { value: '2020-01-01T08:00' } })
+    fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-12-31T23:59' } })
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
+    expect(screen.getByText('O início da vigência não pode ser anterior ao momento atual.')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Alvos e benefícios' })).not.toBeInTheDocument()
+  })
+
   it('valida ordem de datas e duração e permite corrigir os campos', async () => {
     const user = setup()
     await user.type(screen.getByRole('textbox', { name: 'Nome da campanha' }), 'Volta às Aulas 2026')
@@ -72,7 +82,7 @@ describe('Criação de campanha', () => {
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByText('O fim da vigência deve ser posterior ao início.')).toBeVisible()
     expect(screen.getByRole('spinbutton', { name: 'Duração' })).toHaveAttribute('aria-invalid', 'true')
-    fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-10-31T23:59' } })
+    fireEvent.change(screen.getByLabelText('Fim da vigência'), { target: { value: '2026-12-31T23:59' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Duração' }), { target: { value: '45' } })
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Alvos e benefícios' })).toBeVisible()
@@ -815,7 +825,7 @@ describe('Revisão geral', () => {
     expect(within(progress).getByText('Escopo e canais').closest('li')).toHaveTextContent('concluída')
     const information = screen.getByRole('region', { name: 'Informações' })
     expect(information).toHaveTextContent('Campanha de escopo')
-    expect(information).toHaveTextContent('01/10/2026 08:00 a 31/10/2026 23:59')
+    expect(information).toHaveTextContent('01/12/2026 08:00 a 31/12/2026 23:59')
     expect(information).toHaveTextContent('30 dias após a emissão')
     expect(information).not.toHaveTextContent('Toda a rede')
     const scope = screen.getByRole('region', { name: 'Escopo e canais' })

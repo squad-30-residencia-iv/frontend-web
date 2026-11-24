@@ -23,11 +23,18 @@ export function writeSavedCampaignId(id: string) {
 export function clearSavedCampaignId() {
   localStorage.removeItem(savedCampaignIdKey)
 }
+
+/** Valor de `datetime-local` no fuso do navegador, no minuto atual. */
+export function localDateTimeValue(date = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 export const initialCampaignDraft: CampaignDraft = {
   information: {
     name: '',
-    start: '2026-10-01T08:00',
-    end: '2026-10-31T23:59',
+    start: '2026-12-01T08:00',
+    end: '2026-12-31T23:59',
     voucherModel: 'relative',
     voucherDurationDays: '30',
     voucherCap: 'unlimited',
@@ -51,7 +58,12 @@ function isCampaignDraft(value: unknown): value is Pick<CampaignDraft, 'informat
 
 /** Formulário novo, sem o rascunho guardado no navegador. */
 export function newCampaignDraft(): CampaignDraft {
-  return { information: { ...initialCampaignDraft.information }, benefits: newCampaignBenefits(), rules: newCampaignRules(), scope: newCampaignScope() }
+  return {
+    information: { ...initialCampaignDraft.information, start: localDateTimeValue(), end: '' },
+    benefits: newCampaignBenefits(),
+    rules: newCampaignRules(),
+    scope: newCampaignScope(),
+  }
 }
 
 export function loadCampaignDraft(): CampaignDraft {
@@ -85,10 +97,21 @@ function isValidDateTime(value: string) {
     && date.getDate() === day && date.getHours() === hours && date.getMinutes() === minutes
 }
 
-function collectCampaignInformationErrors({ information }: Pick<CampaignDraft, 'information'>): CampaignInformationErrors {
+export type CampaignInformationOptions = {
+  /** Na criação, o início não pode ser anterior ao minuto atual. Na edição de rascunho gravado, a vigência já salva permanece. */
+  requireFutureStart?: boolean
+}
+
+function collectCampaignInformationErrors(
+  { information }: Pick<CampaignDraft, 'information'>,
+  options: CampaignInformationOptions = {},
+): CampaignInformationErrors {
   const errors: CampaignInformationErrors = {}
   if (!information.name.trim()) errors.name = 'Informe o nome da campanha.'
   if (!isValidDateTime(information.start)) errors.start = 'Informe uma data e hora de início válidas.'
+  else if ((options.requireFutureStart ?? true) && information.start < localDateTimeValue()) {
+    errors.start = 'O início da vigência não pode ser anterior ao momento atual.'
+  }
   if (!isValidDateTime(information.end)) errors.end = 'Informe uma data e hora de fim válidas.'
   if (!errors.start && !errors.end && information.end <= information.start) errors.end = 'O fim da vigência deve ser posterior ao início.'
   if (!information.voucherModel) errors.voucherModel = 'Selecione o modelo de validade.'
@@ -104,8 +127,13 @@ export interface DraftCatalog {
   stores?: readonly CampaignStore[]
 }
 
-export function validateCampaignDraft(draft: CampaignDraft, catalog: DraftCatalog = {}, batchCustomerCount = 0) {
-  const information = validateCampaignInformation(draft)
+export function validateCampaignDraft(
+  draft: CampaignDraft,
+  catalog: DraftCatalog = {},
+  batchCustomerCount = 0,
+  options: CampaignInformationOptions = {},
+) {
+  const information = validateCampaignInformation(draft, options)
   const benefits = catalog.categories && catalog.products
     ? validateCampaignBenefits(draft.benefits, { categories: catalog.categories, products: catalog.products }, batchCustomerCount)
     : validateCampaignBenefits(draft.benefits, undefined, batchCustomerCount)
@@ -135,6 +163,7 @@ export const campaignInformationSchema = createFormSchema(
   information => collectCampaignInformationErrors({ information }),
 )
 
-export function validateCampaignInformation(value: CampaignDraft): CampaignInformationErrors {
+export function validateCampaignInformation(value: CampaignDraft, options: CampaignInformationOptions = {}): CampaignInformationErrors {
+  if (options.requireFutureStart === false) return collectCampaignInformationErrors(value, options)
   return formErrors(campaignInformationSchema, value.information)
 }
