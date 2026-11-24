@@ -420,13 +420,12 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     && !benefitValidation.customerBase
     && !benefitValidation.quantityPerCustomer
 
-  const requirements = [
-    { label: 'Informações básicas', complete: basicInformationComplete },
-    { label: 'Alvos e benefícios', complete: benefitsComplete },
-    { label: 'Quantidade de vouchers', complete: quantityComplete },
-    { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all' },
-    { label: 'Escopo organizacional', complete: visitedScope },
-    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog, batchCustomerCount).firstInvalid === null },
+  const requirements: { label: string; complete: boolean; step: 1 | 2 | 3 | 4 | 5 }[] = [
+    { label: 'Informações básicas', complete: basicInformationComplete, step: 1 },
+    { label: 'Alvos, benefícios e quantidade', complete: benefitsComplete && quantityComplete, step: 2 },
+    { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all', step: 3 },
+    { label: 'Escopo organizacional', complete: visitedScope, step: 4 },
+    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog, batchCustomerCount).firstInvalid === null, step: 5 },
   ]
   const pageTitle = editing ? 'Editar rascunho' : 'Criar nova campanha'
   const breadcrumbs = [
@@ -478,19 +477,33 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
         />}
         <nav aria-label="Etapas da criação" className="create-campaign-steps">
           <ol>
-            {steps.map((stepLabel, index) => (
-              <li
-                key={stepLabel}
-                aria-current={index === step - 1 ? 'step' : undefined}
-                className={index < step - 1 ? 'create-campaign-step-complete' : undefined}
-              >
-                <span aria-hidden="true">
-                  {index < step - 1 ? <Check size={12} /> : index + 1}
-                </span>
-                {stepLabel}
-                {index < step - 1 && <span className="create-campaign-sr-only">concluída</span>}
-              </li>
-            ))}
+            {steps.map((stepLabel, index) => {
+              const stepNumber = (index + 1) as 1 | 2 | 3 | 4 | 5
+              const complete = stepNumber < step
+              return (
+                <li
+                  key={stepLabel}
+                  aria-current={stepNumber === step ? 'step' : undefined}
+                  className={complete ? 'create-campaign-step-complete' : undefined}
+                >
+                  {complete
+                    ? <button
+                        type="button"
+                        className="create-campaign-step-button"
+                        aria-label={`${stepLabel}, etapa concluída. Abrir etapa.`}
+                        onClick={() => setStep(stepNumber)}
+                      >
+                        <span aria-hidden="true"><Check size={12} /></span>
+                        {stepLabel}
+                        <span className="create-campaign-sr-only">concluída</span>
+                      </button>
+                    : <>
+                        <span aria-hidden="true">{index + 1}</span>
+                        {stepLabel}
+                      </>}
+                </li>
+              )
+            })}
           </ol>
         </nav>
         <form
@@ -529,7 +542,13 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             onChange={handleScopeChange}
           />}
           {step === 5 && <>
-            <CampaignReview draft={draft} catalog={draftCatalog} batchCustomerCount={batchSelection?.customerCount ?? 0} batchGroupNames={batchSelection?.groups.map(group => group.name)} />
+            <CampaignReview
+              draft={draft}
+              catalog={draftCatalog}
+              batchCustomerCount={batchSelection?.customerCount ?? 0}
+              batchGroupNames={batchSelection?.groups.map(group => group.name)}
+              onEditStep={setStep}
+            />
             {networkId && campaignPersistBlocker(draft, {
               groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
               uniqueCustomers: batchSelection?.customerCount ?? 0,
@@ -553,16 +572,32 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             <p className="create-campaign-draft-status">Rascunho</p>
             <p className="create-campaign-summary-label">Itens obrigatórios</p>
             <ul>
-              {requirements.map(({ label, complete }) => {
+              {requirements.map(({ label, complete, step: target }) => {
                 const Icon = complete ? Check : Circle
+                const open = complete && target !== step
                 return <li key={label} className={complete ? 'create-campaign-requirement-complete' : undefined}>
-                  <Icon size={10} aria-hidden="true" />
-                  <span>
-                    {label}
-                    <span className="create-campaign-sr-only">: {' '}
-                      {complete ? 'completo' : 'pendente'}
-                    </span>
-                  </span>
+                  {open
+                    ? <button
+                        type="button"
+                        className="create-campaign-requirement-button"
+                        aria-label={`${label}, completo. Abrir etapa.`}
+                        onClick={() => setStep(target)}
+                      >
+                        <Icon size={10} aria-hidden="true" />
+                        <span>
+                          {label}
+                          <span className="create-campaign-sr-only">: completo</span>
+                        </span>
+                      </button>
+                    : <>
+                        <Icon size={10} aria-hidden="true" />
+                        <span>
+                          {label}
+                          <span className="create-campaign-sr-only">: {' '}
+                            {complete ? 'completo' : 'pendente'}
+                          </span>
+                        </span>
+                      </>}
                 </li>
               })}
             </ul>

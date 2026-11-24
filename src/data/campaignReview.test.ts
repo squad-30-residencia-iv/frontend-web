@@ -28,6 +28,12 @@ describe('Apresentação da revisão', () => {
 
     expect(valueFor('Valor')).toMatch(/R\$\s*99,50/)
     expect(valueFor('Produto ou categoria')).toBe('Moda, Calçados')
+    expect(sections.map(section => section.title)).toEqual([
+      'Informações',
+      'Alvo e benefícios',
+      'Regras e público',
+      'Escopo e canais',
+    ])
     expect(valueFor('Rede')).toBe('001 — Loja Centro')
     expect(valueFor('Canais')).toBe('Virtual')
     expect(valueFor('Total previsto')).toBe('4 vouchers')

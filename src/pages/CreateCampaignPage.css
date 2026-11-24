@@ -33,6 +33,32 @@
   color: var(--muted);
 }
 
+.create-campaign-step-button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-height: 62px;
+  margin: -14px -20px;
+  padding: 14px 20px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.create-campaign-step-button:hover,
+.create-campaign-step-button:focus-visible {
+  background: color-mix(in srgb, var(--color-brand) 10%, var(--surface));
+  outline: none;
+}
+
+.create-campaign-step-button:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus, var(--color-brand));
+}
+
 .create-campaign-steps li[aria-current] {
   color: var(--color-brand);
   background: color-mix(in srgb, var(--color-brand) 5%, var(--surface));
@@ -214,6 +240,32 @@
 
 .create-campaign-summary li.create-campaign-requirement-complete {
   color: var(--success);
+}
+
+.create-campaign-requirement-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.create-campaign-requirement-button:hover,
+.create-campaign-requirement-button:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.create-campaign-requirement-button:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus, var(--color-brand));
 }
 
 .create-campaign-rule .alert {

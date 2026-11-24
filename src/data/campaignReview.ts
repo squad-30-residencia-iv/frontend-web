@@ -9,6 +9,7 @@ export interface CampaignReviewField {
 
 export interface CampaignReviewSection {
   title: string
+  step: 1 | 2 | 3 | 4
   fields: CampaignReviewField[]
 }
 
@@ -109,19 +110,19 @@ export function getCampaignReviewSections(
   return [
     {
       title: 'Informações',
+      step: 1,
       fields: [
         { label: 'Nome', value: information.name.trim() || 'Não informado' },
         { label: 'Vigência', value: `${formatDateTime(information.start)} a ${formatDateTime(information.end)}` },
         { label: 'Modelo', value: information.voucherModel === 'relative' ? 'Prazo relativo' : 'Não informado' },
         { label: 'Validade', value: `${formatQuantity(information.voucherDurationDays)} dias após a emissão` },
         { label: 'Teto máximo', value: information.voucherCap === 'unlimited' ? 'Sem teto' : 'Não informado' },
-        { label: 'Rede', value: isNetwork ? 'Toda a rede' : (storeNames.join(', ') || 'Não informado') },
-        { label: 'Canais', value: channels.map(channel => channelLabels[channel]).join(', ') || 'Não informado' },
       ],
     },
-    { title: 'Alvo e benefícios', fields: benefitFields },
+    { title: 'Alvo e benefícios', step: 2, fields: benefitFields },
     {
       title: 'Regras e público',
+      step: 3,
       fields: [
         { label: 'Público', value: rules.audience === 'all' ? 'Todos os clientes' : 'Não informado' },
         { label: 'Condições', value: rules.conditionMatch === 'all' ? 'Todas as condições — E' : 'Pelo menos uma condição — OU' },
@@ -142,6 +143,14 @@ export function getCampaignReviewSections(
             return `${type}: mínimo ${formatMoney(item.minimum)}; máximo ${maximum}`
           }).join(restrictionSeparator) || 'Nenhuma restrição adicionada',
         },
+      ],
+    },
+    {
+      title: 'Escopo e canais',
+      step: 4,
+      fields: [
+        { label: 'Rede', value: isNetwork ? 'Toda a rede' : (storeNames.join(', ') || 'Não informado') },
+        { label: 'Canais', value: channels.map(channel => channelLabels[channel]).join(', ') || 'Não informado' },
       ],
     },
   ]

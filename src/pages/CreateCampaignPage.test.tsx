@@ -193,6 +193,8 @@ describe('Alvos e benefícios', () => {
     const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
     expect(within(progress).getByText('Alvos e benefícios').closest('li')).toHaveAttribute('aria-current', 'step')
     expect(within(progress).getByText('Informações').closest('li')).toHaveTextContent('concluída')
+    expect(within(progress).getByRole('button', { name: 'Informações, etapa concluída. Abrir etapa.' })).toBeVisible()
+    expect(within(progress).queryByRole('button', { name: 'Alvos e benefícios, etapa concluída. Abrir etapa.' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Tipo de benefício/ })).toHaveTextContent('Desconto percentual (%)')
     expect(screen.getByRole('radio', { name: 'Valor total da compra' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Automática' })).toBeChecked()
@@ -656,7 +658,7 @@ describe('Escopo e canais', () => {
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
     expect(screen.queryByText('Campanha salva como rascunho.')).not.toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Físico, Virtual')
+    expect(screen.getByRole('region', { name: 'Escopo e canais' })).toHaveTextContent('Físico, Virtual')
     expect(localStorage.getItem(campaignDraftStorageKey)).not.toBeNull()
   })
 
@@ -673,8 +675,8 @@ describe('Escopo e canais', () => {
     await user.click(within(channels).getByRole('checkbox', { name: 'Virtual' }))
     await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('heading', { name: 'Revisão' })).toBeVisible()
-    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Loja Shopping')
-    expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Loja Centro')
+    expect(screen.getByRole('region', { name: 'Escopo e canais' })).toHaveTextContent('Loja Shopping')
+    expect(screen.getByRole('region', { name: 'Escopo e canais' })).toHaveTextContent('Loja Centro')
   })
 
   it('mostra busca vazia, remove loja selecionada e permite desmarcar os canais', async () => {
@@ -815,14 +817,44 @@ describe('Revisão geral', () => {
     expect(information).toHaveTextContent('Campanha de escopo')
     expect(information).toHaveTextContent('01/10/2026 08:00 a 31/10/2026 23:59')
     expect(information).toHaveTextContent('30 dias após a emissão')
-    expect(information).toHaveTextContent('Toda a rede')
-    expect(information).toHaveTextContent('Físico, Virtual')
+    expect(information).not.toHaveTextContent('Toda a rede')
+    const scope = screen.getByRole('region', { name: 'Escopo e canais' })
+    expect(scope).toHaveTextContent('Toda a rede')
+    expect(scope).toHaveTextContent('Físico, Virtual')
     expect(screen.getByRole('region', { name: 'Alvo e benefícios' })).toHaveTextContent('20%')
     expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent(/R\$\s*200,00/)
     expect(screen.getByRole('region', { name: 'Regras e público' })).toHaveTextContent('Sem limite')
     const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
     expect(within(summary).getByText('Condições de geração').closest('li')).toHaveTextContent('completo')
     expect(screen.getByRole('button', { name: 'Salvar campanha' })).toBeEnabled()
+    expect(within(progress).getByRole('button', { name: 'Informações, etapa concluída. Abrir etapa.' })).toBeVisible()
+    expect(within(progress).getByRole('button', { name: 'Alvos e benefícios, etapa concluída. Abrir etapa.' })).toBeVisible()
+    expect(within(progress).getByRole('button', { name: 'Regras e público, etapa concluída. Abrir etapa.' })).toBeVisible()
+    expect(within(progress).getByRole('button', { name: 'Escopo e canais, etapa concluída. Abrir etapa.' })).toBeVisible()
+    expect(within(progress).queryByRole('button', { name: 'Revisão, etapa concluída. Abrir etapa.' })).not.toBeInTheDocument()
+  })
+
+  it('abre a etapa pelo item completo do resumo', async () => {
+    const user = await openReview()
+    const summary = screen.getByRole('complementary', { name: 'Resumo da configuração' })
+    await user.click(within(summary).getByRole('button', { name: 'Informações básicas, completo. Abrir etapa.' }))
+    expect(screen.getByRole('heading', { name: 'Informações básicas' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
+  })
+
+  it('abre a etapa pelo stepper verde e foca o título', async () => {
+    const user = await openReview()
+    const progress = screen.getByRole('navigation', { name: 'Etapas da criação' })
+    await user.click(within(progress).getByRole('button', { name: 'Informações, etapa concluída. Abrir etapa.' }))
+    expect(screen.getByRole('heading', { name: 'Informações básicas' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Nome da campanha' })).toHaveValue('Campanha de escopo')
+  })
+
+  it('abre o escopo pelo Editar da revisão', async () => {
+    const user = await openReview()
+    await user.click(screen.getByRole('button', { name: 'Editar Escopo e canais' }))
+    expect(screen.getByRole('checkbox', { name: 'Toda a rede' })).toBeChecked()
+    expect(screen.getByRole('heading', { name: 'Escopo Organizacional' })).toHaveFocus()
   })
 
   it('volta ao escopo, permite corrigir dados e atualiza a revisão', async () => {
@@ -839,7 +871,7 @@ describe('Revisão geral', () => {
     await user.type(name, 'Campanha revisada')
     for (let step = 1; step <= 4; step += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByRole('region', { name: 'Informações' })).toHaveTextContent('Campanha revisada')
-    expect(screen.getByRole('region', { name: 'Informações' })).not.toHaveTextContent('Virtual')
+    expect(screen.getByRole('region', { name: 'Escopo e canais' })).not.toHaveTextContent('Virtual')
   })
 
   it('salva de forma simulada, retorna ao gerenciamento e inicia outro formulário limpo', async () => {
