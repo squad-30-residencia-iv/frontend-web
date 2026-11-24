@@ -10,6 +10,7 @@ import {
   duplicateCampaign,
   fetchNetworkCampaigns,
   formatBenefit,
+  campaignItemBody,
   saveCampaignDraft,
   scopeBody,
   scopeSummary,
@@ -17,17 +18,23 @@ import {
   toListCampaign,
   readApiCampaign,
   toCampaignDetails,
+  limitShare,
   type ApiCampaign,
 } from './campaigns'
 
 const campaign: ApiCampaign = {
   id: '0199e3a0-0000-7000-8000-000000000111',
+  networkId: '0199e3a0-0000-7000-8000-000000000001',
   name: 'Volta às Aulas',
   description: 'Campanha da rede',
   startsAt: '2026-10-01T08:00:00-03:00',
   endsAt: '2026-10-31T23:59:00-03:00',
   status: 'Active',
   totalVoucherLimit: 100,
+  issuedVouchers: 0,
+  reservedVouchers: 0,
+  redeemedVouchers: 0,
+  expiredVouchers: 0,
   items: [{ benefitType: 'Percentage', benefitValue: 10, categoryId: null }],
 }
 
@@ -43,7 +50,11 @@ describe('campanhas da rede', () => {
     const now = Date.parse('2026-10-05T12:00:00Z')
     const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
     try {
-      expect(toCampaignDetails(campaign)).toMatchObject({ status: 'active', referenceAt: new Date(now).toISOString() })
+      expect(toCampaignDetails(campaign)).toMatchObject({
+        status: 'active',
+        referenceAt: new Date(now).toISOString(),
+        metrics: { issued: 0, reserved: 0 },
+      })
       expect(toCampaignDetails({ ...campaign, status: 'Paused' }).status).toBe('paused')
     } finally { clock.mockRestore() }
   })
@@ -66,6 +77,16 @@ describe('campanhas da rede', () => {
     } finally { post.mockRestore(); put.mockRestore() }
   })
 
+  it('aceita o lote quando a união cabe no teto e recusa quando passa', () => {
+    const draft = structuredClone(initialCampaignDraft)
+    draft.benefits.generationMode = 'batch'
+    draft.benefits.quantityPerCustomer = '2'
+    draft.benefits.maxVouchers = '6'
+    expect(campaignPersistBlocker(draft, { groupIds: ['grupo'], uniqueCustomers: 3 })).toBeNull()
+    expect(campaignPersistBlocker(draft, { groupIds: ['grupo'], uniqueCustomers: 4 })).toMatch(/API/)
+    expect(campaignPersistBlocker(draft)).toMatch(/API/)
+  })
+
   it('ignora teto antigo do percentual quando a escolha atual é valor fixo', () => {
     const draft = structuredClone(initialCampaignDraft)
     draft.benefits.discountType = 'fixed'
@@ -74,7 +95,7 @@ describe('campanhas da rede', () => {
   })
 
   it('traduz status, limite, escopo e o benefício do primeiro item', () => {
-    const overview = toHomeOverview([campaign])
+    const overview = toHomeOverview([{ ...campaign, issuedVouchers: 40, reservedVouchers: 10 }])
 
     expect(overview.campaigns[0]).toMatchObject({
       name: 'Volta às Aulas',
@@ -82,11 +103,23 @@ describe('campanhas da rede', () => {
       end: '2026-10-31',
       status: 'active',
       vouchers: 100,
-      usage: 0,
+      usage: 50,
       benefit: '10% OFF',
     })
     expect(overview.featured?.title).toBe('Volta às Aulas')
     expect(formatBenefit({ benefitType: 'FixedAmount', benefitValue: 20, categoryId: null })).toBe('R$ 20 OFF')
+  })
+
+  it('mostra confirmados e reservas no detalhe', () => {
+    const details = toCampaignDetails({ ...campaign, issuedVouchers: 40, reservedVouchers: 10 })
+    expect(details.metrics).toMatchObject({ issued: 40, reserved: 10, used: 0, issueLimit: 100 })
+  })
+
+  it('contador ausente ou inválido fica em zero', () => {
+    const read = readApiCampaign({ ...campaign, issuedVouchers: undefined, reservedVouchers: 'x' })
+    expect(read).toMatchObject({ issuedVouchers: 0, reservedVouchers: 0 })
+    expect(toListCampaign(read).usage).toBe(0)
+    expect(limitShare(4, 6, null)).toBe(0)
   })
 
   it('lista vazia não tem destaque', () => {
@@ -184,6 +217,32 @@ describe('escopo e edição do rascunho (US-021)', () => {
     expect(toListCampaign({ ...campaign, scopes: [region] }).scope).toBe('Região Norte')
   })
 
+  it('monta PUT items com productCode exclusivo e une o seletor', () => {
+    const draft = {
+      ...initialCampaignDraft,
+      benefits: {
+        ...initialCampaignDraft.benefits,
+        application: 'specific' as const,
+        targetType: 'product' as const,
+        targetIds: ['p1', 'p2'],
+        productCodes: 'SKU-A\nsku-b',
+      },
+    }
+    const items = campaignItemBody(draft, [
+      { value: 'p1', code: 'SKU-A' },
+      { value: 'p2', code: 'OTHER' },
+    ])
+
+    expect(items).toEqual([
+      expect.objectContaining({ targetType: 'Product', productCode: 'SKU-A' }),
+      expect.objectContaining({ targetType: 'Product', productCode: 'sku-b' }),
+      expect.objectContaining({ targetType: 'Product', productId: 'p2' }),
+    ])
+    expect(items[0]).not.toHaveProperty('productId')
+    expect(items[1]).not.toHaveProperty('productId')
+    expect(items[2]).not.toHaveProperty('productCode')
+  })
+
   it('grava nome e vigência e o escopo ao salvar uma campanha que já existe', async () => {
     const requests: string[] = []
     const onRequest = ({ request }: { request: Request }) => { requests.push(`${request.method} ${new URL(request.url).pathname}`) }
@@ -235,6 +294,47 @@ describe('escopo e edição do rascunho (US-021)', () => {
     expect(notices.join(' ')).toMatch(/validade gravada/)
     expect(notices.join(' ')).toMatch(/Condições de categoria/)
     expect(notices.join(' ')).toMatch(/Regiões gravadas/)
+  })
+
+  it('reabre alvos de produto na lista de códigos e no seletor', () => {
+    const { draft } = campaignToDraft({
+      ...campaign,
+      status: 'Draft',
+      items: [
+        { targetType: 'Product', categoryId: null, productId: 'p1', productCode: 'CAM-DEMO', benefitType: 'Percentage', benefitValue: 10 },
+        { targetType: 'Product', categoryId: null, productId: null, productCode: 'TEN-DEMO', benefitType: 'Percentage', benefitValue: 10 },
+      ],
+    })
+
+    expect(draft.benefits.application).toBe('specific')
+    expect(draft.benefits.targetType).toBe('product')
+    expect(draft.benefits.targetIds).toEqual(['p1'])
+    expect(draft.benefits.productCodes).toBe('CAM-DEMO\nTEN-DEMO')
+  })
+
+  it('propaga codes do 422 no PUT items', async () => {
+    const id = '0199e3a0-0000-7000-8000-000000000111'
+    server.use(http.put('*/api/v1/campaigns/:id/items', () => HttpResponse.json({
+      status: 422,
+      detail: 'Um ou mais códigos de produto não existem no catálogo.',
+      code: 'CAMPAIGN_ITEM_PRODUCT_CODE_NOT_FOUND',
+      codes: ['ZZZ-NOPE'],
+    }, { status: 422 })))
+    const draft = {
+      ...initialCampaignDraft,
+      benefits: {
+        ...initialCampaignDraft.benefits,
+        application: 'specific' as const,
+        targetType: 'product' as const,
+        productCodes: 'ZZZ-NOPE',
+      },
+      scope: networkScope,
+    }
+
+    await expect(saveCampaignDraft('0199e3a0-0000-7000-8000-000000000001', draft, id)).rejects.toMatchObject({
+      message: expect.stringMatching(/ZZZ-NOPE/),
+      codes: ['ZZZ-NOPE'],
+    })
   })
 
   it('duplica e devolve o id da cópia; o 422 mostra o detail', async () => {

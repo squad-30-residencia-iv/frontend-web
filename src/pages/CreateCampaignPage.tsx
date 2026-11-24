@@ -1,3 +1,4 @@
+import { batchIsReady, type CampaignBatch, type CampaignCustomerGroup } from '../data/campaignBatch'
 import { PageHeader } from '../components/shared/PageHeader'
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
@@ -24,7 +25,6 @@ import type { CampaignDraft } from '../types/campaign'
 import { CampaignBenefitsForm } from '../components/campaigns/create/CampaignBenefitsForm'
 import {
   validateCampaignBenefits,
-  validateDiscount,
   type CampaignBenefitsErrors,
 } from '../data/campaignBenefits'
 import { CampaignRulesForm } from '../components/campaigns/create/CampaignRulesForm'
@@ -44,6 +44,8 @@ import {
   saveCampaignDraft,
   type EditableCampaign,
 } from '../services/campaigns'
+import { fetchCustomerGroups, previewCustomerGroups } from '../services/customerGroups'
+import { ApiProblemError } from '../services/problemDetails'
 import './CreateCampaignPage.css'
 
 const steps = ['Informações', 'Alvos e benefícios', 'Regras e público', 'Escopo e canais', 'Revisão']
@@ -60,7 +62,11 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const { user } = useAuth()
   const networkId = user?.networkId ?? null
   const editing = campaignId !== undefined
+  const informationOptions = { requireFutureStart: !editing }
   const signedIn = user !== null
+  const [batchSelection, setBatchSelection] = useState<CampaignBatch | null>(null)
+  const [customerCatalog, setCustomerCatalog] = useState<CampaignCustomerGroup[] | null>(null)
+  const batchCustomerCount = batchIsReady(batchSelection) ? batchSelection.customerCount : 0
   const [draft, setDraft] = useState(() => editing ? newCampaignDraft() : loadCampaignDraft())
   const [editPhase, setEditPhase] = useState<EditPhase>(editing ? 'loading' : 'ready')
   const [editTarget, setEditTarget] = useState<EditableCampaign | null>(null)
@@ -82,8 +88,8 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   const formRef = useRef<HTMLFormElement>(null)
   const returnPath = campaignId ? `/campanhas/${campaignId}` : '/campanhas'
   const information = draft.information
-  const dirty = JSON.stringify(draft) !== savedDraft
-  const basicInformationComplete = Object.keys(validateCampaignInformation(draft)).length === 0
+  const dirty = JSON.stringify(draft) !== savedDraft || batchSelection !== null
+  const basicInformationComplete = Object.keys(validateCampaignInformation(draft, informationOptions)).length === 0
 
   useEffect(() => {
     const heading = formRef.current?.querySelector<HTMLElement>('h2')
@@ -130,6 +136,12 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
         const loaded = JSON.stringify(target.draft)
         setDraft(target.draft)
         setSavedDraft(loaded)
+        if (target.customerGroups.length) {
+          setBatchSelection({
+            groups: target.customerGroups.map(group => ({ id: group.groupId, name: group.name, customerIds: [] })),
+            customerCount: target.uniqueCustomerCount,
+          })
+        }
         setVisitedBenefits(true)
         setVisitedRules(true)
         setVisitedScope(true)
@@ -155,6 +167,26 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     return () => { cancelled = true }
   }, [networkId, feedback])
 
+  useEffect(() => {
+    if (!networkId) {
+      setCustomerCatalog(null)
+      return
+    }
+    let cancelled = false
+    fetchCustomerGroups(networkId, true)
+      .then(list => {
+        if (cancelled) return
+        setCustomerCatalog(list.map(group => ({
+          id: group.id,
+          name: group.name,
+          customerIds: [],
+          memberCount: group.memberCount,
+        })))
+      })
+      .catch(() => { if (!cancelled) setCustomerCatalog([]) })
+    return () => { cancelled = true }
+  }, [networkId])
+
   const draftCatalog: DraftCatalog | undefined = networkId
     ? { categories: catalog?.categories ?? [], products: catalog?.products ?? [], stores: catalog?.stores ?? [] }
     : undefined
@@ -169,6 +201,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
   }
 
   function handleBenefitsChange(benefits: CampaignDraft['benefits']) {
+    if (benefits.generationMode === 'automatic') setBatchSelection(null)
     setDraft(current => ({ ...current, benefits }))
     setBenefitsErrors({})
   }
@@ -218,7 +251,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     try {
       localStorage.setItem(campaignDraftStorageKey, JSON.stringify(draft))
       setSavedDraft(JSON.stringify(draft))
-      feedback.success({ title: 'Rascunho salvo neste navegador.', description: 'Você pode voltar e continuar preenchendo depois.' })
+      feedback.success({ title: 'Rascunho salvo neste navegador.', description: draft.benefits.generationMode === 'batch' ? 'A seleção de grupos não foi salva. Selecione novamente ao reabrir o rascunho.' : 'Você pode voltar e continuar preenchendo depois.' })
     } catch {
       feedback.error({ title: 'Não foi possível salvar o rascunho.', description: 'Seus dados continuam nesta tela. Verifique o armazenamento do navegador e tente novamente.' })
     }
@@ -230,28 +263,10 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     focusTarget?.focus()
   }
 
-  function handleAddBenefit() {
-    const benefits = draft.benefits
-    const key = benefits.discountType === 'percentage' ? 'percentage' : 'fixedAmount'
-    const errors = validateCampaignBenefits(benefits)
-    if (!validateDiscount(benefits.discountType, benefits[key]) || errors.maximumDiscount) {
-      setBenefitsErrors({ [key]: errors[key], maximumDiscount: errors.maximumDiscount })
-      focusInvalidField(errors[key] ? key : 'maximumDiscount')
-      return
-    }
-    setDraft(current => ({
-      ...current, benefits: {
-        ...current.benefits,
-        addedBenefits: [...current.benefits.addedBenefits, { type: benefits.discountType, value: benefits[key], ...(benefits.discountType === 'percentage' ? { maximumDiscount: benefits.maximumDiscount } : {}) }],
-      }
-    }))
-    feedback.success({ title: 'Benefício adicionado ao rascunho.' })
-  }
-
   function handleContinue(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (step === 1) {
-      const validationErrors = validateCampaignInformation(draft)
+      const validationErrors = validateCampaignInformation(draft, informationOptions)
       setErrors(validationErrors)
       const firstInvalidField = Object.keys(validationErrors)[0]
       if (firstInvalidField) {
@@ -263,7 +278,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       return
     }
     if (step === 2) {
-      const validationErrors = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined)
+      const validationErrors = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined, batchCustomerCount)
       setBenefitsErrors(validationErrors)
       const firstInvalidField = Object.keys(validationErrors)[0]
       if (firstInvalidField) {
@@ -287,7 +302,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       return
     }
 
-    const validation = validateCampaignDraft(draft, draftCatalog)
+    const validation = validateCampaignDraft(draft, draftCatalog, batchCustomerCount, informationOptions)
     setErrors(validation.information)
     setBenefitsErrors(validation.benefits)
     setRulesErrors(validation.rules)
@@ -327,7 +342,11 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     }
 
     if (networkId) {
-      const blocker = campaignPersistBlocker(draft)
+      const persist = {
+        groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
+        uniqueCustomers: batchSelection?.customerCount ?? 0,
+      }
+      const blocker = campaignPersistBlocker(draft, persist)
       if (blocker) {
         feedback.error({ title: 'Esta campanha não pode ser gravada assim.', description: blocker })
         return
@@ -335,7 +354,10 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
       setSaving(true)
       saveCampaignDraft(networkId, draft, campaignId ?? readSavedCampaignId(), {
         stores: catalog?.stores,
+        products: catalog?.products,
         description: editTarget?.description ?? null,
+        customerGroupIds: persist.groupIds,
+        uniqueCustomers: persist.uniqueCustomers,
       })
         .then(({ notices }) => {
           if (campaignId) {
@@ -351,6 +373,14 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
           navigate('/campanhas')
         })
         .catch((error: unknown) => {
+          if (error instanceof ApiProblemError && error.codes.length) {
+            setBenefitsErrors(current => ({
+              ...current,
+              productCodes: `Códigos recusados: ${error.codes.join(', ')}.`,
+            }))
+            pendingFocusRef.current = 'productCodes'
+            setStep(2)
+          }
           feedback.error({
             title: 'Não foi possível concluir o salvamento.',
             description: error instanceof Error ? error.message : 'Não foi possível registrar a campanha. Seus dados continuam nesta tela; tente novamente.',
@@ -374,7 +404,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     feedback.success({ title: 'Campanha salva como rascunho.' })
     navigate('/campanhas')
   }
-  const benefitValidation = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined)
+  const benefitValidation = validateCampaignBenefits(draft.benefits, networkId ? benefitChoices : undefined, batchCustomerCount)
   const benefitsComplete =
     visitedBenefits
     && !benefitValidation.percentage
@@ -382,6 +412,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     && !benefitValidation.fixedAmount
     && !benefitValidation.addedBenefits
     && !benefitValidation.targetIds
+    && !benefitValidation.productCodes
   const quantityComplete =
     visitedBenefits
     && !benefitValidation.maxVouchers
@@ -390,13 +421,12 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
     && !benefitValidation.customerBase
     && !benefitValidation.quantityPerCustomer
 
-  const requirements = [
-    { label: 'Informações básicas', complete: basicInformationComplete },
-    { label: 'Alvos e benefícios', complete: benefitsComplete },
-    { label: 'Quantidade de vouchers', complete: quantityComplete },
-    { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all' },
-    { label: 'Escopo organizacional', complete: visitedScope },
-    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog).firstInvalid === null },
+  const requirements: { label: string; complete: boolean; step: 1 | 2 | 3 | 4 | 5 }[] = [
+    { label: 'Informações básicas', complete: basicInformationComplete, step: 1 },
+    { label: 'Alvos, benefícios e quantidade', complete: benefitsComplete && quantityComplete, step: 2 },
+    { label: 'Público elegível', complete: visitedRules && draft.rules.audience === 'all', step: 3 },
+    { label: 'Escopo organizacional', complete: visitedScope, step: 4 },
+    { label: 'Condições de geração', complete: step === 5 && validateCampaignDraft(draft, draftCatalog, batchCustomerCount, informationOptions).firstInvalid === null, step: 5 },
   ]
   const pageTitle = editing ? 'Editar rascunho' : 'Criar nova campanha'
   const breadcrumbs = [
@@ -448,19 +478,33 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
         />}
         <nav aria-label="Etapas da criação" className="create-campaign-steps">
           <ol>
-            {steps.map((stepLabel, index) => (
-              <li
-                key={stepLabel}
-                aria-current={index === step - 1 ? 'step' : undefined}
-                className={index < step - 1 ? 'create-campaign-step-complete' : undefined}
-              >
-                <span aria-hidden="true">
-                  {index < step - 1 ? <Check size={12} /> : index + 1}
-                </span>
-                {stepLabel}
-                {index < step - 1 && <span className="create-campaign-sr-only">concluída</span>}
-              </li>
-            ))}
+            {steps.map((stepLabel, index) => {
+              const stepNumber = (index + 1) as 1 | 2 | 3 | 4 | 5
+              const complete = stepNumber < step
+              return (
+                <li
+                  key={stepLabel}
+                  aria-current={stepNumber === step ? 'step' : undefined}
+                  className={complete ? 'create-campaign-step-complete' : undefined}
+                >
+                  {complete
+                    ? <button
+                        type="button"
+                        className="create-campaign-step-button"
+                        aria-label={`${stepLabel}, etapa concluída. Abrir etapa.`}
+                        onClick={() => setStep(stepNumber)}
+                      >
+                        <span aria-hidden="true"><Check size={12} /></span>
+                        {stepLabel}
+                        <span className="create-campaign-sr-only">concluída</span>
+                      </button>
+                    : <>
+                        <span aria-hidden="true">{index + 1}</span>
+                        {stepLabel}
+                      </>}
+                </li>
+              )
+            })}
           </ol>
         </nav>
         <form
@@ -473,6 +517,7 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
           {step === 1 && <CampaignInformationForm
             information={information}
             errors={errors}
+            requireFutureStart={!editing}
             onChange={updateField}
           />}
           {step === 2 && <CampaignBenefitsForm
@@ -480,8 +525,12 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             errors={benefitsErrors}
             categories={benefitChoices.categories}
             products={benefitChoices.products}
+            batchSelection={batchSelection}
+            onBatchChange={value => { setBatchSelection(value); setBenefitsErrors({}) }}
+            groups={customerCatalog ?? undefined}
+            resolveCount={networkId ? ids => previewCustomerGroups(networkId, [...ids]) : undefined}
             onChange={handleBenefitsChange}
-            onAddBenefit={handleAddBenefit}
+
           />}
           {step === 3 && <CampaignRulesForm
             value={draft.rules}
@@ -495,11 +544,23 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             onChange={handleScopeChange}
           />}
           {step === 5 && <>
-            <CampaignReview draft={draft} catalog={draftCatalog} />
-            {networkId && campaignPersistBlocker(draft) && <FeedbackAlert
+            <CampaignReview
+              draft={draft}
+              catalog={draftCatalog}
+              batchCustomerCount={batchSelection?.customerCount ?? 0}
+              batchGroupNames={batchSelection?.groups.map(group => group.name)}
+              onEditStep={setStep}
+            />
+            {networkId && campaignPersistBlocker(draft, {
+              groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
+              uniqueCustomers: batchSelection?.customerCount ?? 0,
+            }) && <FeedbackAlert
               type="warning"
               title="Ajuste a configuração antes de enviar"
-              description={campaignPersistBlocker(draft) ?? undefined}
+              description={campaignPersistBlocker(draft, {
+                groupIds: draft.benefits.generationMode === 'batch' ? batchSelection?.groups.map(group => group.id) ?? [] : [],
+                uniqueCustomers: batchSelection?.customerCount ?? 0,
+              }) ?? undefined}
             />}
             {networkId && <FeedbackAlert
               type="warning"
@@ -513,16 +574,32 @@ export function CreateCampaignPage({ campaignId }: CreateCampaignPageProps = {})
             <p className="create-campaign-draft-status">Rascunho</p>
             <p className="create-campaign-summary-label">Itens obrigatórios</p>
             <ul>
-              {requirements.map(({ label, complete }) => {
+              {requirements.map(({ label, complete, step: target }) => {
                 const Icon = complete ? Check : Circle
+                const open = complete && target !== step
                 return <li key={label} className={complete ? 'create-campaign-requirement-complete' : undefined}>
-                  <Icon size={10} aria-hidden="true" />
-                  <span>
-                    {label}
-                    <span className="create-campaign-sr-only">: {' '}
-                      {complete ? 'completo' : 'pendente'}
-                    </span>
-                  </span>
+                  {open
+                    ? <button
+                        type="button"
+                        className="create-campaign-requirement-button"
+                        aria-label={`${label}, completo. Abrir etapa.`}
+                        onClick={() => setStep(target)}
+                      >
+                        <Icon size={10} aria-hidden="true" />
+                        <span>
+                          {label}
+                          <span className="create-campaign-sr-only">: completo</span>
+                        </span>
+                      </button>
+                    : <>
+                        <Icon size={10} aria-hidden="true" />
+                        <span>
+                          {label}
+                          <span className="create-campaign-sr-only">: {' '}
+                            {complete ? 'completo' : 'pendente'}
+                          </span>
+                        </span>
+                      </>}
                 </li>
               })}
             </ul>

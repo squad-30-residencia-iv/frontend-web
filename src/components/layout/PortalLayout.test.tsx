@@ -82,7 +82,7 @@ describe('PortalLayout', () => {
 
     const links = within(screen.getByRole('navigation', { name: 'Principal' })).getAllByRole('link').map(link => link.textContent)
     const expected = ['Visão geral', 'Campanhas', 'Vouchers', 'Relatórios', 'Auditoria']
-    expect(links).toEqual(visible ? [...expected, 'Cadastros', 'Aplicações'] : expected)
+    expect(links).toEqual(visible ? [...expected, 'Cadastros', 'Aplicações', 'Grupos'] : expected)
   })
 
   it('clicar em Sair encerra a sessão e remove o token', async () => {

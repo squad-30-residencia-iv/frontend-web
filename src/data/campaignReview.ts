@@ -1,5 +1,5 @@
 import type { CampaignChannel, CampaignDraft } from '../types/campaign'
-import { categoryOptions, productOptions, customerBases, getBatchTotal, parseDiscount, type BenefitCatalog } from './campaignBenefits'
+import { categoryOptions, productOptions, getBatchTotal, parseDiscount, parseProductCodes, type BenefitCatalog } from './campaignBenefits'
 import { campaignStores, type CampaignStore } from './campaignScope'
 
 export interface CampaignReviewField {
@@ -9,6 +9,7 @@ export interface CampaignReviewField {
 
 export interface CampaignReviewSection {
   title: string
+  step: 1 | 2 | 3 | 4
   fields: CampaignReviewField[]
 }
 
@@ -39,6 +40,8 @@ function formatDiscount(type: 'percentage' | 'fixed', value: string) {
 export function getCampaignReviewSections(
   draft: CampaignDraft,
   catalog: { categories?: BenefitCatalog['categories']; products?: BenefitCatalog['products']; stores?: readonly CampaignStore[] } = {},
+  batchCustomerCount = 0,
+  batchGroupNames: readonly string[] = [],
 ): CampaignReviewSection[] {
   const { information, benefits, rules, scope } = draft
   const categories = catalog.categories ?? categoryOptions
@@ -51,7 +54,26 @@ export function getCampaignReviewSections(
     return store ? `${store.code} — ${store.name}` : 'Loja indisponível'
   })
   const targetOptions = benefits.targetType === 'category' ? categories : products
-  const targetNames = benefits.targetIds.map(id => targetOptions.find(option => option.value === id)?.label ?? 'Item indisponível')
+  const pastedCodes = parseProductCodes(benefits.productCodes)
+  const selectedNames = benefits.targetIds.map(id => {
+    const option = targetOptions.find(item => item.value === id)
+    const catalogCode = products.find(item => item.value === id)?.code
+    if (
+      benefits.targetType === 'product'
+      && catalogCode
+      && pastedCodes.some(item => item.toLowerCase() === catalogCode.toLowerCase())
+    ) {
+      return null
+    }
+    return option?.label ?? 'Item indisponível'
+  }).filter((label): label is string => label !== null)
+  const codeNames = benefits.targetType === 'product'
+    ? parseProductCodes(benefits.productCodes).map(code => {
+      const option = products.find(item => item.code?.toLowerCase() === code.toLowerCase())
+      return option ? `${code} — ${option.label}` : code
+    })
+    : []
+  const targetNames = [...selectedNames, ...codeNames]
   const isSpecific = benefits.application === 'specific'
   const isAutomatic = benefits.generationMode === 'automatic'
   const discountValue = benefits.discountType === 'percentage' ? benefits.percentage : benefits.fixedAmount
@@ -78,29 +100,29 @@ export function getCampaignReviewSections(
   if (isAutomatic) {
     benefitFields.push({ label: 'Quantidade por concessão', value: formatQuantity(benefits.quantityPerGrant) })
   } else {
-    const base = customerBases.find(item => item.value === benefits.customerBase)
     benefitFields.push(
-      { label: 'Base de clientes', value: base ? `Base ${base.label} (${numberFormat.format(base.customers)} clientes)` : 'Não informado' },
-      { label: 'Total previsto', value: `${numberFormat.format(getBatchTotal(benefits))} vouchers` },
+      { label: 'Grupos selecionados', value: batchGroupNames.join(', ') || 'Não informado' },
+      { label: 'Clientes únicos', value: numberFormat.format(batchCustomerCount) },
+      { label: 'Total previsto', value: `${numberFormat.format(getBatchTotal(benefits, batchCustomerCount))} vouchers` },
     )
   }
 
   return [
     {
       title: 'Informações',
+      step: 1,
       fields: [
         { label: 'Nome', value: information.name.trim() || 'Não informado' },
         { label: 'Vigência', value: `${formatDateTime(information.start)} a ${formatDateTime(information.end)}` },
         { label: 'Modelo', value: information.voucherModel === 'relative' ? 'Prazo relativo' : 'Não informado' },
         { label: 'Validade', value: `${formatQuantity(information.voucherDurationDays)} dias após a emissão` },
         { label: 'Teto máximo', value: information.voucherCap === 'unlimited' ? 'Sem teto' : 'Não informado' },
-        { label: 'Rede', value: isNetwork ? 'Toda a rede' : (storeNames.join(', ') || 'Não informado') },
-        { label: 'Canais', value: channels.map(channel => channelLabels[channel]).join(', ') || 'Não informado' },
       ],
     },
-    { title: 'Alvo e benefícios', fields: benefitFields },
+    { title: 'Alvo e benefícios', step: 2, fields: benefitFields },
     {
       title: 'Regras e público',
+      step: 3,
       fields: [
         { label: 'Público', value: rules.audience === 'all' ? 'Todos os clientes' : 'Não informado' },
         { label: 'Condições', value: rules.conditionMatch === 'all' ? 'Todas as condições — E' : 'Pelo menos uma condição — OU' },
@@ -121,6 +143,14 @@ export function getCampaignReviewSections(
             return `${type}: mínimo ${formatMoney(item.minimum)}; máximo ${maximum}`
           }).join(restrictionSeparator) || 'Nenhuma restrição adicionada',
         },
+      ],
+    },
+    {
+      title: 'Escopo e canais',
+      step: 4,
+      fields: [
+        { label: 'Rede', value: isNetwork ? 'Toda a rede' : (storeNames.join(', ') || 'Não informado') },
+        { label: 'Canais', value: channels.map(channel => channelLabels[channel]).join(', ') || 'Não informado' },
       ],
     },
   ]

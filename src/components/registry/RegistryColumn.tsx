@@ -10,6 +10,8 @@ import './RegistryColumn.css'
 
 export interface RegistryColumnActions {
   onCreate: () => void
+  /** Lote de produto ou loja. Sem a função, o botão não aparece. */
+  onImport?: () => void
   onEdit: (row: RegistryRow) => void
   onDeactivate: (row: RegistryRow) => void
   onReactivate: (row: RegistryRow) => void
@@ -41,6 +43,7 @@ export function RegistryColumn({
   createBlockedReason,
   pendingRowId,
   onCreate,
+  onImport,
   onEdit,
   onDeactivate,
   onReactivate,
@@ -147,14 +150,24 @@ export function RegistryColumn({
           {countSummary(entity, activeCount, inactiveCount)}
         </p>}
       </div>
-      {list.phase !== 'idle' && <Button
-        size="sm"
-        className="registry-create"
-        startIcon={Plus}
-        isDisabled={Boolean(createBlockedReason)}
-        aria-describedby={createBlockedReason ? noteId : undefined}
-        onPress={onCreate}
-      >{newLabel(entity)}</Button>}
+      {list.phase !== 'idle' && <div className="registry-column-actions">
+        {onImport && <Button
+          size="sm"
+          variant="secondary"
+          className="registry-create"
+          isDisabled={Boolean(createBlockedReason)}
+          aria-describedby={createBlockedReason ? noteId : undefined}
+          onPress={onImport}
+        >Importar em lote</Button>}
+        <Button
+          size="sm"
+          className="registry-create"
+          startIcon={Plus}
+          isDisabled={Boolean(createBlockedReason)}
+          aria-describedby={createBlockedReason ? noteId : undefined}
+          onPress={onCreate}
+        >{newLabel(entity)}</Button>
+      </div>}
     </header>
     {list.phase !== 'idle' && createBlockedReason && <p id={noteId} className="registry-column-note">{createBlockedReason}</p>}
     {renderBody()}

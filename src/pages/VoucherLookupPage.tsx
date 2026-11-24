@@ -8,7 +8,9 @@ import { Select } from '../components/ui/Select'
 import { Loading } from '../components/ui/Loading'
 import { EmptyState } from '../components/ui/EmptyState'
 import { VoucherActionsMenu } from '../components/vouchers/VoucherActionsMenu'
+import { useAuth } from '../contexts/AuthContext'
 import { emptyVoucherFilters, filterVouchers, loadVouchers, voucherStatusLabels } from '../data/vouchers'
+import { fetchNetworkVouchers } from '../services/vouchers'
 import type { Voucher, VoucherFilters } from '../types/voucher'
 import './VoucherLookupPage.css'
 
@@ -24,18 +26,28 @@ const summary = [
   { status: 'cancelled', label: 'Cancelados', icon: CircleX },
 ] as const
 
-export function VoucherLookupPage({ loadItems = loadVouchers }: VoucherLookupPageProps) {
+export function VoucherLookupPage({ loadItems }: VoucherLookupPageProps) {
+  const { user } = useAuth()
+  const networkId = user?.networkId ?? null
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let cancelled = false
-    Promise.resolve().then(loadItems).then(items => {
-      if (!cancelled) setState({ status: 'success', items })
-    }).catch(() => {
-      if (!cancelled) setState({ status: 'error' })
+    const load = loadItems ?? (() => {
+      if (networkId) return fetchNetworkVouchers(networkId)
+      // Sem rede na sessão: lista vazia. Sem sessão (testes isolados): repositório local.
+      return user ? Promise.resolve([]) : loadVouchers()
     })
+    Promise.resolve()
+      .then(load)
+      .then(items => {
+        if (!cancelled) setState({ status: 'success', items })
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' })
+      })
     return () => { cancelled = true }
-  }, [loadItems, attempt])
+  }, [loadItems, networkId, user, attempt])
 
   function retry() {
     setState({ status: 'loading' })

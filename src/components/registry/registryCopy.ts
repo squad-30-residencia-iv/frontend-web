@@ -1,3 +1,4 @@
+import type { RegistryImportKind } from '../../data/registryImport'
 import type { RegistryEntity, RegistryFormValues, StoreChannel } from '../../types/registry'
 
 interface RegistryCopy {
@@ -81,6 +82,14 @@ const outcomeVerbs: Record<RegistryOutcome, string> = {
 export function outcomeMessage(entity: RegistryEntity, outcome: RegistryOutcome) {
   const { noun, feminine } = registryCopy[entity]
   return `${capitalize(noun)} ${outcomeVerbs[outcome]}${feminine ? 'a' : 'o'}.`
+}
+
+/** Toast do lote: "Produto criado." ou "3 produtos criados." */
+export function importOutcomeMessage(kind: RegistryImportKind, created: number) {
+  const entity: RegistryEntity = kind === 'product' ? 'product' : 'store'
+  if (created === 1) return outcomeMessage(entity, 'created')
+  const { feminine, plural } = registryCopy[entity]
+  return `${created} ${plural.toLowerCase()} criad${feminine ? 'a' : 'o'}s.`
 }
 
 /** "2 ativas · 1 inativa". */

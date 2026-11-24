@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApplicationsPage } from './ApplicationsPage'
+import { satelliteNetworks } from '../data/satellite'
 import type { SatelliteApp } from '../types/satellite'
 
 const mockApps: SatelliteApp[] = [
@@ -10,7 +11,7 @@ const mockApps: SatelliteApp[] = [
     name: 'PDV Centro',
     clientId: 'pdv-centro-001',
     networkId: 'net-001',
-    scopes: ['voucher:redeem', 'voucher:read'],
+    scopes: ['vouchers:redeem', 'vouchers:issue'],
     active: true,
     createdAt: '2026-10-01',
   },
@@ -19,7 +20,7 @@ const mockApps: SatelliteApp[] = [
     name: 'Totem Inativo',
     clientId: 'totem-002',
     networkId: 'net-001',
-    scopes: ['campaign:read'],
+    scopes: ['campaigns:read'],
     active: false,
     createdAt: '2026-10-02',
   },
@@ -33,7 +34,7 @@ describe('ApplicationsPage', () => {
   it('exibe estado de carregamento e depois lista as aplicações da rede', async () => {
     const loadApps = vi.fn().mockResolvedValue(mockApps)
 
-    render(<ApplicationsPage loadApps={loadApps} />)
+    render(<ApplicationsPage loadApps={loadApps} loadNetworks={() => Promise.resolve(satelliteNetworks)} />)
 
     expect(screen.getByText(/Carregando aplicações da rede…/i)).toBeVisible()
 
@@ -53,7 +54,7 @@ describe('ApplicationsPage', () => {
     const user = userEvent.setup()
     const loadApps = vi.fn().mockResolvedValue(mockApps)
 
-    render(<ApplicationsPage loadApps={loadApps} />)
+    render(<ApplicationsPage loadApps={loadApps} loadNetworks={() => Promise.resolve(satelliteNetworks)} />)
 
     await waitFor(() => {
       expect(screen.getByText('PDV Centro')).toBeVisible()
@@ -72,7 +73,7 @@ describe('ApplicationsPage', () => {
       .mockRejectedValueOnce(new Error('Network error'))
       .mockResolvedValueOnce(mockApps)
 
-    render(<ApplicationsPage loadApps={loadApps} />)
+    render(<ApplicationsPage loadApps={loadApps} loadNetworks={() => Promise.resolve(satelliteNetworks)} />)
 
     await waitFor(() => {
       expect(screen.getByText('Não foi possível carregar as aplicações')).toBeVisible()
@@ -90,7 +91,7 @@ describe('ApplicationsPage', () => {
     const user = userEvent.setup()
     const loadApps = vi.fn().mockResolvedValue(mockApps)
 
-    render(<ApplicationsPage loadApps={loadApps} />)
+    render(<ApplicationsPage loadApps={loadApps} loadNetworks={() => Promise.resolve(satelliteNetworks)} />)
 
     await waitFor(() => {
       expect(screen.getByText('PDV Centro')).toBeVisible()

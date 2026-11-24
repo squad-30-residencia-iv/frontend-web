@@ -38,8 +38,8 @@ export function HomeCampaignCard({ campaign, categoryLabel }: HomeCampaignCardPr
         </div>
       </dl>
       <div className={`home-card-usage ${campaign.status === 'paused' ? 'home-card-usage--paused' : ''}`}>
-        <progress max={100} value={campaign.usage} aria-label={`Utilização de ${campaign.name}`} />
-        <span>{campaign.usage}% utilizado</span>
+        <progress max={100} value={campaign.usage} aria-label={`Parcela do limite de ${campaign.name}`} />
+        <span>{campaign.usage}% do limite</span>
       </div>
     </article>
   )

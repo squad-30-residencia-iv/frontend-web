@@ -61,6 +61,8 @@ export interface CampaignDraft {
     application: 'total' | 'specific'
     targetType: 'category' | 'product'
     targetIds: string[]
+    /** Lista colada no modo Produto (um código por linha; também aceita `,` e `;`). */
+    productCodes: string
     maxVouchers: string
     generationMode: 'automatic' | 'batch'
     quantityPerGrant: string

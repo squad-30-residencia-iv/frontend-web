@@ -8,10 +8,18 @@
   margin-top: 18px;
 }
 
+.campaign-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .campaign-review-section h3 {
   font-size: 15px;
   font-weight: 400;
-  margin-bottom: 12px;
+  margin: 0;
 }
 
 .campaign-review-card {

@@ -1,14 +1,18 @@
-import { Plus, X } from 'lucide-react'
+import { CampaignBatchGroups } from './CampaignBatchGroups'
+import type { CampaignBatch, CampaignCustomerGroup } from '../../../data/campaignBatch'
+import { X } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
 import type { CampaignDraft } from '../../../types/campaign'
 import {
+  applyProductCodeBatch,
   categoryOptions,
   productOptions,
-  customerBases,
   getBatchTotal,
   parseDiscount,
+  parseProductCodes,
+  targetOptionLabel,
   type CampaignBenefitsErrors,
 } from '../../../data/campaignBenefits'
 import './CampaignBenefitsForm.css'
@@ -18,9 +22,12 @@ interface CampaignBenefitsFormProps {
   value: Benefits
   errors: CampaignBenefitsErrors
   categories?: readonly { value: string; label: string }[]
-  products?: readonly { value: string; label: string }[]
+  products?: readonly { value: string; label: string; code?: string }[]
+  batchSelection: CampaignBatch | null
+  onBatchChange: (batch: CampaignBatch | null) => void
+  groups?: readonly CampaignCustomerGroup[]
+  resolveCount?: (ids: readonly string[]) => Promise<number>
   onChange: (value: Benefits) => void
-  onAddBenefit: () => void
 }
 const integerInputProps = { min: 1, step: 1 }
 const formatNumber = new Intl.NumberFormat('pt-BR')
@@ -31,8 +38,11 @@ export function CampaignBenefitsForm({
   errors,
   categories = categoryOptions,
   products = productOptions,
+  batchSelection,
+  onBatchChange,
+  groups,
+  resolveCount,
   onChange,
-  onAddBenefit,
 }: CampaignBenefitsFormProps) {
 
   function update<Key extends keyof Benefits>(key: Key, fieldValue: Benefits[Key]) {
@@ -40,6 +50,12 @@ export function CampaignBenefitsForm({
   }
   const specific = value.application === 'specific'
   const batch = value.generationMode === 'batch'
+  const productTargets = products.map(option => ({ value: option.value, label: targetOptionLabel(option) }))
+
+  function commitSelectorCodes(text: string) {
+    const next = applyProductCodeBatch(value.targetIds, value.productCodes, text, products)
+    onChange({ ...value, targetIds: next.targetIds, productCodes: next.productCodes })
+  }
   return <section className="create-campaign-information campaign-benefits" aria-labelledby="campaign-benefits-title">
     <h2 id="campaign-benefits-title" tabIndex={-1}>Alvos e benefícios</h2>
     <Select
@@ -83,12 +99,6 @@ export function CampaignBenefitsForm({
           inputProps={{ inputMode: 'decimal' }}
         />
       }
-      <Button
-        type="button"
-        variant="secondary"
-        endIcon={Plus}
-        onPress={onAddBenefit}
-      >Adicionar</Button>
     </div>
     {value.addedBenefits.length > 0 && <ul className="campaign-benefits-added" aria-label="Benefícios adicionados">
       {value.addedBenefits.map((benefit, index) => <li key={`${index}-${benefit.type}-${benefit.value}`}>
@@ -137,20 +147,68 @@ export function CampaignBenefitsForm({
         name="targetType"
         options={[{ value: 'category', label: 'Categoria' }, { value: 'product', label: 'Produto' }]}
         value={value.targetType}
-        onChange={next => onChange({ ...value, targetType: next === 'product' ? 'product' : 'category', targetIds: [] })}
+        onChange={next => onChange({
+          ...value,
+          targetType: next === 'product' ? 'product' : 'category',
+          targetIds: [],
+          productCodes: next === 'product' ? value.productCodes : '',
+        })}
       />
       <Select
         selectionMode="multiple"
         label="Produtos ou categoria"
         name="targetIds"
-        options={value.targetType === 'category' ? categories : products}
+        options={value.targetType === 'category' ? categories : productTargets}
         value={value.targetIds}
         onChange={next => update('targetIds', next.map(String))}
         placeholder="Selecione uma ou mais opções"
-        isRequired={specific}
+        isRequired={specific && (value.targetType === 'category' || parseProductCodes(value.productCodes).length === 0)}
         validationBehavior="aria"
         errorMessage={errors.targetIds}
       />
+      {value.targetType === 'product' && <>
+        <div className="campaign-benefits-codes">
+          <label htmlFor="campaign-product-selector-codes">Adicionar ao seletor por código</label>
+          <input
+            id="campaign-product-selector-codes"
+            name="selectorProductCodes"
+            placeholder="MOD-001 — Camiseta, CAL-001"
+            onKeyDown={event => {
+              if (event.key !== 'Enter') return
+              event.preventDefault()
+              commitSelectorCodes(event.currentTarget.value)
+              event.currentTarget.value = ''
+            }}
+            onPaste={event => {
+              const text = event.clipboardData.getData('text')
+              if (!/[\n,;]/.test(text)) return
+              event.preventDefault()
+              commitSelectorCodes(text)
+              event.currentTarget.value = ''
+            }}
+          />
+          <p className="campaign-benefits-codes-hint">Digite ou cole vários códigos (com ou sem o nome) e pressione Enter. O produto do catálogo entra no seletor.</p>
+        </div>
+      <div className="campaign-benefits-codes">
+        <label htmlFor="campaign-product-codes">Códigos de produto</label>
+        <textarea
+          id="campaign-product-codes"
+          name="productCodes"
+          value={value.productCodes}
+          onChange={event => update('productCodes', event.target.value)}
+          rows={8}
+          placeholder={'MOD-001 — Camiseta básica\nCAL-001 — Tênis casual'}
+          aria-invalid={Boolean(errors.productCodes) || undefined}
+          aria-describedby={errors.productCodes ? 'campaign-product-codes-error' : 'campaign-product-codes-hint'}
+        />
+        <p id="campaign-product-codes-hint" className="campaign-benefits-codes-hint">
+          Lote: um código por linha, com ou sem o nome (CODIGO — produto). Também aceita vírgula ou ponto e vírgula.
+        </p>
+        {errors.productCodes && <p id="campaign-product-codes-error" className="campaign-benefits-error" role="alert">
+          {errors.productCodes}
+        </p>}
+      </div>
+      </>}
     </div>
     <Input
       className="campaign-benefits-maximum"
@@ -187,7 +245,7 @@ export function CampaignBenefitsForm({
         />Em lote
       </label>
     </fieldset>
-    <section aria-labelledby="campaign-automatic-title">
+    {!batch && <section aria-labelledby="campaign-automatic-title">
       <h4 id="campaign-automatic-title">Automática:</h4>
       <p>O voucher será gerado automaticamente quando o cliente atender às condições definidas na campanha.</p>
       <div className="campaign-benefits-panel campaign-benefits-automatic">
@@ -214,21 +272,12 @@ export function CampaignBenefitsForm({
           errorMessage={errors.limitPerCustomer}
         />
       </div>
-    </section>
-    <section aria-labelledby="campaign-batch-title">
+    </section>}
+    {batch && <section aria-labelledby="campaign-batch-title">
       <h4 id="campaign-batch-title">Em lote:</h4>
-      <p>Os vouchers serão gerados de uma única vez para uma base de clientes.</p>
+      <p>O início é quando os vouchers passam a existir. A validade em dias é o prazo de uso, igual para todos. O fim da campanha não encerra o voucher.</p>
+      <CampaignBatchGroups value={batchSelection} onChange={onBatchChange} groups={groups} resolveCount={resolveCount} error={errors.customerBase} />
       <div className="campaign-benefits-panel campaign-benefits-batch">
-        <Select
-          label="Base de clientes"
-          name="customerBase"
-          options={customerBases}
-          value={value.customerBase || null}
-          onChange={next => update('customerBase', String(next ?? ''))}
-          isRequired={batch}
-          validationBehavior="aria"
-          errorMessage={errors.customerBase}
-        />
         <Input
           label="Quantidade por cliente"
           name="quantityPerCustomer"
@@ -243,10 +292,10 @@ export function CampaignBenefitsForm({
         <div className="campaign-benefits-total">
           <span id="campaign-total-label">Total previsto</span>
           <output aria-labelledby="campaign-total-label" aria-live="polite">
-            {formatNumber.format(getBatchTotal(value))} vouchers
+            {formatNumber.format(getBatchTotal(value, batchSelection?.customerCount ?? 0))} vouchers
           </output>
         </div>
       </div>
-    </section>
+    </section>}
   </section>
 }

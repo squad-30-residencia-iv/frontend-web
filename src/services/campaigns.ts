@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { api } from './api'
 import { problemMessage, toProblemError } from './problemDetails'
-import { newCampaignBenefits, parseDiscount } from '../data/campaignBenefits'
+import { newCampaignBenefits, parseDiscount, parseProductCodes } from '../data/campaignBenefits'
 import { writeSavedCampaignId } from '../data/campaignDraft'
 import { newCampaignRules } from '../data/campaignRules'
 import { newCampaignScope, storeScopeChannels, type CampaignStore } from '../data/campaignScope'
@@ -24,17 +24,29 @@ export interface ApiCampaignScope {
   channels: string[]
 }
 
+export interface ApiCustomerGroupLink {
+  groupId: string
+  name: string
+}
+
 export interface ApiCampaign {
   id: string
+  networkId: string | null
   name: string
   description: string | null
   startsAt: string
   endsAt: string
   status: string
   totalVoucherLimit: number | null
+  issuedVouchers: number
+  reservedVouchers: number
+  redeemedVouchers: number
+  expiredVouchers: number
   items: ApiCampaignItem[]
   rejectionReason?: string | null
   scopes?: ApiCampaignScope[]
+  customerGroups?: ApiCustomerGroupLink[]
+  uniqueCustomerCount?: number
 }
 
 const statusByApiName: Record<string, CampaignStatus> = {
@@ -50,6 +62,16 @@ const statusByApiName: Record<string, CampaignStatus> = {
 }
 
 const amountFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
+
+function readCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0
+}
+
+/** Parcela do limite já confirmada ou reservada. Sem limite, fica em zero. */
+export function limitShare(issued: number, reserved: number, total: number | null): number {
+  if (!total || total <= 0) return 0
+  return Math.min(100, Math.round(((issued + reserved) / total) * 100))
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -94,16 +116,28 @@ export function readApiCampaign(value: unknown): ApiCampaign {
 
   return {
     id: value.id,
+    networkId: typeof value.networkId === 'string' ? value.networkId : null,
     name: value.name,
     description: typeof value.description === 'string' ? value.description : null,
     startsAt: value.startsAt,
     endsAt: value.endsAt,
     status: value.status,
     totalVoucherLimit: typeof value.totalVoucherLimit === 'number' ? value.totalVoucherLimit : null,
+    issuedVouchers: readCount(value.issuedVouchers),
+    reservedVouchers: readCount(value.reservedVouchers),
+    redeemedVouchers: readCount(value.redeemedVouchers),
+    expiredVouchers: readCount(value.expiredVouchers),
     items: value.items.map(readItem).filter((item): item is ApiCampaignItem => item !== null),
     scopes: Array.isArray(value.scopes)
       ? value.scopes.map(readScope).filter((scope): scope is ApiCampaignScope => scope !== null)
       : [],
+    customerGroups: Array.isArray(value.customerGroups)
+      ? value.customerGroups.flatMap(item => {
+          if (!isRecord(item) || typeof item.groupId !== 'string' || typeof item.name !== 'string') return []
+          return [{ groupId: item.groupId, name: item.name }]
+        })
+      : [],
+    uniqueCustomerCount: readCount(value.uniqueCustomerCount),
   }
 }
 
@@ -148,7 +182,7 @@ export function toListCampaign(campaign: ApiCampaign): Campaign {
     end: businessDate(campaign.endsAt),
     scope: scopeSummary(campaign.scopes),
     vouchers: campaign.totalVoucherLimit ?? 0,
-    usage: 0,
+    usage: limitShare(campaign.issuedVouchers, campaign.reservedVouchers, campaign.totalVoucherLimit),
     status: mapStatus(campaign.status),
   }
 }
@@ -201,12 +235,27 @@ export function isCampaignGuid(value: string) {
   return guidPattern.test(value)
 }
 
-export function campaignPersistBlocker(draft: CampaignDraft): string | null {
+export interface CampaignPersistInput {
+  groupIds?: readonly string[]
+  uniqueCustomers?: number
+}
+
+export function campaignPersistBlocker(draft: CampaignDraft, input: CampaignPersistInput = {}): string | null {
   if (draft.benefits.discountType === 'percentage' && draft.benefits.maximumDiscount?.trim()) {
     return 'A API ainda não permite teto de desconto percentual. Remova o teto para salvar na API ou mantenha o rascunho neste navegador.'
   }
   if (draft.benefits.generationMode === 'batch') {
-    return 'A API ainda não permite geração em lote. Escolha a geração automática para salvar na API ou mantenha o rascunho neste navegador.'
+    const groupIds = input.groupIds ?? []
+    if (groupIds.length === 0) {
+      return 'A API grava a campanha em lote só com grupos de clientes cadastrados. Selecione ao menos um grupo ou escolha a geração automática.'
+    }
+    const unique = input.uniqueCustomers ?? 0
+    const perCustomer = Number(draft.benefits.quantityPerCustomer)
+    const total = Number(draft.benefits.maxVouchers)
+    const needed = unique * perCustomer
+    if (!Number.isFinite(needed) || !Number.isFinite(total) || needed > total) {
+      return `A união dos grupos precisa de ${needed} vouchers e o teto da campanha é ${total}. A API recusa o lote acima do teto.`
+    }
   }
   if (draft.rules.restrictions.length > 1) {
     return 'A API permite apenas uma faixa de restrição de compra. Mantenha uma restrição para salvar na API ou mantenha o rascunho neste navegador.'
@@ -222,7 +271,7 @@ export function campaignPersistBlocker(draft: CampaignDraft): string | null {
 
 export function campaignPersistNotices(draft: CampaignDraft): string[] {
   const notices = [draft.benefits.generationMode === 'batch'
-    ? 'A geração em lote fica somente no rascunho local; o envio à API exige geração automática.'
+    ? 'Os vouchers deste lote ainda não são emitidos. O início da campanha é quando a emissão futura acontece; a validade em dias é o prazo de uso, igual para todos; o fim da campanha não encerra o voucher.'
     : 'Base de clientes e quantidade por concessão ficam só neste navegador.']
   return notices
 }
@@ -232,21 +281,43 @@ function benefitAmount(draft: CampaignDraft) {
   return parseDiscount(raw)
 }
 
-function itemBody(draft: CampaignDraft) {
+export interface ProductTargetOption {
+  value: string
+  code?: string
+}
+
+/** Corpo de `PUT /items`: Product do seletor usa `productId`; da lista, só `productCode`. */
+export function campaignItemBody(draft: CampaignDraft, products: readonly ProductTargetOption[] = []) {
   const benefitType = draft.benefits.discountType === 'percentage' ? 'Percentage' : 'FixedAmount'
   const benefitValue = benefitAmount(draft)
+  const shared = { benefitType, benefitValue, voucherLimit: null as null }
   if (draft.benefits.application === 'total') {
-    return [{ targetType: 'All', categoryId: null, productId: null, benefitType, benefitValue, voucherLimit: null }]
+    return [{ targetType: 'All', categoryId: null, productId: null, ...shared }]
   }
-  const targetType = draft.benefits.targetType === 'category' ? 'Category' : 'Product'
-  return draft.benefits.targetIds.map(id => ({
-    targetType,
-    categoryId: targetType === 'Category' ? id : null,
-    productId: targetType === 'Product' ? id : null,
-    benefitType,
-    benefitValue,
-    voucherLimit: null,
+  if (draft.benefits.targetType === 'category') {
+    return draft.benefits.targetIds.map(id => ({
+      targetType: 'Category',
+      categoryId: id,
+      productId: null,
+      ...shared,
+    }))
+  }
+
+  const codes = parseProductCodes(draft.benefits.productCodes)
+  const keys = new Set(codes.map(code => code.toLowerCase()))
+  const fromList = codes.map(productCode => ({
+    targetType: 'Product' as const,
+    categoryId: null,
+    productCode,
+    ...shared,
   }))
+  const fromSelector = draft.benefits.targetIds.flatMap(id => {
+    const option = products.find(product => product.value === id)
+    const code = option?.code?.trim()
+    if (code && keys.has(code.toLowerCase())) return []
+    return [{ targetType: 'Product' as const, categoryId: null, productId: id, ...shared }]
+  })
+  return [...fromList, ...fromSelector]
 }
 
 const apiChannels: Record<CampaignChannel, string> = { physical: 'Physical', virtual: 'Virtual' }
@@ -268,8 +339,13 @@ export function scopeBody(scope: CampaignDraft['scope'], stores: readonly Campai
 export interface SaveCampaignContext {
   /** Lojas da rede, com os canais, para o corpo do escopo. */
   stores?: readonly CampaignStore[]
+  /** Produtos ativos, com `code`, para unir seletor e lista no `PUT /items`. */
+  products?: readonly ProductTargetOption[]
   /** Descrição gravada; a tela não a edita e a reenvia ao salvar uma campanha existente. */
   description?: string | null
+  /** Grupos da campanha em lote. Geração automática envia lista vazia. */
+  customerGroupIds?: readonly string[]
+  uniqueCustomers?: number
 }
 
 function optionalMoney(value: string) {
@@ -289,7 +365,8 @@ export async function saveCampaignDraft(
   existingId: string | null,
   context: SaveCampaignContext = {},
 ) {
-  const blocker = campaignPersistBlocker(draft)
+  const groupIds = draft.benefits.generationMode === 'batch' ? (context.customerGroupIds ?? []) : []
+  const blocker = campaignPersistBlocker(draft, { groupIds, uniqueCustomers: context.uniqueCustomers })
   if (blocker) throw new Error(blocker)
 
   let id = existingId
@@ -312,11 +389,12 @@ export async function saveCampaignDraft(
       ? Number(draft.benefits.quantityPerCustomer)
       : Number(draft.benefits.limitPerCustomer)
     const firstRestriction = draft.rules.restrictions[0]
-    await api.put(`/api/v1/campaigns/${id}/items`, { items: itemBody(draft) })
+    await api.put(`/api/v1/campaigns/${id}/items`, { items: campaignItemBody(draft, context.products) })
     await api.put(`/api/v1/campaigns/${id}/quantities`, {
       totalVoucherLimit: Number(draft.benefits.maxVouchers),
       perCustomerVoucherLimit: perCustomer,
     })
+    await api.put(`/api/v1/campaigns/${id}/customer-groups`, { groupIds: [...groupIds] })
     await api.put(`/api/v1/campaigns/${id}/audience`, { audienceType: 'AllCustomers' })
     await api.put(`/api/v1/campaigns/${id}/voucher-validity`, {
       type: 'Relative',
@@ -369,6 +447,7 @@ interface ApiCondition {
 interface ApiDetailItem extends ApiCampaignItem {
   targetType: string
   productId: string | null
+  productCode: string | null
 }
 
 interface ApiCampaignDetail extends ApiCampaign {
@@ -416,6 +495,7 @@ function readDetail(value: unknown): ApiCampaignDetail {
       ...base,
       targetType: typeof item.targetType === 'string' ? item.targetType : 'All',
       productId: typeof item.productId === 'string' ? item.productId : null,
+      productCode: typeof item.productCode === 'string' ? item.productCode : null,
     }]
   }) : []
 
@@ -502,7 +582,7 @@ function detailSections(campaign: ApiCampaignDetail): CampaignInfoSection[] {
   ]
 }
 
-export function toCampaignDetails(value: unknown): CampaignDetails {
+export function toCampaignDetails(value: unknown, recentVouchers: CampaignDetails['recentVouchers'] = []): CampaignDetails {
   const campaign = readDetail(value)
   return {
     id: campaign.id,
@@ -515,9 +595,15 @@ export function toCampaignDetails(value: unknown): CampaignDetails {
     endsAt: campaign.endsAt,
     referenceAt: new Date(Date.now()).toISOString(),
     voucherValidity: validityText(campaign.voucherValidity),
-    metrics: { issued: 0, used: 0, expired: 0, issueLimit: campaign.totalVoucherLimit },
+    metrics: {
+      issued: campaign.issuedVouchers,
+      reserved: campaign.reservedVouchers,
+      used: campaign.redeemedVouchers,
+      expired: campaign.expiredVouchers,
+      issueLimit: campaign.totalVoucherLimit,
+    },
     lastUsedVoucher: null,
-    recentVouchers: [],
+    recentVouchers,
     info: detailSections(campaign),
     rejectionReason: campaign.rejectionReason ?? undefined,
   }
@@ -543,7 +629,38 @@ export async function decideCampaign(id: string, action: CampaignAction, reason?
 export async function fetchCampaignDetails(id: string): Promise<CampaignDetails | null> {
   try {
     const { data } = await api.get<unknown>(`/api/v1/campaigns/${id}`)
-    return toCampaignDetails(data)
+    const campaign = readDetail(data)
+    if (!campaign.networkId) return toCampaignDetails(data)
+    const { data: voucherRows } = await api.get<Array<{
+      code: string
+      customerDocumentMasked: string
+      issuedAt: string
+      validUntil: string
+      usesCount: number
+      maxUses: number
+      status: string
+    }>>('/api/v1/vouchers', { params: { networkId: campaign.networkId, campaignId: id } }).catch(() => ({ data: [] as const }))
+
+    const statusMap: Record<string, CampaignDetails['recentVouchers'][number]['status']> = {
+      Available: 'available',
+      Redeemed: 'used',
+      Expired: 'expired',
+      Provisional: 'available',
+    }
+    const recentVouchers = (Array.isArray(voucherRows) ? voucherRows : [])
+      .filter(row => row.status !== 'Discarded' && row.status !== 'Cancelled')
+      .slice(0, 7)
+      .map(row => ({
+        code: row.code,
+        customerMask: row.customerDocumentMasked,
+        issuedAt: row.issuedAt,
+        expiresAt: row.validUntil,
+        uses: row.usesCount,
+        maxUses: row.maxUses,
+        status: statusMap[row.status] ?? 'available',
+      }))
+
+    return toCampaignDetails(data, recentVouchers)
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) return null
     throw error
@@ -560,6 +677,8 @@ export interface EditableCampaign {
   draft: CampaignDraft
   /** O que a tela não representa e será substituído ao salvar (D-2). */
   notices: string[]
+  customerGroups: ApiCustomerGroupLink[]
+  uniqueCustomerCount: number
 }
 
 const moneyText = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
@@ -590,6 +709,11 @@ function draftBenefits(campaign: ApiCampaignDetail, notices: string[]): Campaign
         const id = targetType === 'category' ? item.categoryId : item.productId
         return item.targetType === first.targetType && id ? [id] : []
       })
+      if (targetType === 'product') {
+        benefits.productCodes = items
+          .flatMap(item => item.targetType === 'Product' && item.productCode ? [item.productCode] : [])
+          .join('\n')
+      }
       if (items.some(item => item.targetType !== first.targetType)) {
         notices.push('A campanha mistura tipos de alvo; ao salvar, ficam só os do mesmo tipo do primeiro.')
       }
@@ -598,6 +722,10 @@ function draftBenefits(campaign: ApiCampaignDetail, notices: string[]): Campaign
 
   benefits.maxVouchers = campaign.totalVoucherLimit ? String(campaign.totalVoucherLimit) : ''
   benefits.limitPerCustomer = campaign.perCustomerVoucherLimit ? String(campaign.perCustomerVoucherLimit) : '1'
+  if (campaign.customerGroups?.length) {
+    benefits.generationMode = 'batch'
+    benefits.quantityPerCustomer = campaign.perCustomerVoucherLimit ? String(campaign.perCustomerVoucherLimit) : ''
+  }
   return benefits
 }
 
@@ -670,7 +798,12 @@ export function campaignToDraft(value: unknown): Omit<EditableCampaign, 'id' | '
     scope: draftScope(campaign.scopes ?? [], notices),
   }
 
-  return { draft, notices }
+  return {
+    draft,
+    notices,
+    customerGroups: campaign.customerGroups ?? [],
+    uniqueCustomerCount: campaign.uniqueCustomerCount ?? 0,
+  }
 }
 
 /** Campanha da API para o assistente; null quando não existe. */
