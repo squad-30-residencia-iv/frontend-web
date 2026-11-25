@@ -1,6 +1,6 @@
 # 🧠 Estado Atual do Frontend (Project State)
 
-> Atualizado em 2026-11-23 (sessão grupos, stepper e vigência). As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
+> Atualizado em 2026-11-25 (issue #57, Relatórios). As seções Contexto, Tarefas e Últimas Entregas são o estado vigente. Os blocos de entrega mais abaixo são o diário da sessão em que foram escritos e não substituem estas seções.
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **Sprint:** Sprint 1
 - **Foco:** Com `VITE_USE_MOCK=false`, o portal autentica e mostra `profile.name`, lista campanhas, grava o rascunho (incluindo grupos do lote) e, no detalhe de um Guid, o analista submete e o gestor aprova ou reprova. A barra de uso é a parcela do limite já confirmada ou reservada. Com `networkId`, vouchers, histórico, relatórios e auditoria leem a API. Na criação, a validade do voucher é só em dias, o desconto é único, a vigência começa no horário atual (fim vazio) e o lote grava `PUT /customer-groups`. O administrador mantém cadastros, aplicações satélite e grupos de CPF. Pausar e encerrar campanhas de Guid usam a API.
-- **Última atualização:** 2026-11-23 (US-030, US-031 e vigência do assistente na `staging`).
+- **Última atualização:** 2026-11-25 (US-032 / issue #57).
 
 O que o portal faz hoje:
 
@@ -24,6 +24,8 @@ O que o portal faz hoje:
 ---
 
 ## 🚧 Tarefas em Andamento
+
+- [x] US-032 / issue #57: estrutura de Relatórios sempre montada, catálogo/overview defensivos, quatro filtros reais, cancelamento e CSV aplicados implementados. Imagem do Figma recebida: gráficos com mesma largura, rosca e tabelas compactas. Verify aprovado (419 testes/43 arquivos) e build aprovado. Conferência visual no navegador indisponível: host integrado indisponível e Chrome não autorizado. Veja `REPORTS.md` e spec `completed/US-032-relatorios-issue57.md`.
 
 - [x] US-030: `/grupos` do administrador e lote do assistente com `PUT /customer-groups`. Spec `completed/US-030-grupos-de-clientes.md`. Commit `d90c9b8`.
 - [x] US-031: stepper, revisão e resumo abrem a etapa já passada. Spec `completed/US-031-navegacao-etapas-verdes.md`. Commit `9326016`.

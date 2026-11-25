@@ -16,6 +16,8 @@ export interface ReportOption {
 }
 
 export interface ReportCatalog {
+  /** Ausente no catálogo local legado; a API declara apenas os filtros implementados. */
+  supportedFilters?: readonly (keyof ReportFilters)[]
   periods: readonly ReportOption[]
   campaigns: readonly ReportOption[]
   categories: readonly ReportOption[]

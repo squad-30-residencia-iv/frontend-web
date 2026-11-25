@@ -8,7 +8,7 @@ export interface ReportBarChartProps {
 
 const width = 560
 const height = 240
-const margin = { top: 12, right: 8, bottom: 28, left: 44 }
+const margin = { top: 12, right: 8, bottom: 28, left: 8 }
 const series = [
   { key: 'issued', label: 'Emitidos' },
   { key: 'redeemed', label: 'Resgatados' },
@@ -30,9 +30,8 @@ export function ReportBarChart({ data }: ReportBarChartProps) {
   const plotWidth = width - margin.left - margin.right
   const plotHeight = height - margin.top - margin.bottom
   const groupWidth = plotWidth / Math.max(data.length, 1)
-  const barWidth = Math.min(20, groupWidth / 4)
+  const barWidth = Math.min(14, groupWidth / 4)
   const y = (value: number) => margin.top + plotHeight - (value / top) * plotHeight
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map(fraction => fraction * top)
 
   return <section className="report-card report-bar-chart" aria-labelledby="report-bar-title">
     <header className="report-card-header">
@@ -43,10 +42,6 @@ export function ReportBarChart({ data }: ReportBarChartProps) {
     </header>
     {!hasData ? <p className="report-chart-empty">Sem dados de utilização para os filtros selecionados.</p> : <>
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Gráfico de barras mensal de vouchers emitidos, resgatados e expirados" className="report-bar-svg">
-        {ticks.map(tick => <g key={tick}>
-          <line className="report-grid-line" x1={margin.left} x2={width - margin.right} y1={y(tick)} y2={y(tick)} />
-          <text className="report-axis-label" x={margin.left - 8} y={y(tick) + 3} textAnchor="end">{formatCount(tick)}</text>
-        </g>)}
         {data.map((point, index) => {
           const center = margin.left + groupWidth * index + groupWidth / 2
           const gap = 3

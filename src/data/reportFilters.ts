@@ -42,6 +42,11 @@ const isKnown = (options: readonly ReportOption[], value: string) => value === a
 /** Descarta valores inexistentes no catálogo e combinações incompatíveis da cascata Rede → Região → Estabelecimento. */
 export function normalizeReportFilters(catalog: ReportCatalog, filters: ReportFilters): ReportFilters {
   const result: ReportFilters = { ...filters }
+  if (catalog.supportedFilters) {
+    for (const key of filterKeys) {
+      if (!catalog.supportedFilters.includes(key)) (result as unknown as Record<string, string>)[key] = defaultReportFilters[key]
+    }
+  }
   if (!reportPeriodSchema.safeParse(result.period).success) result.period = defaultReportFilters.period
   if (!isKnown(catalog.campaigns, result.campaign)) result.campaign = allValue
   if (!isKnown(catalog.categories, result.category)) result.category = allValue

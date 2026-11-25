@@ -37,7 +37,7 @@ export function ReportFiltersForm({ catalog, draft, applied, isBusy, onDraftChan
     { field: 'region', label: 'Região', allLabel: 'Todas', options: regionOptions(catalog, draft.network) },
     { field: 'establishment', label: 'Estabelecimento', allLabel: 'Todos', options: establishmentOptions(catalog, draft.network, draft.region) },
     { field: 'customerType', label: 'Tipo de cliente', allLabel: 'Todos', options: catalog.customerTypes },
-  ]
+  ].filter(item => !catalog.supportedFilters || catalog.supportedFilters.includes(item.field as keyof ReportFilters)) as FilterField[]
   // Os chips usam as opções completas do catálogo, para sempre achar o rótulo do valor aplicado.
   const chipOptions: Record<keyof ReportFilters, readonly ReportOption[]> = {
     period: catalog.periods, campaign: catalog.campaigns, category: catalog.categories, network: catalog.networks,
@@ -60,12 +60,13 @@ export function ReportFiltersForm({ catalog, draft, applied, isBusy, onDraftChan
         key={field}
         className="report-filter"
         label={`${label}:`}
-        options={allLabel ? [{ value: allValue, label: allLabel }, ...options] : options}
+        options={allLabel ? [{ value: allValue, label: allLabel }, ...options.filter(option => option.value !== allValue)] : options}
+        isDisabled={isBusy}
         value={draft[field]}
         onChange={value => handleChange(field, String(value))}
       />)}
       <Button type="submit" className="report-filter-button" isDisabled={isBusy}>Aplicar filtros</Button>
-      <Button type="button" variant="ghost" className="report-filter-clear" onPress={onClear}>Limpar filtros</Button>
+      <Button type="button" variant="ghost" isDisabled={isBusy} className="report-filter-clear" onPress={onClear}>Limpar filtros</Button>
     </form>
     <ul className="report-chips" aria-label="Filtros aplicados">
       {fields.map(({ field, label, allLabel }) => {
@@ -75,7 +76,7 @@ export function ReportFiltersForm({ catalog, draft, applied, isBusy, onDraftChan
           : chipOptions[field].find(option => option.value === applied[field])?.label ?? applied[field]
         return <li key={field} className="report-chip">
           <span>{label}: {valueLabel}</span>
-          {!isDefault && <button type="button" aria-label={`Remover filtro ${label}: ${valueLabel}`} onClick={() => onRemoveFilter(field)}>
+          {!isDefault && <button type="button" disabled={isBusy} aria-label={`Remover filtro ${label}: ${valueLabel}`} onClick={() => onRemoveFilter(field)}>
             <X size={12} aria-hidden="true" />
           </button>}
         </li>

@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
@@ -28,7 +28,7 @@ async function setup(path = '/relatorios', props: Partial<Parameters<typeof Repo
   window.history.replaceState(null, '', path)
   const user = userEvent.setup()
   render(<ReportsPage loadCatalog={loadCatalog} loadReport={loadReport} {...props} />)
-  await screen.findByRole('region', { name: 'Indicadores de vouchers' })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Aplicar filtros' })).toBeEnabled())
   return user
 }
 
@@ -46,7 +46,7 @@ describe('Relatórios e indicadores', () => {
   it('renderiza a rota com cabeçalho, sidebar ativa e sem o estado "Em construção"', async () => {
     window.history.replaceState(null, '', '/relatorios')
     render(<App />)
-    expect(await screen.findByRole('region', { name: 'Indicadores de vouchers' })).toBeVisible()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeEnabled())
     expect(screen.getByRole('heading', { level: 1, name: 'Relatórios e indicadores' })).toBeVisible()
     expect(within(screen.getByRole('navigation', { name: 'Caminho' })).getByText('Relatórios')).toHaveAttribute('aria-current', 'page')
     expect(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: 'Relatórios' })).toHaveAttribute('aria-current', 'page')
@@ -143,16 +143,14 @@ describe('Relatórios e indicadores', () => {
     expect(await screen.findByRole('region', { name: 'Indicadores de vouchers' })).toBeVisible()
   })
 
-  it('trata falha no catálogo e a ausência de campanhas', async () => {
+  it('trata falha no catálogo e mantém a estrutura sem campanhas', async () => {
     window.history.replaceState(null, '', '/relatorios')
     const { unmount } = render(<ReportsPage loadCatalog={() => Promise.reject(new Error('falha'))} loadReport={loadReport} />)
     expect(await screen.findByRole('heading', { name: 'Não foi possível carregar os relatórios' })).toBeVisible()
     unmount()
     render(<ReportsPage loadCatalog={() => Promise.resolve({ ...reportCatalog, campaigns: [] })} loadReport={loadReport} />)
-    expect(await screen.findByRole('heading', { name: 'Nenhuma campanha cadastrada' })).toBeVisible()
-    expect(screen.queryByRole('form')).not.toBeInTheDocument()
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Criar campanha' }))
-    expect(window.location.pathname).toBe('/campanhas/nova')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aplicar filtros' })).toBeEnabled())
+    expect(screen.getByRole('region', { name: 'Indicadores de vouchers' })).toBeVisible()
   })
 
   it('exporta o CSV do recorte aplicado', async () => {
