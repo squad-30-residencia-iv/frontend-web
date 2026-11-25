@@ -56,7 +56,7 @@ export const portalReadHandlers = [
     return HttpResponse.json([voucher])
   }),
 
-  http.get('/api/v1/reports/catalog', () => HttpResponse.json({
+  http.get('*/api/v1/reports/catalog', () => HttpResponse.json({
     campaigns: [{ value: campaignId, label: 'Campanha demonstrativa' }],
     regions: [{ value: '0199e3a0-aaaa-7000-8000-000000000501', label: 'Região Norte' }],
     establishments: [{
@@ -66,7 +66,7 @@ export const portalReadHandlers = [
     }],
   })),
 
-  http.get('/api/v1/reports/overview', () => HttpResponse.json({
+  http.get('*/api/v1/reports/overview', () => HttpResponse.json({
     kpis: { issued: 1, redeemed: 0, expired: 0, available: 1, cancelled: 0, utilizationRate: 0 },
     monthly: [{ month: 'out/26', issued: 1, redeemed: 0, expired: 0 }],
     statusDistribution: [{ status: 'available', count: 1 }],

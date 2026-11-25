@@ -14,25 +14,24 @@ import { Loading } from '../components/ui/Loading'
 import { useAuth } from '../contexts/AuthContext'
 import { defaultReportFilters, normalizeReportFilters, parseReportFilters, serializeReportFilters } from '../data/reportFilters'
 import { fetchReport, fetchReportCatalog } from '../data/reports'
-import { fetchReportCatalogFromApi, fetchReportFromApi } from '../services/reports'
-import { navigate } from '../navigation/navigate'
+import { emptyReportCatalog, emptyReportData, fetchReportCatalogFromApi, fetchReportFromApi } from '../services/reports'
 import type { ReportCatalog, ReportData, ReportFilters } from '../types/report'
 import './ReportsPage.css'
 
 type CatalogState =
   | { status: 'loading' }
-  | { status: 'error' }
+  | { status: 'error'; message: string }
   | { status: 'success'; catalog: ReportCatalog }
 
 type ReportState =
   | { status: 'loading' }
-  | { status: 'error' }
+  | { status: 'error'; message: string }
   | { status: 'success'; data: ReportData }
 
 export interface ReportsPageProps {
   /** Mantenha a referência estável (função de módulo ou useCallback): ela dispara o carregamento. */
-  loadCatalog?: () => Promise<ReportCatalog>
-  loadReport?: (filters: ReportFilters) => Promise<ReportData>
+  loadCatalog?: (signal?: AbortSignal) => Promise<ReportCatalog>
+  loadReport?: (filters: ReportFilters, signal?: AbortSignal) => Promise<ReportData>
 }
 
 const pageTitle = 'Relatórios e indicadores'
@@ -42,32 +41,26 @@ const breadcrumbs = [{ label: 'Portal' }, { label: 'Relatórios' }]
 export function ReportsPage({ loadCatalog, loadReport }: ReportsPageProps) {
   const { user } = useAuth()
   const networkId = user?.networkId ?? null
+  const hasSession = user !== null
+  const noScope = hasSession && !networkId
   const [state, setState] = useState<CatalogState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    let cancelled = false
-    const load = loadCatalog ?? (() => {
-      if (networkId) return fetchReportCatalogFromApi(networkId)
-      return user ? Promise.resolve({
-        periods: [],
-        campaigns: [],
-        categories: [],
-        networks: [],
-        regions: [],
-        establishments: [],
-        customerTypes: [],
-      } satisfies ReportCatalog) : fetchReportCatalog()
+    const controller = new AbortController()
+    setState({ status: 'loading' })
+    Promise.resolve().then(() => {
+      if (noScope) return emptyReportCatalog()
+      if (loadCatalog) return loadCatalog(controller.signal)
+      if (networkId) return fetchReportCatalogFromApi(networkId, controller.signal)
+      return fetchReportCatalog()
+    }).then(catalog => {
+      if (!controller.signal.aborted) setState({ status: 'success', catalog })
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) setState({ status: 'error', message: error instanceof Error ? error.message : 'Verifique sua conexão e tente novamente.' })
     })
-    load()
-      .then(catalog => {
-        if (!cancelled) setState({ status: 'success', catalog })
-      })
-      .catch(() => {
-        if (!cancelled) setState({ status: 'error' })
-      })
-    return () => { cancelled = true }
-  }, [loadCatalog, networkId, user, attempt])
+    return () => controller.abort()
+  }, [loadCatalog, networkId, noScope, attempt])
 
   function handleRetry() {
     setState({ status: 'loading' })
@@ -75,28 +68,17 @@ export function ReportsPage({ loadCatalog, loadReport }: ReportsPageProps) {
   }
 
   return <PortalLayout activeSection="reports">
-    <div className="reports-page" aria-busy={state.status === 'loading'}>
-      {state.status !== 'success' && <PageHeader title={pageTitle} subtitle={pageSubtitle} breadcrumbs={breadcrumbs} />}
-      {state.status === 'loading' && <Loading message="Carregando relatórios…" />}
-      {state.status === 'error' && <div role="alert">
-        <EmptyState
-          icon={TriangleAlert}
-          title="Não foi possível carregar os relatórios"
-          description="Verifique sua conexão e tente novamente."
-          action={<Button variant="secondary" onPress={handleRetry}>Tentar novamente</Button>}
-        />
-      </div>}
-      {state.status === 'success' && state.catalog.campaigns.length === 0 && <>
-        <PageHeader title={pageTitle} subtitle={pageSubtitle} breadcrumbs={breadcrumbs} />
-        <EmptyState
-          title="Nenhuma campanha cadastrada"
-          description="Crie uma campanha para começar a acompanhar a utilização dos vouchers."
-          action={<Button onPress={() => navigate('/campanhas/nova')}>Criar campanha</Button>}
-        />
-      </>}
-      {state.status === 'success' && state.catalog.campaigns.length > 0 && (
-        <ReportsContent catalog={state.catalog} networkId={networkId} loadReport={loadReport} />
-      )}
+    <div className="reports-page">
+      <ReportsContent
+        key={String(networkId) + ':' + (hasSession ? 'session' : 'local') + ':' + (noScope ? 'no-scope' : state.status === 'success' ? 'ready' : 'pending')}
+        catalog={state.status === 'success' ? state.catalog : emptyReportCatalog()}
+        catalogReady={state.status === 'success'}
+        catalogError={state.status === 'error' ? state.message : undefined}
+        onCatalogRetry={handleRetry}
+        noScope={noScope}
+        networkId={networkId}
+        loadReport={loadReport}
+      />
     </div>
   </PortalLayout>
 }
@@ -108,33 +90,39 @@ function writeFiltersToUrl(filters: ReportFilters) {
 
 interface ReportsContentProps {
   catalog: ReportCatalog
+  catalogReady: boolean
+  catalogError?: string
+  onCatalogRetry: () => void
+  noScope: boolean
   networkId: string | null
-  loadReport?: (filters: ReportFilters) => Promise<ReportData>
+  loadReport?: (filters: ReportFilters, signal?: AbortSignal) => Promise<ReportData>
 }
 
-function ReportsContent({ catalog, networkId, loadReport }: ReportsContentProps) {
+function ReportsContent({ catalog, catalogReady, catalogError, onCatalogRetry, noScope, networkId, loadReport }: ReportsContentProps) {
   const [initial] = useState(() => parseReportFilters(window.location.search, catalog))
   const [draft, setDraft] = useState<ReportFilters>(initial)
   const [applied, setApplied] = useState<ReportFilters>(initial)
   const [report, setReport] = useState<ReportState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
+  const [exportError, setExportError] = useState('')
   useEffect(() => {
-    let cancelled = false
-    const load = loadReport ?? ((filters: ReportFilters) => (
-      networkId ? fetchReportFromApi(networkId, filters) : fetchReport(filters)
-    ))
-    load(applied)
-      .then(data => {
-        if (!cancelled) setReport({ status: 'success', data })
-      })
-      .catch(() => {
-        if (!cancelled) setReport({ status: 'error' })
-      })
-    return () => { cancelled = true }
-  }, [loadReport, networkId, applied, attempt])
+    if (!catalogReady || noScope) return
+    const controller = new AbortController()
+    setReport({ status: 'loading' })
+    Promise.resolve().then(() => {
+      if (loadReport) return loadReport(applied, controller.signal)
+      return networkId ? fetchReportFromApi(networkId, applied, controller.signal) : fetchReport(applied)
+    }).then(data => {
+      if (!controller.signal.aborted) setReport({ status: 'success', data })
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) setReport({ status: 'error', message: error instanceof Error ? error.message : 'Tente carregar os dados novamente.' })
+    })
+    return () => controller.abort()
+  }, [loadReport, networkId, catalogReady, noScope, applied, attempt])
 
   function commit(filters: ReportFilters) {
+    setExportError('')
     const next = normalizeReportFilters(catalog, filters)
     setDraft(next)
     setApplied({ ...next })
@@ -151,11 +139,16 @@ function ReportsContent({ catalog, networkId, loadReport }: ReportsContentProps)
     setAttempt(current => current + 1)
   }
 
-  const data = report.status === 'success' ? report.data : null
-  const isEmpty = data !== null && data.kpis.issued === 0
+  const data = report.status === 'success' && !noScope ? report.data : emptyReportData()
+  const busy = !noScope && !catalogError && (!catalogReady || report.status === 'loading')
+  const success = catalogReady && !noScope && report.status === 'success'
+  const isEmpty = success && data.kpis.issued === 0
 
   function handleExport() {
-    if (data) downloadCsv(reportCsvFilename, buildReportCsv(data, applied, catalog))
+    try {
+      downloadCsv(reportCsvFilename, buildReportCsv(data, applied, catalog))
+      setExportError('')
+    } catch { setExportError('Não foi possível exportar o CSV. Tente novamente.') }
   }
 
   return <>
@@ -163,34 +156,32 @@ function ReportsContent({ catalog, networkId, loadReport }: ReportsContentProps)
       title={pageTitle}
       subtitle={pageSubtitle}
       breadcrumbs={breadcrumbs}
-      action={<Button variant="secondary" startIcon={Download} isDisabled={!data || isEmpty} onPress={handleExport}>Exportar CSV</Button>}
+      action={<Button variant="secondary" startIcon={Download} isDisabled={!success || isEmpty} onPress={handleExport}>Exportar CSV</Button>}
     />
     <ReportFiltersForm
       catalog={catalog}
       draft={draft}
       applied={applied}
-      isBusy={report.status === 'loading'}
+      isBusy={busy || noScope || Boolean(catalogError)}
       onDraftChange={setDraft}
       onApply={() => commit(draft)}
       onClear={() => commit(defaultReportFilters)}
       onRemoveFilter={handleRemoveFilter}
     />
-    <div aria-busy={report.status === 'loading'}>
-      {report.status === 'loading' && <Loading message="Atualizando indicadores…" />}
-      {report.status === 'error' && <div role="alert">
-        <EmptyState
-          icon={TriangleAlert}
-          title="Não foi possível carregar os indicadores"
-          description="Tente carregar os dados novamente."
-          action={<Button variant="secondary" onPress={handleRetry}>Tentar novamente</Button>}
-        />
+    <div aria-busy={busy}>
+      {noScope && <EmptyState title="Rede não definida" description="Sua conta não possui uma rede ou escopo definido para consultar relatórios. Solicite a configuração do escopo ao administrador." />}
+      {busy && <Loading message={catalogReady ? 'Atualizando indicadores…' : 'Carregando relatórios…'} />}
+      {(catalogError || report.status === 'error') && !noScope && <div role="alert">
+        <EmptyState icon={TriangleAlert}
+          title={catalogError ? 'Não foi possível carregar os relatórios' : 'Não foi possível carregar os indicadores'}
+          description={catalogError ?? (report.status === 'error' ? report.message : '')}
+          action={<Button variant="secondary" onPress={catalogError ? onCatalogRetry : handleRetry}>Tentar novamente</Button>} />
       </div>}
-      {data && <>
-        {isEmpty && <div className="reports-empty" role="status">
-          <strong>Nenhum voucher encontrado</strong>
-          <span>Não há vouchers para a combinação de filtros aplicada.</span>
-          <Button variant="secondary" onPress={() => commit(defaultReportFilters)}>Limpar filtros</Button>
-        </div>}
+      {exportError && <p role="alert">{exportError}</p>}
+      {isEmpty && <div className="reports-empty" role="status">
+        <strong>Nenhum voucher encontrado</strong>
+        <span>Não há vouchers para a combinação de filtros aplicada.</span>
+      </div>}
         <ReportKpiCards kpis={data.kpis} />
         <div className="reports-charts">
           <ReportBarChart data={data.monthly} />
@@ -200,7 +191,6 @@ function ReportsContent({ catalog, networkId, loadReport }: ReportsContentProps)
           <TopCampaignsTable rows={data.topCampaigns} />
           <RegionPerformanceTable rows={data.regions} />
         </div>
-      </>}
     </div>
   </>
 }

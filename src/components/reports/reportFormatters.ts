@@ -70,7 +70,8 @@ export function buildReportCsv(data: ReportData, filters: ReportFilters, catalog
     ['Região', 'Vouchers', 'Utilização (%)', 'Ticket médio (R$)'],
     ...data.regions.map(item => [item.name, csvNumber(item.vouchers), csvNumber(item.rate, 1), csvNumber(item.averageTicket, 2)]),
   ]
-  return rows.map(row => row.map(csvText).join(';')).join('\r\n')
+  const unsupported = catalog.supportedFilters ? ['Categoria', 'Rede', 'Tipo de cliente'] : []
+  return rows.filter(row => !unsupported.includes(row[0])).map(row => row.map(csvText).join(';')).join('\r\n')
 }
 
 export const reportCsvFilename = 'relatorio-vouchers.csv'
@@ -79,10 +80,13 @@ export const reportCsvFilename = 'relatorio-vouchers.csv'
 export function downloadCsv(filename: string, content: string): void {
   const url = URL.createObjectURL(new Blob([`﻿${content}`], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  try {
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+  } finally {
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
 }

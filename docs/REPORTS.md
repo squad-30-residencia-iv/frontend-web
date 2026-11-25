@@ -1,32 +1,51 @@
-# Relatórios e Indicadores
+# Relatórios e indicadores — /relatorios
 
-Rota `/relatorios` substitui o placeholder "Em construção". Usa `PortalLayout` (seção `reports`) e `PageHeader` com subtítulo e botão **Exportar CSV**. Só front-end com mock; spec em `docs/specs/in-progress/US-013-relatorios-indicadores.md`.
+## Integração e escopo
 
-## Comportamento
-- Filtros: Período, Campanha, Categoria, Rede, Região, Estabelecimento e Tipo de cliente. Os campos editam o `draft`; **Aplicar filtros**, **Limpar filtros** ou remover um chip atualizam o `applied` e disparam nova consulta.
-- Combinação por AND. Filtro sem resultado é sucesso: visão zerada, aviso "Nenhum voucher encontrado", taxa "—" e Exportar CSV desabilitado.
-- Cascata Rede → Região → Estabelecimento: as opções dependem da escolha anterior; valor incompatível é zerado. No mock, Franquias não atuam no Norte.
-- URL: `?periodo=&campanha=&categoria=&rede=&regiao=&estabelecimento=&cliente=`, só com o que difere do padrão, via `replaceState`. Valores inexistentes ou combinações incompatíveis são ignorados na leitura.
-- Chips: um por filtro (como na imagem); o "x" só aparece nos que diferem do padrão (Últimos 30 dias, Todas/Todos).
-- Taxa de utilização = resgatados ÷ emitidos; "—" sem emitidos. Emitidos = resgatados + expirados + disponíveis + cancelados (validado pelo schema Zod).
-- Gráfico mensal: sempre 6 meses (Jan-Jun), respeita todos os filtros menos Período. KPIs, rosca e tabelas respeitam o Período (30 dias = 1 mês, 90 dias = 3, 6 meses = 6 no mock).
-- Top 5 campanhas ordenado por taxa; Desempenho por região ordenado por vouchers, com Tkt Médio mock fixo por região.
-- Estados: carregando, sucesso, vazio, nenhuma campanha (com atalho "Criar campanha"), erro com "Tentar novamente" (catálogo e indicadores).
-- Exportar CSV: separador ";", decimal ",", BOM UTF-8, filtros aplicados no topo, texto protegido contra fórmula.
+A sessão com rede consulta GET /api/v1/reports/catalog?networkId= e GET /api/v1/reports/overview. O cliente Axios compartilhado anexa o JWT e mantém o tratamento existente de 401. Administrador sem rede vê Rede não definida, com estrutura zerada e sem requisições ou dados locais substituindo a API.
 
-## Mock e referência
-Período padrão reproduz a imagem: 5.899 emitidos, 3.567 resgatados, 892 expirados, 1.284 disponíveis e 60,5%; cancelados = 156 (donut). As tabelas são derivadas do mesmo conjunto e por isso **não repetem** os números da imagem (Black Friday com 15.000 emitidos, por exemplo, excede o total de 5.899). Contagens por região são aproximadas dos 2.477/1.234/943/712/533 da imagem. Os dados vêm de 1.260 registros (campanha × estabelecimento × tipo de cliente × mês) gerados deterministicamente em `src/data/reports.ts`.
+Filtros autenticados: Período (30d, 90d, 6m), Campanha, Região e Estabelecimento. campaignId, regionId e establishmentId são Guid opcionais; networkId é obrigatório e vem da sessão. Valores all, vazios e inválidos não são enviados. Categoria, Rede e Tipo de cliente ficam ocultos e são descartados da URL/CSV nessa modalidade, pois o overview não os aceita. O mock isolado sem sessão mantém apenas para testes os filtros locais que implementa.
 
-## Arquivos
-- `src/types/report.ts`, `src/schemas/reportSchema.ts`: contratos e Zod.
-- `src/data/reports.ts`: catálogo, mock, `buildReport`, `fetchReport`, `fetchReportCatalog` (ponto de troca pela API).
-- `src/data/reportFilters.ts`, `reportMetrics.ts`: filtros padrão, cascata, URL e taxa.
-- `src/components/reports/`: `ReportFiltersForm`, `ReportKpiCards`, `ReportBarChart`, `ReportStatusDonut` (SVG próprio, sem Recharts), `ReportTables`, `reportFormatters` (formatação e CSV), CSS ao lado.
-- `src/pages/ReportsPage.tsx` e CSS; rota em `src/App.tsx`.
-- Testes: `reports.test.ts`, `reportFormatters.test.ts`, `ReportsPage.test.tsx`; `PageHeader.test.tsx` ajustado (Relatórios deixou de ser placeholder).
+Os seletores editam draft. Aplicar filtros, Limpar filtros e remoção de chip atualizam applied, query string e overview. Região restringe as lojas disponíveis. Campos, aplicação e limpeza são desabilitados durante a consulta; CSV usa somente o resultado dos filtros aplicados.
 
-## Fora do escopo
-Print 2 (bloqueios, alertas, eventos → Auditoria), detalhe da campanha ao clicar na linha, API real e alteração do `CampaignStatus`.
+## Correção da tela vazia (#57)
 
-## Validação
-Lógica pura (mock, filtros, URL, CSV) conferida com os testes de `reports.test.ts` e `reportFormatters.test.ts` executados fora do vitest. **`npm run verify` e `npm run build` não foram executados**: o registro npm estava bloqueado no ambiente. Rodar ambos e fazer a revisão visual no navegador antes do push.
+A versão anterior condicionava ReportsContent ao catálogo e à existência de campanhas e o adaptador acessava listas e KPIs sem validação. Campos ausentes (especialmente percentuais undefined em formatPercent) podiam gerar exceção na renderização. As opções all também eram duplicadas pelo serviço e pelo seletor.
+
+Agora layout, header, filtros, cinco KPIs, gráficos e rankings permanecem montados em carregamento, erro, zero e ausência de escopo. Zero é um sucesso explícito (Nenhum voucher encontrado), sem botão de criar campanha substituindo a página. Erros de HTTP/contrato aparecem com mensagem e Tentar novamente, preservando a estrutura. Ausência de campos opcionais é normalizada para listas vazias, contagens zero e taxas null; tipos inválidos são recusados como erro de contrato, sem inserir dados fictícios.
+
+Cada effect cria um AbortController e repassa signal ao Axios, com timeout de 15 segundos apenas nestes serviços. Cleanup aborta a requisição e descarta respostas antigas. Dependências usam networkId/noScope e loaders estáveis, nunca o objeto user recriado nem uma função wrapper criada a cada render. Nesta branch o loader já era resolvido dentro do effect; essa regra foi mantida e coberta por regressão.
+
+## Exportação
+
+Reutiliza reportFormatters: relatorio-vouchers.csv, separador ;, decimal pt-BR, cabeçalhos legíveis, filtros aplicados no topo, BOM UTF-8 e proteção contra fórmulas. Download local, sem endpoint adicional. URLs temporárias são liberadas em finally. Sem resultado, permanece desabilitado conforme comportamento existente. Falha de download apresenta mensagem, sem quebrar a página.
+
+## Limitações reais do backend
+
+- AverageTicket retorna null; a tabela e o CSV apresentam ausência de valor, sem ticket médio inventado.
+- A série mensal cobre sempre os últimos seis meses; o period recorta KPIs, status e rankings, mas não essa série. Campanha/região/loja filtram a série.
+- Categoria e tipo de cliente exigem uma issue de extensão de contrato se forem obrigatórios no Figma. Não são filtros simulados. Rede é o escopo da sessão.
+- Ranking vem ordenado por resgatados/emitidos; o front preserva o retorno da API.
+- A cópia local do backend não contém Reports; contrato conferido por leitura da main remota, sem alterar arquivos backend.
+
+Fontes: https://github.com/squad-30-residencia-iv/backend-api/blob/main/src/VoucherCampaigns.Api/Controllers/ReportsController.cs e https://github.com/squad-30-residencia-iv/backend-api/blob/main/src/VoucherCampaigns.Application/Reports/ReportContracts.cs e ReportService.cs no mesmo diretório.
+
+## Visual e validação
+
+Componentes, tokens e estrutura da tela existente foram reutilizados. Filtros em card responsivo com quatro seletores, Aplicar filtros, Limpar filtros e chips. Imagem do Figma recebida em 25/11/2026. O painel superior orientou os ajustes: dois gráficos de mesma largura, rosca compacta, legendas, linhas de tabela mais compactas e barras sem grades/eixo numérico visível, preservando títulos e tabela acessível. O painel Monitoramento operacional permanece no escopo da Auditoria, conforme decisão documentada. Os quatro filtros suportados e a exportação CSV permanecem mesmo quando diferem do protótipo.
+
+Tentativa de inspeção da prévia: navegador integrado indisponível e acesso ao Chrome não autorizado pela ferramenta. Não foi realizada comparação visual da página renderizada; essa limitação fica registrada. A prévia temporária foi encerrada.
+
+Spec: docs/specs/completed/US-032-relatorios-issue57.md. Testes: ReportsPage, ReportsApiPage, services/reports e reportFormatters, além da suíte completa do projeto. Resultados finais registrados na spec.
+
+## Arquivos da issue #57
+
+- src/pages/ReportsPage.tsx, ReportsPage.test.tsx e ReportsApiPage.test.tsx.
+- src/services/reports.ts e reports.test.ts.
+- src/types/report.ts; src/data/reportFilters.ts.
+- src/components/reports/ReportFiltersForm.tsx, ReportFiltersForm.css e reportFormatters.ts.
+- src/pages/ReportsPage.css; src/components/reports/ReportBarChart.tsx, ReportCharts.css, ReportKpiCards.css e ReportTables.css.
+- src/mocks/handlers/portalReads.ts.
+- docs/REPORTS.md, docs/PROJECT_STATE.md e docs/specs/completed/US-032-relatorios-issue57.md.
+
+Validação técnica em 25/11/2026: verify aprovado (419 testes/43 arquivos); build aprovado; diff --check aprovado. Imagem recebida e usada como referência. Conferência no navegador não realizada por indisponibilidade/ausência de autorização da ferramenta.
